@@ -6,12 +6,6 @@ import BookingModal from "@/components/BookingModal";
 import PaymentModal from "@/components/PaymentModal";
 import { useUser } from "@/contexts/UserContext";
 
-const navLinks = [
-  { label: "Home", to: "/" },
-  { label: "Bus Fares", to: "/fares" },
-  { label: "My Dashboard", to: "/dashboard" },
-];
-
 const columns = [
   "Route", "HNLU", "Balco Medical Center", "Sector 30", "Sector 29",
   "Sector 27", "South Block", "Indravati Bhavan", "Mahanadi Bhavan",
@@ -133,7 +127,7 @@ const TimetableTable = ({ caption, rows, onBook }: { caption: string; rows: stri
             ))}
             <td className="px-2 py-1.5 border-b border-border text-center">
               <button
-                onClick={() => onBook(row, row[1])}
+                onClick={() => onBook(row, row[1] || "")}
                 className="px-2 py-1 text-[10px] lg:text-xs bg-primary text-primary-foreground rounded-md hover:-translate-y-0.5 transition-all duration-200 hover:shadow-md active:scale-95"
               >
                 Book
@@ -199,7 +193,7 @@ const Timetable = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header title="Bus Time Table" navLinks={navLinks} />
+      <Header />
 
       <main className="py-10 px-4">
         <TimetableTable

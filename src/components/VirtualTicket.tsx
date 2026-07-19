@@ -8,8 +8,8 @@ interface VirtualTicketProps {
 
 // ✅ ADDED: time parsing
 function parseTimeToDate(timeStr: string, baseDate: string) {
-  const [time, period] = timeStr.split(" ");
-  let [h, m] = time.split(":").map(Number);
+  const [time = "", period] = timeStr.split(" ");
+  let [h = 0, m = 0] = time.split(":").map(Number);
 
   if (period === "PM" && h !== 12) h += 12;
   if (period === "AM" && h === 12) h = 0;

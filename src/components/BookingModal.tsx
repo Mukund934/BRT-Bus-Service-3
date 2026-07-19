@@ -3,8 +3,8 @@ import { STOPS, calculateFare } from "@/types/ticket";
 
 function parseTimeToDate(timeStr: string) {
 	const now = new Date();
-	const [time, modifier] = timeStr.split(" ");
-	let [hours, minutes] = time.split(":").map(Number);
+	const [time = "", modifier] = timeStr.split(" ");
+	let [hours = 0, minutes = 0] = time.split(":").map(Number);
 
 	if (modifier === "PM" && hours !== 12) hours += 12;
 	if (modifier === "AM" && hours === 12) hours = 0;

@@ -15,10 +15,7 @@ import {
   Timestamp,
   collection,
   getDocs,
-  query,
   updateDoc,
-  where,
-  orderBy,
 } from "firebase/firestore";
 import { auth, googleProvider, db } from "@/firebase";
 
@@ -31,9 +28,19 @@ interface FirestoreUser {
   photoURL?: string;
 }
 
+interface UserProfile {
+  notifications_enabled?: boolean;
+}
+
+interface ActiveTicket {
+  from_stop: string;
+}
+
 interface UserContextType {
   user: FirebaseUser | null;
   role: "user" | "admin" | "driver" | null;
+  profile: UserProfile | null;
+  activeTicket: ActiveTicket | null;
   loading: boolean;
   signUp: (name: string, email: string, password: string) => Promise<string | null>;
   signIn: (email: string, password: string) => Promise<string | null>;
@@ -51,6 +58,8 @@ const UserContext = createContext<UserContextType | null>(null);
 export const UserProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [role, setRole] = useState<"user" | "admin" | "driver" | null>(null);
+  const [profile] = useState<UserProfile | null>(null);
+  const [activeTicket] = useState<ActiveTicket | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -285,6 +294,8 @@ const getAllUsers = async (): Promise<FirestoreUser[]> => {
       value={{
         user,
         role,
+        profile,
+        activeTicket,
         loading,
         signUp,
         signIn,

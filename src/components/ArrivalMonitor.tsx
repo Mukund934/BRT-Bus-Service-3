@@ -61,7 +61,9 @@ const ArrivalMonitor = () => {
         if (eta <= 5) {
           notify(data.busNumber || "101", stopName, eta);
         }
-      } catch {}
+      } catch (err) {
+        console.error("Arrival poll error:", err);
+      }
     };
 
     poll();

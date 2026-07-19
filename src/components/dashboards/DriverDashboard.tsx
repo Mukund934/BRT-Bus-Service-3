@@ -7,12 +7,12 @@ interface DriverDashboardProps {
   onError?: (error: string) => void;
 }
 
-const DriverDashboard = ({ onError }: DriverDashboardProps) => {
+const DriverDashboard = (_props: DriverDashboardProps) => {
   const { user } = useUser();
   const navigate = useNavigate();
   const [isLive, setIsLive] = useState(false);
 
-  const getInitials = (name?: string) => {
+  const getInitials = (name?: string | null) => {
     if (!name) return "D";
     return name
       .split(" ")

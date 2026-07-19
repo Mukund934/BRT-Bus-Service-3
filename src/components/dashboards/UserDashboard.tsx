@@ -7,7 +7,7 @@ interface UserDashboardProps {
   onError?: (error: string) => void;
 }
 
-const UserDashboard = ({ onError }: UserDashboardProps) => {
+const UserDashboard = (_props: UserDashboardProps) => {
   const { user } = useUser();
   const navigate = useNavigate();
   const [ticket, setTicket] = useState<any>(null);
@@ -23,7 +23,7 @@ const UserDashboard = ({ onError }: UserDashboardProps) => {
     }
   }, []);
 
-  const getInitials = (name?: string) => {
+  const getInitials = (name?: string | null) => {
     if (!name) return "U";
     return name
       .split(" ")

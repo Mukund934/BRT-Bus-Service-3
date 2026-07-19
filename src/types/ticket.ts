@@ -1,3 +1,16 @@
+export interface Ticket {
+  ticketId: string;
+  route: string;
+  fromStop: string;
+  toStop: string;
+  departureTime: string;
+  arrivalTime: string;
+  bookingTime: string;
+  fare: number;
+  status: "ACTIVE" | "EXPIRED";
+  qrData: string;
+}
+
 export const STOPS = [
   "HNLU",
   "Balco Medical Center",

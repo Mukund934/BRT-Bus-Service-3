@@ -1,11 +1,9 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import { useUser } from "@/contexts/UserContext";
 
 const Login = () => {
   const [isActive, setIsActive] = useState(false);
   const { signIn, signUp, signInWithGoogle, user } = useUser();
-  const navigate = useNavigate();
 
   // Sign In States
   const [signInEmail, setSignInEmail] = useState("");
