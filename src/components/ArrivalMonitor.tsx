@@ -1,27 +1,12 @@
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
+import { rtdb } from "@/firebase";
+import { ref, onValue, off } from "firebase/database";
 import { useUser } from "@/contexts/UserContext";
 import { useNotification } from "@/components/NotificationPopup";
+import { STOP_COORDS, ARRIVAL_ALERT_MINUTES, isLiveStatus } from "@/types/ticket";
 
-const API_URL = "https://location-backend-aqvu.onrender.com/api/location";
-
-const STOP_COORDS: Record<string, { lat: number; lng: number }> = {
-  "HNLU": { lat: 21.2514, lng: 81.6296 },
-  "Balco Medical Center": { lat: 21.2480, lng: 81.6350 },
-  "Sector 30": { lat: 21.2460, lng: 81.6400 },
-  "IIM": { lat: 21.2440, lng: 81.6420 },
-  "Sector 29": { lat: 21.2420, lng: 81.6450 },
-  "Sector 27": { lat: 21.2400, lng: 81.6480 },
-  "South Block": { lat: 21.2380, lng: 81.6510 },
-  "Indravati Bhavan": { lat: 21.2360, lng: 81.6540 },
-  "Mahanadi Bhavan": { lat: 21.2340, lng: 81.6560 },
-  "North Block": { lat: 21.2320, lng: 81.6580 },
-  "Ekatm Path": { lat: 21.2300, lng: 81.6600 },
-  "CBD": { lat: 21.2280, lng: 81.6620 },
-  "Sector 15": { lat: 21.2260, lng: 81.6650 },
-  "Telibandha": { lat: 21.2230, lng: 81.6680 },
-  "DKS Bhavan": { lat: 21.2200, lng: 81.6710 },
-  "Railway Station": { lat: 21.2100, lng: 81.6300 },
-};
+const AVERAGE_SPEED_KMPH = 30;
+const STALE_LOCATION_MS = 120000;
 
 function haversine(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371;
@@ -36,39 +21,50 @@ function haversine(lat1: number, lon1: number, lat2: number, lon2: number): numb
 const ArrivalMonitor = () => {
   const { user, profile, activeTicket } = useUser();
   const { notify } = useNotification();
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
-    if (!user || !profile?.notifications_enabled || !activeTicket) {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-      return;
-    }
+    if (!user || !profile?.notifications_enabled || !activeTicket) return;
+    if (!isLiveStatus(activeTicket.status)) return;
 
-    const stopName = activeTicket.from_stop;
+    const stopName = activeTicket.fromStop;
     const stopCoord = STOP_COORDS[stopName];
     if (!stopCoord) return;
 
-    const poll = async () => {
-      try {
-        const res = await fetch(API_URL);
-        const data = await res.json();
-        if (!data?.latitude || !data?.longitude) return;
+    const busRef = ref(rtdb, "busLocations");
 
-        const dist = haversine(data.latitude, data.longitude, stopCoord.lat, stopCoord.lng);
-        const avgSpeed = 30;
-        const eta = Math.round((dist / avgSpeed) * 60);
+    const handleValue = (snapshot: any) => {
+      if (!snapshot.exists()) return;
 
-        if (eta <= 5) {
-          notify(data.busNumber || "101", stopName, eta);
-        }
-      } catch (err) {
-        console.error("Arrival poll error:", err);
+      const buses = Object.values(snapshot.val()) as Array<{
+        lat: number;
+        lng: number;
+        name?: string;
+        updatedAt?: number;
+      }>;
+
+      const now = Date.now();
+      let bestEta: number | null = null;
+
+      buses.forEach((bus) => {
+        if (typeof bus?.lat !== "number" || typeof bus?.lng !== "number") return;
+        if (bus.updatedAt && now - bus.updatedAt > STALE_LOCATION_MS) return;
+
+        const dist = haversine(bus.lat, bus.lng, stopCoord.lat, stopCoord.lng);
+        const eta = Math.round((dist / AVERAGE_SPEED_KMPH) * 60);
+
+        if (bestEta === null || eta < bestEta) bestEta = eta;
+      });
+
+      if (bestEta !== null && bestEta <= ARRIVAL_ALERT_MINUTES) {
+        notify(activeTicket.route, stopName, bestEta);
       }
     };
 
-    poll();
-    intervalRef.current = setInterval(poll, 10000);
-    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
+    onValue(busRef, handleValue, (err) => {
+      console.error("Arrival monitor error:", err);
+    });
+
+    return () => off(busRef, "value", handleValue);
   }, [user, profile?.notifications_enabled, activeTicket, notify]);
 
   return null;

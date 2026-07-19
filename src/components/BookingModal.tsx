@@ -1,21 +1,11 @@
 import { useState } from "react";
-import { STOPS, calculateFare } from "@/types/ticket";
-
-function parseTimeToDate(timeStr: string) {
-	const now = new Date();
-	const [time = "", modifier] = timeStr.split(" ");
-	let [hours = 0, minutes = 0] = time.split(":").map(Number);
-
-	if (modifier === "PM" && hours !== 12) hours += 12;
-	if (modifier === "AM" && hours === 12) hours = 0;
-
-	const date = new Date(now);
-	date.setHours(hours);
-	date.setMinutes(minutes);
-	date.setSeconds(0);
-
-	return date;
-}
+import {
+	STOPS,
+	calculateFare,
+	parseTimeToDate,
+	findConflictingTicket,
+} from "@/types/ticket";
+import { useUser } from "@/contexts/UserContext";
 
 interface BookingModalProps {
 	open: boolean;
@@ -41,12 +31,18 @@ const BookingModal = ({
 	rowData,
 	columns,
 }: BookingModalProps) => {
+	const { tickets } = useUser();
 	const [fromStop, setFromStop] = useState("HNLU");
 	const [toStop, setToStop] = useState("");
 
 	if (!open) return null;
 
-	const fromIdx = STOPS.indexOf(fromStop);
+	const servedStops = STOPS.filter((s) => {
+		const idx = columns.indexOf(s);
+		return idx >= 0 && !!rowData[idx];
+	});
+
+	const fromIdx = servedStops.indexOf(fromStop);
 
 	const fromColIdx = columns.indexOf(fromStop);
 	const dynamicDepartureTime =
@@ -54,13 +50,24 @@ const BookingModal = ({
 			? rowData[fromColIdx]
 			: departureTime;
 
-	const availableTo = fromIdx >= 0 ? STOPS.slice(fromIdx + 1) : [];
+	const availableTo = fromIdx >= 0 ? servedStops.slice(fromIdx + 1) : [];
 
 	const fare = toStop ? calculateFare(fromStop, toStop) : 0;
 
 	const toColIdx = columns.indexOf(toStop);
 	const arrivalTime =
 		toColIdx >= 0 && rowData[toColIdx] ? rowData[toColIdx] : departureTime;
+
+	const departureDate = parseTimeToDate(dynamicDepartureTime);
+	const arrivalDate = parseTimeToDate(arrivalTime);
+	if (arrivalDate < departureDate) arrivalDate.setDate(arrivalDate.getDate() + 1);
+
+	const hasDeparted = departureDate < new Date();
+	const conflict = toStop
+		? findConflictingTicket(tickets, departureDate, arrivalDate)
+		: null;
+
+	const blocked = !toStop || hasDeparted || !!conflict;
 
 	return (
 		<div
@@ -91,7 +98,7 @@ const BookingModal = ({
 					}}
 					className="brt-input mb-4"
 				>
-					{STOPS.map((s) => (
+					{servedStops.map((s) => (
 						<option key={s} value={s}>
 							{s}
 						</option>
@@ -156,6 +163,24 @@ const BookingModal = ({
 					</div>
 				)}
 
+				{hasDeparted && (
+					<div className="rounded-xl bg-destructive/10 border border-destructive/30 px-4 py-3 mb-4">
+						<p className="text-sm text-destructive font-medium">
+							This bus has already departed. Please choose a later
+							service.
+						</p>
+					</div>
+				)}
+
+				{conflict && !hasDeparted && (
+					<div className="rounded-xl bg-destructive/10 border border-destructive/30 px-4 py-3 mb-4">
+						<p className="text-sm text-destructive font-medium">
+							You already have a ticket from {conflict.fromStop} to{" "}
+							{conflict.toStop} that overlaps this journey.
+						</p>
+					</div>
+				)}
+
 				<div className="flex gap-3">
 					<button
 						onClick={onClose}
@@ -165,17 +190,8 @@ const BookingModal = ({
 					</button>
 
 					<button
-						disabled={!toStop}
+						disabled={blocked}
 						onClick={() => {
-							const now = new Date();
-							const departureDate =
-								parseTimeToDate(dynamicDepartureTime);
-
-							if (departureDate < now) {
-								alert("This bus has already departed!");
-								return;
-							}
-
 							onProceedPayment(
 								fromStop,
 								toStop,

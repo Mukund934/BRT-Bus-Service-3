@@ -1,10 +1,12 @@
 import { useState, useEffect } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { useUser } from "@/contexts/UserContext";
+import { PaymentStatus } from "@/types/ticket";
 
 interface PaymentModalProps {
   open: boolean;
   onClose: () => void;
+  route: string;
   fromStop: string;
   toStop: string;
   fare: number;
@@ -14,19 +16,10 @@ interface PaymentModalProps {
   onSuccess: () => void;
 }
 
-type PaymentStatus = "PENDING" | "PROCESSING" | "SUCCESS" | "FAILED";
-
-const generateTicketId = () => {
-  return "TICKET-" + Math.random().toString(36).substring(2, 10).toUpperCase();
-};
-
-const generatePaymentId = () => {
-  return "PAY-" + Math.random().toString(36).substring(2, 10).toUpperCase();
-};
-
 const PaymentModal = ({
   open,
   onClose,
+  route,
   fromStop,
   toStop,
   fare,
@@ -35,47 +28,65 @@ const PaymentModal = ({
   bookingTime, // ✅ ADDED
   onSuccess,
 }: PaymentModalProps) => {
-  const { user } = useUser();
+  const { user, bookTicket } = useUser();
   const [status, setStatus] = useState<PaymentStatus>("PENDING");
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    if (open) setStatus("PENDING");
+    if (open) {
+      setStatus("PENDING");
+      setError("");
+    }
   }, [open]);
 
   if (!open) return null;
 
   const handlePay = async () => {
-    if (!user) return;
+    if (!user) {
+      setError("You must be logged in to complete this payment.");
+      setStatus("FAILED");
+      return;
+    }
 
     setStatus("PROCESSING");
 
-    await new Promise((r) => setTimeout(r, 2000));
+    try {
+      await new Promise((r) => setTimeout(r, 2000));
 
-    const ticketId = generateTicketId();
-    const paymentId = generatePaymentId();
+      const ticket = bookTicket({
+        userId: user.uid,
+        userEmail: user.email || "",
+        route,
+        fromStop,
+        toStop,
+        fare,
+        departureTime,
+        arrivalTime,
+        bookingTime,
+      });
 
-    const ticketData = {
-      ticketId,
-      paymentId,
-      route: "101",
-      from: fromStop,
-      to: toStop,
-      departure: departureTime,
-      arrival: arrivalTime,
-      fare,
-      user: user.email,
-      bookingTime, // ✅ STORED (IMPORTANT)
-    };
+      if (!ticket) {
+        setError(
+          "We could not confirm this booking. The service may have departed, you may already have an overlapping ticket, or your device storage is full."
+        );
+        setStatus("FAILED");
+        return;
+      }
 
-    localStorage.setItem("latestTicket", JSON.stringify(ticketData));
-
-    setStatus("SUCCESS");
+      setStatus("SUCCESS");
+    } catch (err) {
+      console.error("Payment error:", err);
+      setError("Could not save your ticket. Please try again.");
+      setStatus("FAILED");
+    }
   };
 
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
-      onClick={onClose}
+      onClick={() => {
+        if (status !== "PROCESSING") onClose();
+      }}
     >
       <div
         className="bg-card rounded-2xl p-8 w-full max-w-md mx-4 animate-scale-in"
@@ -148,12 +159,25 @@ const PaymentModal = ({
               Payment Failed
             </h3>
 
-            <button
-              onClick={() => setStatus("PENDING")}
-              className="brt-button"
-            >
-              Try Again
-            </button>
+            <p className="text-sm text-muted-foreground text-center mb-5">
+              {error || "Something went wrong while processing your payment."}
+            </p>
+
+            <div className="flex gap-3">
+              <button
+                onClick={onClose}
+                className="px-5 py-2.5 rounded-xl border border-border text-foreground font-medium transition-all duration-300 hover:bg-secondary"
+              >
+                Close
+              </button>
+
+              <button
+                onClick={() => setStatus("PENDING")}
+                className="brt-button"
+              >
+                Try Again
+              </button>
+            </div>
           </div>
         )}
       </div>

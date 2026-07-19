@@ -18,6 +18,23 @@ import {
   updateDoc,
 } from "firebase/firestore";
 import { auth, googleProvider, db } from "@/firebase";
+import {
+  Ticket,
+  TicketDraft,
+  createTicket,
+  resolveTicketStatus,
+  isLiveStatus,
+  getDepartureAt,
+  getArrivalAt,
+  findConflictingTicket,
+} from "@/types/ticket";
+import {
+  loadTickets,
+  saveTickets,
+  addTicket,
+  replaceTicket,
+  migrateLegacyTicket,
+} from "@/lib/ticketStorage";
 
 interface FirestoreUser {
   uid: string;
@@ -29,18 +46,21 @@ interface FirestoreUser {
 }
 
 interface UserProfile {
-  notifications_enabled?: boolean;
-}
-
-interface ActiveTicket {
-  from_stop: string;
+  name: string;
+  email: string;
+  notifications_enabled: boolean;
 }
 
 interface UserContextType {
   user: FirebaseUser | null;
   role: "user" | "admin" | "driver" | null;
   profile: UserProfile | null;
-  activeTicket: ActiveTicket | null;
+  tickets: Ticket[];
+  activeTicket: Ticket | null;
+  ticketHistory: Ticket[];
+  bookTicket: (draft: TicketDraft) => Ticket | null;
+  cancelTicket: (ticketId: string) => void;
+  refreshTickets: () => void;
   loading: boolean;
   signUp: (name: string, email: string, password: string) => Promise<string | null>;
   signIn: (email: string, password: string) => Promise<string | null>;
@@ -58,9 +78,24 @@ const UserContext = createContext<UserContextType | null>(null);
 export const UserProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [role, setRole] = useState<"user" | "admin" | "driver" | null>(null);
-  const [profile] = useState<UserProfile | null>(null);
-  const [activeTicket] = useState<ActiveTicket | null>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const syncStatuses = (list: Ticket[]) => {
+    const now = new Date();
+    let changed = false;
+
+    const next = list.map((t) => {
+      const status = resolveTicketStatus(t, now);
+      if (status === t.status) return t;
+
+      changed = true;
+      return { ...t, status, updatedAt: now.toISOString() };
+    });
+
+    return changed ? next : list;
+  };
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (u) => {
@@ -73,15 +108,36 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
           const snap = await getDoc(ref);
 
           if (snap.exists()) {
-            const userRole = snap.data().role || "user";
+            const data = snap.data();
+            const userRole = data.role || "user";
             setRole(userRole as "user" | "admin" | "driver");
+            setProfile({
+              name: data.name || u.displayName || "Passenger",
+              email: data.email || u.email || "",
+              notifications_enabled: data.notifications_enabled !== false,
+            });
           } else {
             // User doc doesn't exist, default to 'user'
             setRole("user");
+            setProfile({
+              name: u.displayName || "Passenger",
+              email: u.email || "",
+              notifications_enabled: true,
+            });
           }
+
+          migrateLegacyTicket(u.uid, u.email || "");
+
+          const stored = loadTickets(u.uid);
+          const synced = syncStatuses(stored);
+
+          if (synced !== stored) saveTickets(u.uid, synced);
+          setTickets(synced);
         } else {
           setUser(null);
           setRole(null);
+          setProfile(null);
+          setTickets([]);
         }
       } catch (error) {
         console.error("Error fetching user role:", error);
@@ -93,6 +149,70 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
 
     return () => unsub();
   }, []);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const tick = () => {
+      setTickets((prev) => {
+        const next = syncStatuses(prev);
+        if (next !== prev) saveTickets(user.uid, next);
+        return next;
+      });
+    };
+
+    const interval = setInterval(tick, 15000);
+
+    return () => clearInterval(interval);
+  }, [user]);
+
+  const refreshTickets = () => {
+    if (!user) return;
+
+    const stored = loadTickets(user.uid);
+    const synced = syncStatuses(stored);
+
+    if (synced !== stored) saveTickets(user.uid, synced);
+    setTickets(synced);
+  };
+
+  const bookTicket = (draft: TicketDraft): Ticket | null => {
+    if (!user) return null;
+
+    const now = new Date();
+    const ticket = createTicket(draft, now);
+
+    if (getDepartureAt(ticket) < now) return null;
+
+    const conflict = findConflictingTicket(
+      tickets,
+      getDepartureAt(ticket),
+      getArrivalAt(ticket)
+    );
+
+    if (conflict) return null;
+
+    const next = addTicket(user.uid, ticket);
+    if (!next) return null;
+
+    setTickets(next);
+    return ticket;
+  };
+
+  const cancelTicket = (ticketId: string) => {
+    if (!user) return;
+
+    const target = tickets.find((t) => t.ticketId === ticketId);
+    if (!target || !isLiveStatus(target.status)) return;
+
+    const next = replaceTicket(user.uid, {
+      ...target,
+      status: "CANCELLED",
+      updatedAt: new Date().toISOString(),
+    });
+
+    if (next) setTickets(next);
+  };
 
   const signUp = async (
     name: string,
@@ -289,13 +409,25 @@ const getAllUsers = async (): Promise<FirestoreUser[]> => {
     }
   };
 
+  const activeTicket =
+    tickets
+      .filter((t) => isLiveStatus(t.status))
+      .sort((a, b) => getDepartureAt(a).getTime() - getDepartureAt(b).getTime())[0] || null;
+
+  const ticketHistory = tickets.filter((t) => !isLiveStatus(t.status));
+
   return (
     <UserContext.Provider
       value={{
         user,
         role,
         profile,
+        tickets,
         activeTicket,
+        ticketHistory,
+        bookTicket,
+        cancelTicket,
+        refreshTickets,
         loading,
         signUp,
         signIn,

@@ -1,70 +1,89 @@
-import { useState, useEffect } from "react";
-import { QRCodeSVG } from "qrcode.react";
-import type { Ticket } from "@/types/ticket";
+import { useState, useEffect, useRef } from "react";
+import { QRCodeCanvas } from "qrcode.react";
+import { Copy, Check, Download } from "lucide-react";
+import { Ticket, TicketStatus, isLiveStatus } from "@/types/ticket";
 
 interface VirtualTicketProps {
   ticket: Ticket;
+  onCancel?: (ticketId: string) => void;
 }
 
-// ✅ ADDED: time parsing
-function parseTimeToDate(timeStr: string, baseDate: string) {
-  const [time = "", period] = timeStr.split(" ");
-  let [h = 0, m = 0] = time.split(":").map(Number);
+const STATUS_LABELS: Record<TicketStatus, string> = {
+  PENDING: "Pending",
+  ACTIVE: "Active",
+  BOARDING_SOON: "Boarding Soon",
+  IN_TRANSIT: "In Transit",
+  COMPLETED: "Completed",
+  CANCELLED: "Cancelled",
+};
 
-  if (period === "PM" && h !== 12) h += 12;
-  if (period === "AM" && h === 12) h = 0;
+const STATUS_STYLES: Record<TicketStatus, string> = {
+  PENDING: "bg-yellow-500/20 text-yellow-100",
+  ACTIVE: "bg-green-500/20 text-green-200",
+  BOARDING_SOON: "bg-amber-500/20 text-amber-100",
+  IN_TRANSIT: "bg-blue-500/20 text-blue-100",
+  COMPLETED: "bg-slate-500/20 text-slate-100",
+  CANCELLED: "bg-red-500/20 text-red-200",
+};
 
-  const d = new Date(baseDate);
-  d.setHours(h);
-  d.setMinutes(m);
-  d.setSeconds(0);
+const formatCountdown = (ms: number) => {
+  const h = Math.floor(ms / 3600000);
+  const m = Math.floor((ms % 3600000) / 60000);
+  const s = Math.floor((ms % 60000) / 1000);
 
-  return d;
-}
+  return `${h}h ${m}m ${s}s`;
+};
 
-// ✅ ADDED: expiry = arrival + 15 min
-function getExpiryTime(arrival: string, bookingTime: string) {
-  const d = parseTimeToDate(arrival, bookingTime);
-  d.setMinutes(d.getMinutes() + 15);
-  return d;
-}
-
-const VirtualTicket = ({ ticket }: VirtualTicketProps) => {
+const VirtualTicket = ({ ticket, onCancel }: VirtualTicketProps) => {
   const [timeLeft, setTimeLeft] = useState("");
-  const [isExpired, setIsExpired] = useState(ticket.status === "EXPIRED");
+  const [copied, setCopied] = useState(false);
+  const qrRef = useRef<HTMLDivElement>(null);
+
+  const live = isLiveStatus(ticket.status);
 
   useEffect(() => {
-    if (ticket.status !== "ACTIVE") {
-      setIsExpired(true);
+    if (!live) {
+      setTimeLeft("");
       return;
     }
 
     const update = () => {
-      const now = new Date().getTime();
-
-      // ✅ FIXED: compute expiry dynamically
-      const exp = getExpiryTime(ticket.arrivalTime, ticket.bookingTime).getTime();
-
-      const diff = exp - now;
-
-      if (diff <= 0) {
-        setIsExpired(true);
-        setTimeLeft("Expired");
-        return;
-      }
-
-      const h = Math.floor(diff / 3600000);
-      const m = Math.floor((diff % 3600000) / 60000);
-      const s = Math.floor((diff % 60000) / 1000);
-
-      setTimeLeft(`${h}h ${m}m ${s}s`);
+      const diff = new Date(ticket.expiresAt).getTime() - Date.now();
+      setTimeLeft(diff <= 0 ? "Expired" : formatCountdown(diff));
     };
 
     update();
     const iv = setInterval(update, 1000);
 
     return () => clearInterval(iv);
-  }, [ticket]);
+  }, [ticket.expiresAt, live]);
+
+  useEffect(() => {
+    if (!copied) return;
+
+    const t = setTimeout(() => setCopied(false), 2000);
+
+    return () => clearTimeout(t);
+  }, [copied]);
+
+  const copyBookingId = async () => {
+    try {
+      await navigator.clipboard.writeText(ticket.ticketId);
+      setCopied(true);
+    } catch (err) {
+      console.error("Copy failed:", err);
+    }
+  };
+
+  const downloadQr = () => {
+    const canvas = qrRef.current?.querySelector("canvas");
+    if (!canvas) return;
+
+    const link = document.createElement("a");
+    link.download = `${ticket.ticketId}.png`;
+    link.href = canvas.toDataURL("image/png");
+    link.click();
+  };
 
   return (
     <div className="ticket-card animate-fade-in">
@@ -76,13 +95,9 @@ const VirtualTicket = ({ ticket }: VirtualTicketProps) => {
             <p className="text-lg font-bold tracking-tight">Route {ticket.route}</p>
           </div>
           <span
-            className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
-              isExpired
-                ? "bg-red-500/20 text-red-200"
-                : "bg-green-500/20 text-green-200"
-            }`}
+            className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${STATUS_STYLES[ticket.status]}`}
           >
-            {isExpired ? "Expired" : "Active"}
+            {STATUS_LABELS[ticket.status]}
           </span>
         </div>
       </div>
@@ -119,7 +134,7 @@ const VirtualTicket = ({ ticket }: VirtualTicketProps) => {
         </div>
 
         {/* Timer */}
-        {!isExpired && (
+        {live && (
           <div className="bg-secondary rounded-xl p-3 mb-5 text-center">
             <p className="text-xs text-muted-foreground mb-1">Valid for</p>
             <p className="text-xl font-bold text-primary tabular-nums tracking-wider">
@@ -130,12 +145,45 @@ const VirtualTicket = ({ ticket }: VirtualTicketProps) => {
 
         {/* QR Code */}
         <div className="flex flex-col items-center">
-          <div className="bg-white p-3 rounded-xl border border-border mb-2">
-            <QRCodeSVG value={ticket.qrData} size={120} level="M" />
+          <div
+            ref={qrRef}
+            className={`bg-white p-3 rounded-xl border border-border mb-2 ${
+              live ? "" : "opacity-40 grayscale"
+            }`}
+          >
+            <QRCodeCanvas value={ticket.qrData} size={120} level="M" />
           </div>
-          <p className="text-[10px] text-muted-foreground font-mono">
+
+          <button
+            onClick={copyBookingId}
+            className="flex items-center gap-1.5 text-[10px] text-muted-foreground font-mono hover:text-primary transition-colors"
+          >
+            {copied ? (
+              <Check className="w-3 h-3" />
+            ) : (
+              <Copy className="w-3 h-3" />
+            )}
             {ticket.ticketId}
-          </p>
+          </button>
+
+          <div className="flex gap-3 mt-4">
+            <button
+              onClick={downloadQr}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs font-medium text-foreground transition-all duration-300 hover:bg-secondary"
+            >
+              <Download className="w-3.5 h-3.5" />
+              Save QR
+            </button>
+
+            {live && onCancel && (
+              <button
+                onClick={() => onCancel(ticket.ticketId)}
+                className="px-3 py-1.5 rounded-lg border border-destructive/40 text-xs font-medium text-destructive transition-all duration-300 hover:bg-destructive/10"
+              >
+                Cancel Ticket
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>
