@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import RouteCard from "@/components/RouteCard";
-import heroBus from "@/assets/Raipur-Naya_Raipur_BRTS.png";
+import heroBus from "@/assets/hero-brts.webp";
 import { Clock, MapPin, Shield, Zap } from "lucide-react";
 import { getTripStops, getTrips, type Trip } from "@/domain/transit/schedule";
 
@@ -77,9 +77,19 @@ const Home = () => {
 
       <section className="relative w-full h-[420px] md:h-[520px] lg:h-[620px] overflow-hidden">
 
+        {/*
+          The largest-contentful-paint element. Intrinsic dimensions are
+          declared so the browser reserves the space before the image arrives
+          (no layout shift), and fetchPriority marks it as the one image worth
+          competing for bandwidth.
+        */}
         <img
           src={heroBus}
-          alt="BRT Bus"
+          alt="A BRT bus on the Raipur to Naya Raipur corridor"
+          width={1080}
+          height={572}
+          fetchPriority="high"
+          decoding="async"
           className="w-full h-full object-cover scale-[1.03]"
         />
 

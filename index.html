@@ -3,9 +3,19 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!--
+      Declared explicitly so the browser does not fall back to requesting
+      /favicon.ico. The 759 kB .ico that used to sit there was downloaded on
+      every first visit despite never being referenced anywhere.
+    -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+
+    <!-- Open the Firebase Auth connection while the bundle is still parsing. -->
+    <link rel="preconnect" href="https://identitytoolkit.googleapis.com" crossorigin />
+    <link rel="dns-prefetch" href="https://firestore.googleapis.com" />
+
     <title>BRT Bus Service</title>
-
-
   </head>
 
   <body>

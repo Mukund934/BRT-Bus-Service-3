@@ -5,8 +5,12 @@ import { POLLING } from "@/constants/config";
 import { useAuth } from "@/contexts/AuthContext";
 import { toSafeMessage } from "@/domain/auth/errors";
 import { PERMISSIONS, can } from "@/domain/auth/permissions";
-import { isLiveTrackingAvailable } from "@/firebase";
-import { publishLocation, stopPublishing, toBusId } from "@/services/locationService";
+import {
+  isLiveTrackingAvailable,
+  publishLocation,
+  stopPublishing,
+  toBusId,
+} from "@/services/locationService";
 
 interface DriverCoords {
   latitude: number;
@@ -93,10 +97,12 @@ const Driver = () => {
     };
   }, [actor]);
 
-  const startSharing = () => {
+  const startSharing = async () => {
     setError("");
 
-    if (!isLiveTrackingAvailable) {
+    // Resolves the on-demand Realtime Database load before promising the
+    // driver that their position is being broadcast.
+    if (!(await isLiveTrackingAvailable())) {
       setError("Live tracking is unavailable right now.");
       return;
     }
@@ -147,7 +153,7 @@ const Driver = () => {
             <div className="flex justify-center gap-4">
               {!isSharing ? (
                 <button
-                  onClick={startSharing}
+                  onClick={() => void startSharing()}
                   disabled={!mayPublish}
                   className="px-6 py-3 rounded-xl bg-green-600 text-white font-medium shadow hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
                 >

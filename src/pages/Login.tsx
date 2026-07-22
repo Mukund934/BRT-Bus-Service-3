@@ -1,8 +1,9 @@
-import { useId, useRef, useState, type FormEvent } from "react";
+import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { useAnnounce } from "@/components/a11y/LiveAnnouncer";
 import { useAuth } from "@/contexts/AuthContext";
 import { fieldErrors, signInSchema, signUpSchema } from "@/domain/validation/schemas";
+import { prefetchFirestore } from "@/firebase";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 interface FieldProps {
@@ -58,6 +59,13 @@ const Login = () => {
 	 * confuses password managers.
 	 */
 	const isMobile = useIsMobile();
+
+	/*
+		Someone on this page is about to need Firestore, so its chunk is
+		fetched during idle time. Prefetching it globally would push 243 kB
+		onto every visitor who only ever reads the timetable.
+	*/
+	useEffect(() => prefetchFirestore(), []);
 
 	const [isSignUpView, setIsSignUpView] = useState(false);
 

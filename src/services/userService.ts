@@ -1,35 +1,34 @@
 /**
  * Firestore access for user records and roles.
  *
- * The permission checks in this module are the SECOND line of defence. They
- * exist so the UI fails fast and predictably, and so a privileged call is
- * never attempted without intent. They are not what keeps data safe - the
- * matching rules in `firestore.rules` are, because a service function running
- * in the browser can always be called with whatever arguments the caller
- * likes.
+ * The Firestore SDK is imported on demand rather than at module load. This
+ * module is reachable from the auth context, which every page mounts, so a
+ * static import would put ~243 kB of Firestore into the first byte a visitor
+ * downloads even if they never sign in.
+ *
+ * The permission checks below are the SECOND line of defence. They exist so
+ * the UI fails fast and predictably, and so a privileged call is never
+ * attempted without intent. They are not what keeps data safe - the matching
+ * rules in `firestore.rules` are, because a service function running in the
+ * browser can always be called with whatever arguments the caller likes.
  *
  * Read that file alongside this one: every function here has a corresponding
  * rule, and the rule is the authoritative version.
  */
 
-import {
-  Timestamp,
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  limit,
-  query,
-  setDoc,
-  updateDoc,
-} from "firebase/firestore";
 import type { User as FirebaseUser } from "firebase/auth";
-import { db } from "@/firebase";
+import { getDb } from "@/firebase";
 import { REMOTE_PATHS } from "@/constants/config";
 import { AuthorizationError } from "@/domain/auth/errors";
 import { PERMISSIONS, can } from "@/domain/auth/permissions";
 import { userRoleSchema } from "@/domain/validation/schemas";
-import { DEFAULT_ROLE, type Actor, type UserProfile, type UserRecord } from "@/types/user";
+import {
+  DEFAULT_ROLE,
+  isTimestampLike,
+  type Actor,
+  type UserProfile,
+  type UserRecord,
+} from "@/types/user";
 
 /**
  * Client-side bound on a roster read.
@@ -42,7 +41,11 @@ import { DEFAULT_ROLE, type Actor, type UserProfile, type UserRecord } from "@/t
  */
 export const MAX_USERS_PER_READ = 500;
 
-const userDoc = (uid: string) => doc(db, REMOTE_PATHS.USERS, uid);
+/** Loads the Firestore SDK and database handle together. */
+const firestore = async () => {
+  const [sdk, db] = await Promise.all([import("firebase/firestore"), getDb()]);
+  return { ...sdk, db };
+};
 
 /**
  * Narrows a stored role.
@@ -66,7 +69,7 @@ const toRecord = (uid: string, data: Record<string, unknown>): UserRecord => ({
   name: typeof data.name === "string" ? data.name : undefined,
   email: typeof data.email === "string" ? data.email : undefined,
   role: toRole(data.role),
-  createdAt: data.createdAt instanceof Timestamp ? data.createdAt : undefined,
+  createdAt: isTimestampLike(data.createdAt) ? data.createdAt : undefined,
   photoURL: typeof data.photoURL === "string" ? data.photoURL : undefined,
   notifications_enabled:
     typeof data.notifications_enabled === "boolean"
@@ -76,7 +79,9 @@ const toRecord = (uid: string, data: Record<string, unknown>): UserRecord => ({
 
 /** Reads a user's stored record, or null when they have none yet. */
 export const fetchUserRecord = async (uid: string): Promise<UserRecord | null> => {
-  const snap = await getDoc(userDoc(uid));
+  const { doc, getDoc, db } = await firestore();
+
+  const snap = await getDoc(doc(db, REMOTE_PATHS.USERS, uid));
 
   return snap.exists() ? toRecord(uid, snap.data()) : null;
 };
@@ -87,15 +92,20 @@ export const fetchUserRecord = async (uid: string): Promise<UserRecord | null> =
  * The role is hardcoded to the default and never taken from a caller. The
  * corresponding rule enforces the same thing, so even a direct API call
  * cannot self-register as an administrator.
+ *
+ * `createdAt` is written as a plain Date; Firestore stores it as a Timestamp
+ * and reads it back as one, which avoids needing the Timestamp class here.
  */
 export const createUserRecord = async (
   user: FirebaseUser,
   name?: string
 ): Promise<UserRecord> => {
-  const displayName = name ?? user.displayName ?? "User";
-  const createdAt = Timestamp.now();
+  const { doc, setDoc, db } = await firestore();
 
-  await setDoc(userDoc(user.uid), {
+  const displayName = name ?? user.displayName ?? "User";
+  const createdAt = new Date();
+
+  await setDoc(doc(db, REMOTE_PATHS.USERS, user.uid), {
     name: displayName,
     email: user.email,
     role: DEFAULT_ROLE,
@@ -108,7 +118,7 @@ export const createUserRecord = async (
     name: displayName,
     email: user.email ?? undefined,
     role: DEFAULT_ROLE,
-    createdAt,
+    createdAt: { toDate: () => createdAt },
     photoURL: user.photoURL ?? undefined,
   };
 };
@@ -158,6 +168,8 @@ export const fetchAllUsers = async (actor: Actor | null): Promise<UserRoster> =>
     throw new AuthorizationError(PERMISSIONS.READ_ALL_USERS);
   }
 
+  const { collection, getDocs, limit, query, db } = await firestore();
+
   const snapshot = await getDocs(
     query(collection(db, REMOTE_PATHS.USERS), limit(MAX_USERS_PER_READ))
   );
@@ -165,7 +177,7 @@ export const fetchAllUsers = async (actor: Actor | null): Promise<UserRoster> =>
   const users = snapshot.docs.map((entry) => toRecord(entry.id, entry.data()));
 
   const createdAtMs = (record: UserRecord): number =>
-    record.createdAt instanceof Timestamp ? record.createdAt.toDate().getTime() : 0;
+    record.createdAt ? record.createdAt.toDate().getTime() : 0;
 
   return {
     users: users.sort((a, b) => createdAtMs(b) - createdAtMs(a)),
@@ -199,17 +211,16 @@ export const updateUserRole = async (
   }
 
   try {
-    const ref = userDoc(userId);
+    const { doc, getDoc, setDoc, updateDoc, db } = await firestore();
+
+    const ref = doc(db, REMOTE_PATHS.USERS, userId);
     const snap = await getDoc(ref);
+    const now = new Date();
 
     if (snap.exists()) {
-      await updateDoc(ref, { role: parsed.data, updatedAt: Timestamp.now() });
+      await updateDoc(ref, { role: parsed.data, updatedAt: now });
     } else {
-      await setDoc(ref, {
-        role: parsed.data,
-        createdAt: Timestamp.now(),
-        updatedAt: Timestamp.now(),
-      });
+      await setDoc(ref, { role: parsed.data, createdAt: now, updatedAt: now });
     }
 
     return { ok: true };

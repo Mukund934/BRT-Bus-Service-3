@@ -1,6 +1,10 @@
 /**
  * Live bus positions.
  *
+ * The Realtime Database SDK (~165 kB) is imported on demand. Only the map,
+ * the driver screen and the arrival monitor need it, so a visitor reading the
+ * timetable never downloads it.
+ *
  * PRIVACY: the `busLocations` node is world-readable, because the live map is
  * a public page. Everything published here is therefore visible to anyone on
  * the internet, so the payload is reduced to the minimum the map needs:
@@ -12,8 +16,8 @@
  * accident.
  */
 
-import { off, onValue, ref, remove, set, type DataSnapshot } from "firebase/database";
-import { rtdb } from "@/firebase";
+import type { DataSnapshot } from "firebase/database";
+import { getRtdb } from "@/firebase";
 import { REMOTE_PATHS } from "@/constants/config";
 import { AuthorizationError } from "@/domain/auth/errors";
 import { PERMISSIONS, can } from "@/domain/auth/permissions";
@@ -24,6 +28,16 @@ import type { Actor } from "@/types/user";
 export interface LiveBus extends ValidatedBusPosition {
   busId: string;
 }
+
+/** Loads the Realtime Database SDK and handle together. */
+const database = async () => {
+  const [sdk, rtdb] = await Promise.all([import("firebase/database"), getRtdb()]);
+  return { ...sdk, rtdb };
+};
+
+/** Whether live tracking can be used at all in this environment. */
+export const isLiveTrackingAvailable = async (): Promise<boolean> =>
+  (await getRtdb()) !== null;
 
 /**
  * A short, stable, non-identifying label for a driver's vehicle.
@@ -40,9 +54,6 @@ export const toBusId = (uid: string): string => {
 
   return `BUS-${Math.abs(hash).toString(36).toUpperCase().slice(0, 4).padStart(4, "0")}`;
 };
-
-const locationRef = (uid: string) =>
-  rtdb ? ref(rtdb, `${REMOTE_PATHS.BUS_LOCATIONS}/${uid}`) : null;
 
 export interface Coords {
   latitude: number;
@@ -63,8 +74,8 @@ export const publishLocation = async (
     throw new AuthorizationError(PERMISSIONS.PUBLISH_LOCATION);
   }
 
-  const node = locationRef(actor!.uid);
-  if (!node) return;
+  const { ref, set, rtdb } = await database();
+  if (!rtdb) return;
 
   const payload = {
     lat: coords.latitude,
@@ -82,70 +93,89 @@ export const publishLocation = async (
     return;
   }
 
-  await set(node, payload);
+  await set(ref(rtdb, `${REMOTE_PATHS.BUS_LOCATIONS}/${actor!.uid}`), payload);
 };
 
 /** Removes the driver's position when they stop sharing. */
 export const stopPublishing = async (actor: Actor | null): Promise<void> => {
   if (!actor) return;
 
-  const node = locationRef(actor.uid);
-  if (!node) return;
+  const { ref, remove, rtdb } = await database();
+  if (!rtdb) return;
 
-  await remove(node);
+  await remove(ref(rtdb, `${REMOTE_PATHS.BUS_LOCATIONS}/${actor.uid}`));
 };
 
 /**
  * Subscribes to live bus positions.
  *
+ * Deliberately keeps a synchronous signature returning an unsubscribe
+ * function, even though loading the SDK is asynchronous: React effects need
+ * to return their cleanup immediately. Unsubscribing before the SDK finishes
+ * loading is handled by the `cancelled` flag, so a component that mounts and
+ * unmounts quickly never leaves a listener attached.
+ *
  * Every entry is schema-checked. A malformed or hostile record - a string
  * where a latitude should be, an injected extra field - is dropped rather
  * than rendered, so the public node cannot drive the UI into a bad state.
- *
- * Returns an unsubscribe function; a no-op when live tracking is unavailable.
  */
 export const subscribeToBuses = (
   onBuses: (buses: LiveBus[]) => void,
   onError?: (error: Error) => void
 ): (() => void) => {
-  if (!rtdb) {
-    onBuses([]);
-    return () => {};
-  }
+  let cancelled = false;
+  let detach: () => void = () => {};
 
-  const node = ref(rtdb, REMOTE_PATHS.BUS_LOCATIONS);
+  void (async () => {
+    const { ref, onValue, off, rtdb } = await database();
 
-  const handleValue = (snapshot: DataSnapshot) => {
-    if (!snapshot.exists()) {
+    if (cancelled) return;
+
+    if (!rtdb) {
+      onError?.(new Error("Live tracking is unavailable."));
       onBuses([]);
       return;
     }
 
-    const raw: unknown = snapshot.val();
+    const node = ref(rtdb, REMOTE_PATHS.BUS_LOCATIONS);
 
-    if (typeof raw !== "object" || raw === null) {
+    const handleValue = (snapshot: DataSnapshot) => {
+      if (!snapshot.exists()) {
+        onBuses([]);
+        return;
+      }
+
+      const raw: unknown = snapshot.val();
+
+      if (typeof raw !== "object" || raw === null) {
+        onBuses([]);
+        return;
+      }
+
+      const buses: LiveBus[] = [];
+
+      for (const [uid, value] of Object.entries(raw)) {
+        const parsed = busPositionSchema.safeParse(value);
+
+        if (!parsed.success) continue;
+
+        buses.push({ ...parsed.data, busId: parsed.data.busId ?? toBusId(uid) });
+      }
+
+      onBuses(buses);
+    };
+
+    onValue(node, handleValue, (error) => {
+      console.error("Live bus subscription failed:", error);
+      onError?.(error);
       onBuses([]);
-      return;
-    }
+    });
 
-    const buses: LiveBus[] = [];
+    detach = () => off(node, "value", handleValue);
+  })();
 
-    for (const [uid, value] of Object.entries(raw)) {
-      const parsed = busPositionSchema.safeParse(value);
-
-      if (!parsed.success) continue;
-
-      buses.push({ ...parsed.data, busId: parsed.data.busId ?? toBusId(uid) });
-    }
-
-    onBuses(buses);
+  return () => {
+    cancelled = true;
+    detach();
   };
-
-  onValue(node, handleValue, (error) => {
-    console.error("Live bus subscription failed:", error);
-    onError?.(error);
-    onBuses([]);
-  });
-
-  return () => off(node, "value", handleValue);
 };

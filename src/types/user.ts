@@ -5,7 +5,22 @@
  * could not name the shapes they were consuming.
  */
 
-import type { Timestamp } from "firebase/firestore";
+/**
+ * A Firestore Timestamp, structurally.
+ *
+ * Declared here rather than imported from `firebase/firestore` so that these
+ * types carry no dependency on the Firestore SDK - importing the real
+ * `Timestamp` for its type would be erased at compile time, but any file that
+ * also needed it as a value would drag the whole 243 kB module in.
+ */
+export interface TimestampLike {
+  toDate(): Date;
+}
+
+export const isTimestampLike = (value: unknown): value is TimestampLike =>
+  typeof value === "object" &&
+  value !== null &&
+  typeof (value as TimestampLike).toDate === "function";
 
 /**
  * Every role the system recognises.
@@ -27,7 +42,7 @@ export interface UserRecord {
   name?: string;
   email?: string;
   role: UserRole;
-  createdAt?: Timestamp;
+  createdAt?: TimestampLike;
   photoURL?: string;
   /** Absent means opted in; only an explicit `false` disables alerts. */
   notifications_enabled?: boolean;

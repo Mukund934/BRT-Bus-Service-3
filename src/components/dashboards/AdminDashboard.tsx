@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useId, useState } from "react";
-import { Timestamp } from "firebase/firestore";
 import { CheckCircle, Edit2, Loader, Search, Shield, TrendingUp, Users, X } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { toSafeMessage } from "@/domain/auth/errors";
@@ -9,7 +8,12 @@ import {
   fetchAllUsers,
   updateUserRole,
 } from "@/services/userService";
-import { USER_ROLES, type UserRecord, type UserRole } from "@/types/user";
+import {
+  USER_ROLES,
+  type TimestampLike,
+  type UserRecord,
+  type UserRole,
+} from "@/types/user";
 
 interface AdminDashboardProps {
   onError?: (error: string) => void;
@@ -80,7 +84,7 @@ const AdminDashboard = ({ onError }: AdminDashboardProps) => {
     }
   }, [searchTerm, allUsers]);
 
-  const formatJoinedDate = (timestamp?: Timestamp): string => {
+  const formatJoinedDate = (timestamp?: TimestampLike): string => {
     if (!timestamp) return "N/A";
 
     try {

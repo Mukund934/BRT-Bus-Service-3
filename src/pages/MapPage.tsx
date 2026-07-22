@@ -4,7 +4,6 @@ import Footer from "@/components/Footer";
 import { MAP_CONFIG } from "@/constants/config";
 import { DEFAULT_MAP_CENTER } from "@/domain/transit/stops";
 import { subscribeToBuses, type LiveBus } from "@/services/locationService";
-import { isLiveTrackingAvailable } from "@/firebase";
 
 /**
  * Public live-tracking map.
@@ -19,24 +18,25 @@ const MapPage = () => {
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
 
-  useEffect(() => {
-    if (!isLiveTrackingAvailable) {
-      setLoading(false);
-      setFailed(true);
-      return;
-    }
-
-    return subscribeToBuses(
-      (next) => {
-        setBuses(next);
-        setLoading(false);
-      },
-      () => {
-        setFailed(true);
-        setLoading(false);
-      }
-    );
-  }, []);
+  /*
+    Availability is reported through the error callback rather than checked
+    up front, because the Realtime Database SDK is now loaded on demand and
+    an effect must return its cleanup synchronously.
+  */
+  useEffect(
+    () =>
+      subscribeToBuses(
+        (next) => {
+          setBuses(next);
+          setLoading(false);
+        },
+        () => {
+          setFailed(true);
+          setLoading(false);
+        }
+      ),
+    []
+  );
 
   /** Centre on the fleet, falling back to the first stop before any report. */
   const { lat, lng } = useMemo(() => {
