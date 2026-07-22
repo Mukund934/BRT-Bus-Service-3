@@ -236,6 +236,84 @@ http://localhost:8080
 
 ---
 
+## 🧪 Testing
+
+```bash
+npm test              # run the suite once
+npm run test:watch    # re-run on change
+npm run test:coverage # suite + coverage report
+npm run verify        # everything CI runs, in the same order
+```
+
+Coverage lands in `coverage/`; open `coverage/index.html` for the line-by-line view.
+
+### Philosophy
+
+Tests here protect **behaviour**, not implementation. A test that breaks when a
+component is refactored but the user experience is unchanged is a liability, so
+the suite avoids snapshots of markup, shallow rendering, and assertions about
+internal state.
+
+Practically that means:
+
+- **Query the way a user finds things** — by role, label and visible text.
+  `getByRole("button", { name: /proceed to pay/i })` breaks only if the button
+  genuinely stops being reachable.
+- **Drive with `user-event`, not `fireEvent`** — it dispatches the same event
+  sequence a browser does, so a click on a disabled or covered element fails
+  like it would in real life.
+- **Coverage is measured only where decisions live** (`domain`, `services`,
+  `contexts`, `components`). Including presentational pages would raise the
+  percentage without telling anyone whether booking works.
+- **Thresholds are a ratchet, not a target.** They sit just below what the suite
+  achieves so a regression fails CI; they are raised deliberately.
+
+### Layout
+
+| Path | What lives there |
+|---|---|
+| `src/test/domain/` | Pure business rules: fares, timetable, ticket lifecycle, selectors |
+| `src/test/services/` | Persistence, booking rules, user records, alerts, location |
+| `src/test/contexts/` | Provider wiring: sign-in, sign-out, account switching, polling |
+| `src/test/components/` | UI behaviour and accessibility |
+| `src/test/integration/` | Whole user journeys through real pages |
+| `src/test/helpers/` | Shared render helper, data factories, mocks |
+
+### Mocking
+
+Firebase is never loaded in tests. `src/test/helpers/firebase.ts` is the single
+place that defines how it behaves — a controllable auth listener and an
+in-memory Firestore document store, so `userService` runs its real logic against
+something that acts like a database rather than against per-call stubs.
+
+Tests that mount the auth provider but are not about user records mock
+`userService` via `src/test/helpers/userService.ts`, which also lets them choose
+a role outright.
+
+Anything time-dependent freezes the clock. The timetable's first departure is
+6:25 AM, so a suite using the real clock would quietly pass in the morning and
+fail in the evening.
+
+---
+
+## 🔄 Continuous Integration
+
+`.github/workflows/ci.yml` runs on every push and pull request to `main`, across
+Node 20 and 22. Each gate is a separate step, so a red run names what broke:
+
+| Gate | Blocks merge on |
+|---|---|
+| `npm ci` | lockfile drift |
+| `npm run typecheck` | any type error |
+| `npm run lint` | any ESLint error |
+| `npm run test:coverage` | a failing test **or** coverage below threshold |
+| `npm run build` | a broken production build |
+
+Coverage and the built `dist/` are uploaded as artifacts. Run the identical
+sequence locally with `npm run verify`.
+
+---
+
 ## 🔐 Security Model
 
 Authorization is enforced in two independent places. The browser layer decides

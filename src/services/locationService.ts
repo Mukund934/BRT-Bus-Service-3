@@ -52,7 +52,18 @@ export const toBusId = (uid: string): string => {
     hash = (hash * 31 + uid.charCodeAt(i)) | 0;
   }
 
-  return `BUS-${Math.abs(hash).toString(36).toUpperCase().slice(0, 4).padStart(4, "0")}`;
+  /*
+    The LAST four base-36 digits, not the first.
+
+    Taking the leading digits collided constantly: Firebase uids share long
+    prefixes and differ near the end, and the trailing characters only move
+    the low-order bits of the hash - exactly the digits a leading slice
+    discards. "driver-1" and "driver-2" both produced BUS-9W6W, which would
+    show two vehicles as one on the public map and duplicate a React key.
+  */
+  const digits = Math.abs(hash).toString(36).toUpperCase().padStart(4, "0");
+
+  return `BUS-${digits.slice(-4)}`;
 };
 
 export interface Coords {

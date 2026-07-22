@@ -1,0 +1,78 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# A new push to the same branch cancels the previous run, so a busy branch
+# does not queue up builds nobody will read.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Verify (Node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+
+    strategy:
+      # Every version is reported even when one fails, so a Node-specific
+      # break is distinguishable from a genuine code break.
+      fail-fast: false
+      matrix:
+        # 20 is the floor the project supports; 22 is current LTS.
+        node: [20, 22]
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Set up Node ${{ matrix.node }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          # Keyed on package-lock.json, so the cache is reused until a
+          # dependency actually changes.
+          cache: npm
+
+      # `npm ci` installs exactly what the lockfile pins and fails if
+      # package.json and the lockfile have drifted apart.
+      - name: Install dependencies
+        run: npm ci
+
+      # Each gate runs as its own step so a red run names what broke rather
+      # than pointing at one long "build" log.
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test with coverage
+        run: npm run test:coverage
+
+      - name: Build
+        run: npm run build
+
+      - name: Upload coverage report
+        # Runs even when a gate above failed - the coverage of a failing
+        # build is often what explains it.
+        if: always() && matrix.node == 22
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage/
+          retention-days: 7
+
+      - name: Upload production build
+        if: matrix.node == 22
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          retention-days: 7

@@ -13,6 +13,9 @@ dist-ssr
 *.local
 *.tsbuildinfo
 
+# Test output
+coverage
+
 # Environment. Firebase web config is public by design, but a personal
 # project's values should not be committed - see .env.example.
 .env
