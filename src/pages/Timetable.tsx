@@ -5,19 +5,9 @@ import Footer from "@/components/Footer";
 import BookingModal from "@/components/BookingModal";
 import PaymentModal from "@/components/PaymentModal";
 import { useUser } from "@/contexts/UserContext";
+import { STOPS } from "@/types/ticket";
 
-const navLinks = [
-  { label: "Home", to: "/" },
-  { label: "Bus Fares", to: "/fares" },
-  { label: "My Dashboard", to: "/dashboard" },
-];
-
-const columns = [
-  "Route", "HNLU", "Balco Medical Center", "Sector 30", "Sector 29",
-  "Sector 27", "South Block", "Indravati Bhavan", "Mahanadi Bhavan",
-  "North Block", "Ekatm Path", "CBD", "Sector 15", "Telibandha",
-  "DKS Bhavan", "Railway Station",
-];
+const columns = ["Route", ...STOPS];
 
 const weekdayRows = [
   ["101","6:25 AM","6:26 AM","6:31 AM","6:34 AM","6:36 AM","6:38 AM","6:42 AM","6:44 AM","6:48 AM","6:49 AM","6:52 AM","6:55 AM","7:18 AM","7:33 AM","7:48 AM"],
@@ -133,7 +123,7 @@ const TimetableTable = ({ caption, rows, onBook }: { caption: string; rows: stri
             ))}
             <td className="px-2 py-1.5 border-b border-border text-center">
               <button
-                onClick={() => onBook(row, row[1])}
+                onClick={() => onBook(row, row[1] || "")}
                 className="px-2 py-1 text-[10px] lg:text-xs bg-primary text-primary-foreground rounded-md hover:-translate-y-0.5 transition-all duration-200 hover:shadow-md active:scale-95"
               >
                 Book
@@ -147,7 +137,7 @@ const TimetableTable = ({ caption, rows, onBook }: { caption: string; rows: stri
 );
 
 const Timetable = () => {
-  const { user, activeTicket } = useUser();
+  const { user } = useUser();
   const navigate = useNavigate();
 
   const [bookingOpen, setBookingOpen] = useState(false);
@@ -173,11 +163,6 @@ const Timetable = () => {
       return;
     }
 
-    if (activeTicket) {
-      alert("You already have an active ticket. Please wait for it to expire or check your dashboard.");
-      return;
-    }
-
     setSelectedRow(row);
     setSelectedDep(depTime);
     setBookingOpen(true);
@@ -199,7 +184,7 @@ const Timetable = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header title="Bus Time Table" navLinks={navLinks} />
+      <Header />
 
       <main className="py-10 px-4">
         <TimetableTable
@@ -228,6 +213,7 @@ const Timetable = () => {
       <PaymentModal
         open={paymentOpen}
         onClose={() => setPaymentOpen(false)}
+        route={selectedRow[0] || "101"}
         fromStop={paymentData.from}
         toStop={paymentData.to}
         fare={paymentData.fare}

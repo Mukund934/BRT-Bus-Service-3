@@ -1,7 +1,7 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useUser } from "@/contexts/UserContext";
 import { useState, useEffect, useRef } from "react";
-import { Home, MapPin, Clock, DollarSign, Phone, LayoutDashboard, LogOut, Menu, X, ChevronDown } from "lucide-react";
+import { Home, MapPin, Clock, DollarSign, Phone, LayoutDashboard, LogOut, Menu, X } from "lucide-react";
 
 const Header = () => {
 	const location = useLocation();
@@ -73,7 +73,7 @@ const Header = () => {
 
 	const getShortName = (name: string): string => {
 		if (!name) return "User";
-		return name.split(" ")[0];
+		return name.split(" ")[0] || "User";
 	};
 
 	const handleDashboardClick = () => {
