@@ -1,0 +1,36 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+
+    "busLocations": {
+      ".read": true,
+
+      "$driverUid": {
+        ".write": "auth != null && auth.uid === $driverUid",
+
+        ".validate": "newData.hasChildren(['lat', 'lng', 'updatedAt']) || !newData.exists()",
+
+        "lat": {
+          ".validate": "newData.isNumber() && newData.val() >= -90 && newData.val() <= 90"
+        },
+
+        "lng": {
+          ".validate": "newData.isNumber() && newData.val() >= -180 && newData.val() <= 180"
+        },
+
+        "updatedAt": {
+          ".validate": "newData.isNumber() && newData.val() <= now + 60000"
+        },
+
+        "busId": {
+          ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 16"
+        },
+
+        "$other": {
+          ".validate": false
+        }
+      }
+    }
+  }
+}

@@ -207,7 +207,22 @@ npm install
 
 ---
 
-### 3️⃣ Run Development Server
+### 3️⃣ Configure Firebase
+
+```bash
+cp .env.example .env
+```
+
+Fill in the values from **Firebase console → Project settings → General → Your apps → SDK setup**.
+
+> These values are **not secrets**. Firebase web configuration is compiled into
+> the JavaScript bundle every visitor downloads and can be read from any
+> deployed Firebase app. What protects the data is the security rules below,
+> which run on Google's servers and cannot be bypassed by a modified client.
+
+---
+
+### 4️⃣ Run Development Server
 
 ```bash
 npm run dev
@@ -216,7 +231,47 @@ npm run dev
 Open:
 
 ```
-http://localhost:5173
+http://localhost:8080
+```
+
+---
+
+## 🔐 Security Model
+
+Authorization is enforced in two independent places. The browser layer decides
+what to render and which calls to attempt; the server layer decides what is
+actually permitted. Only the second one is a security boundary.
+
+| Layer | Where | What it does |
+|---|---|---|
+| Security rules | `firestore.rules`, `database.rules.json` | The real boundary. Runs on Google's servers. |
+| Permission model | `src/domain/auth/permissions.ts` | Named capabilities per role, asked via `can(actor, PERMISSION)`. |
+| Route guards | `src/components/routing/RouteGuards.tsx` | Keeps unauthorized users off privileged pages and blocks rendering until the role resolves. |
+| Schema validation | `src/domain/validation/schemas.ts` | Everything from storage, Firestore, RTDB and forms is parsed before use. |
+
+**Key invariants**
+
+- A user may create and edit their own profile but can **never** set or change
+  their own `role`. Role assignment is admin-only, enforced in `firestore.rules`.
+- Listing the `users` collection is admin-only, so a signed-in passenger cannot
+  enumerate every account.
+- Any collection without an explicit rule is denied by default.
+- Driver positions publish **coordinates and an opaque bus label only** — never
+  a name or email address. `database.rules.json` rejects any other field.
+
+### Deploying the rules
+
+Rules in this repository do nothing until they are deployed. After changing
+them:
+
+```bash
+npx firebase-tools deploy --only firestore:rules,database
+```
+
+### Testing the rules locally
+
+```bash
+npx firebase-tools emulators:start --only firestore,database
 ```
 
 ---

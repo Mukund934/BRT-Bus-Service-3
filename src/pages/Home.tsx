@@ -73,6 +73,8 @@ const Home = () => {
 
       <Header />
 
+      <main id="main-content" tabIndex={-1}>
+
       <section className="relative w-full h-[420px] md:h-[520px] lg:h-[620px] overflow-hidden">
 
         <img
@@ -85,12 +87,17 @@ const Home = () => {
 
           <div className="text-center px-4 max-w-4xl">
 
-            <h2
+            {/*
+              The page's h1. The rotating strapline is decorative, so it is
+              not placed in a live region - re-announcing it every three
+              seconds would make the page unusable with a screen reader.
+            */}
+            <h1
               key={animKey}
               className="text-white text-3xl md:text-5xl lg:text-6xl font-semibold tracking-tight drop-shadow-lg transition-all duration-700"
             >
               {rotatingTexts[textIndex]}
-            </h2>
+            </h1>
 
             <p className="text-white/90 text-lg md:text-xl mt-6 max-w-2xl mx-auto leading-relaxed">
               Your Journey, Our Priority — Fast, Safe, and Reliable
@@ -104,7 +111,11 @@ const Home = () => {
 
       </section>
 
-      <section className="py-20 px-4">
+      <section className="py-20 px-4" aria-labelledby="features-heading">
+
+        <h2 id="features-heading" className="sr-only">
+          Why travel with us
+        </h2>
 
         <div className="max-w-7xl mx-auto">
 
@@ -151,7 +162,7 @@ const Home = () => {
 
           <div className="text-center mb-12">
             <h2 className="text-[34px] md:text-[40px] font-semibold text-[#874f9c] tracking-tight">
-              Available Buses
+              Available buses
             </h2>
 
             <p className="text-[#7a6aa8] text-[15px] md:text-[16px] mt-3">
@@ -184,6 +195,8 @@ const Home = () => {
         </div>
 
       </section>
+
+      </main>
 
       <Footer />
 

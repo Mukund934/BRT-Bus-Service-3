@@ -7,9 +7,19 @@
 
 import type { Timestamp } from "firebase/firestore";
 
-export type UserRole = "user" | "admin" | "driver";
+/**
+ * Every role the system recognises.
+ *
+ * Declared once as a const tuple; `UserRole` is derived from it so the list
+ * and the type cannot drift, and so runtime validators can consume it
+ * directly.
+ */
+export const USER_ROLES = ["user", "admin", "driver"] as const;
 
-export const USER_ROLES: readonly UserRole[] = ["user", "admin", "driver"];
+export type UserRole = (typeof USER_ROLES)[number];
+
+/** The role assigned to every newly registered account. */
+export const DEFAULT_ROLE: UserRole = "user";
 
 /** A user record as stored in Firestore. */
 export interface UserRecord {

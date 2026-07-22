@@ -1,9 +1,9 @@
 /**
  * Ticket persistence and booking orchestration.
  *
- * This is the seam between the pure ticket domain and the browser. The
- * context provider calls into here; it does not talk to storage or apply
- * booking rules itself.
+ * The seam between the pure ticket domain and the browser. Everything read
+ * back from storage is treated as untrusted: it is schema-validated, then
+ * ownership-checked, before any of it reaches the UI.
  */
 
 import { STORAGE_KEYS } from "@/constants/config";
@@ -12,73 +12,97 @@ import { createTicket } from "@/domain/ticket/factory";
 import { isLiveStatus } from "@/domain/ticket/status";
 import { getArrivalAt, getDepartureAt } from "@/domain/ticket/timing";
 import type { Ticket, TicketDraft } from "@/domain/ticket/types";
-import { isRouteId } from "@/domain/transit/routes";
-import { isStopName } from "@/domain/transit/stops";
-import { readJson, readRaw, removeKey, writeJson } from "./storageService";
+import { ticketSchema, unknownArraySchema } from "@/domain/validation/schemas";
+import {
+  clearWhere,
+  readValidated,
+  removeKey,
+  storageKey,
+  write,
+} from "./storageService";
 
-const ticketsKey = (userId: string): string =>
-  `${STORAGE_KEYS.TICKETS_PREFIX}.${userId}`;
+const ticketsKey = (userId: string): string => storageKey("tickets", userId);
 
 /**
- * Structural check for a stored ticket.
+ * Upgrades payloads written before storage was versioned.
  *
- * Guards against schema drift between releases and hand-edited storage. Stops
- * and routes are checked against the registries, so a ticket naming a stop
- * that no longer exists is discarded rather than rendered.
+ * Version 0 is the pre-envelope format: a bare `Ticket[]` written straight to
+ * the key. Anything unrecognised becomes an empty list rather than being
+ * passed through unvalidated.
  */
-const isTicket = (value: unknown): value is Ticket => {
-  if (typeof value !== "object" || value === null) return false;
+const migrateTickets = (raw: unknown, version: number): unknown => {
+  if (version === 0 && Array.isArray(raw)) return raw;
 
-  const t = value as Record<string, unknown>;
-
-  return (
-    typeof t.ticketId === "string" &&
-    typeof t.userId === "string" &&
-    typeof t.fare === "number" &&
-    typeof t.departureTime === "string" &&
-    typeof t.arrivalTime === "string" &&
-    typeof t.travelDate === "string" &&
-    typeof t.expiresAt === "string" &&
-    typeof t.status === "string" &&
-    typeof t.qrData === "string" &&
-    isRouteId(t.route) &&
-    isStopName(t.fromStop) &&
-    isStopName(t.toStop)
-  );
+  return Array.isArray(raw) ? raw : [];
 };
 
 /**
  * Every ticket held by a user, newest first.
  *
- * Unreadable entries are dropped individually rather than failing the whole
- * read: one corrupt record must not make a passenger's other tickets vanish.
+ * Each entry is validated on its own, so a single tampered or corrupt record
+ * costs the passenger that one ticket rather than their whole history. Two
+ * checks apply per entry: the schema rejects a wrong shape (a hand-edited
+ * fare, an unknown stop, a broken date), and the ownership check rejects any
+ * record claiming a different `userId`, so a tampered store cannot inject
+ * another account's journey into this session.
+ *
+ * When anything is dropped the cleaned list is written back, so the store
+ * heals instead of re-reporting the same damage on every read.
  */
 export const loadTickets = (userId: string): Ticket[] => {
   if (!userId) return [];
 
-  const stored = readJson<unknown[]>(ticketsKey(userId), [], Array.isArray);
+  const { value } = readValidated<unknown[]>(
+    ticketsKey(userId),
+    unknownArraySchema,
+    [],
+    migrateTickets
+  );
 
-  const tickets = stored.filter(isTicket);
+  const tickets: Ticket[] = [];
+  let dropped = 0;
 
-  if (tickets.length !== stored.length) {
-    console.warn(
-      `Discarded ${stored.length - tickets.length} unreadable ticket(s) from storage.`
-    );
+  for (const entry of value) {
+    const parsed = ticketSchema.safeParse(entry);
+
+    if (!parsed.success || parsed.data.userId !== userId) {
+      dropped += 1;
+      continue;
+    }
+
+    tickets.push(parsed.data);
+  }
+
+  if (dropped > 0) {
+    console.warn(`Discarded ${dropped} unreadable or foreign stored ticket(s).`);
+    saveTickets(userId, tickets);
   }
 
   return tickets;
 };
 
 /** Persists a user's full ticket list. Returns false when storage refused. */
-export const saveTickets = (userId: string, tickets: Ticket[]): boolean => {
-  if (!userId) return false;
+export const saveTickets = (userId: string, tickets: Ticket[]): boolean =>
+  userId ? write(ticketsKey(userId), tickets) === "ok" : false;
 
-  return writeJson(ticketsKey(userId), tickets);
+/**
+ * Removes cached tickets for every account except the one signing in.
+ *
+ * Ticket data is session-scoped by intent: on a shared browser the previous
+ * passenger's journeys, QR payloads and validation tokens must not remain at
+ * rest once someone else signs in.
+ */
+export const purgeOtherUsersTickets = (currentUserId: string): number => {
+  const keep = ticketsKey(currentUserId);
+
+  return clearWhere((key) => key.startsWith(storageKey("tickets")) && key !== keep);
 };
 
 export type BookingFailure =
+  | "NOT_AUTHENTICATED"
   | "ALREADY_DEPARTED"
   | "OVERLAPPING_TICKET"
+  | "INVALID_JOURNEY"
   | "STORAGE_FAILED";
 
 export type BookingResult =
@@ -87,19 +111,20 @@ export type BookingResult =
 
 /** Why a booking was refused, in words a passenger can act on. */
 export const BOOKING_FAILURE_MESSAGES: Record<BookingFailure, string> = {
-  ALREADY_DEPARTED:
-    "This service has already departed. Please choose a later bus.",
+  NOT_AUTHENTICATED: "Please sign in to book a ticket.",
+  ALREADY_DEPARTED: "This service has already departed. Please choose a later bus.",
   OVERLAPPING_TICKET:
     "You already hold a ticket for a journey that overlaps this one.",
-  STORAGE_FAILED:
-    "Your ticket could not be saved. Your device storage may be full.",
+  INVALID_JOURNEY: "That journey is not valid. Please reselect your stops.",
+  STORAGE_FAILED: "Your ticket could not be saved. Your device storage may be full.",
 };
 
 /**
  * Applies the booking rules and persists the ticket.
  *
- * Returns a tagged result rather than null so the payment screen can explain
- * precisely which rule refused the booking.
+ * The freshly built ticket is validated against the same schema used on read,
+ * so a journey assembled from bad UI state is rejected at the boundary rather
+ * than becoming a permanently malformed record.
  */
 export const bookTicket = (
   userId: string,
@@ -107,7 +132,15 @@ export const bookTicket = (
   draft: TicketDraft,
   now = new Date()
 ): BookingResult => {
+  if (!userId || draft.userId !== userId) {
+    return { ok: false, reason: "NOT_AUTHENTICATED" };
+  }
+
   const ticket = createTicket(draft, now);
+
+  if (!ticketSchema.safeParse(ticket).success) {
+    return { ok: false, reason: "INVALID_JOURNEY" };
+  }
 
   if (getDepartureAt(ticket) < now) {
     return { ok: false, reason: "ALREADY_DEPARTED" };
@@ -133,8 +166,8 @@ export const bookTicket = (
 /**
  * Marks a live ticket cancelled.
  *
- * Returns the updated list, or null when the ticket is missing, already
- * finished, or storage refused the write.
+ * Returns the updated list, or null when the ticket is missing, not owned by
+ * the caller, already finished, or storage refused the write.
  */
 export const cancelTicket = (
   userId: string,
@@ -144,7 +177,8 @@ export const cancelTicket = (
 ): Ticket[] | null => {
   const target = existing.find((ticket) => ticket.ticketId === ticketId);
 
-  if (!target || !isLiveStatus(target.status)) return null;
+  if (!target || target.userId !== userId) return null;
+  if (!isLiveStatus(target.status)) return null;
 
   const tickets = existing.map((ticket) =>
     ticket.ticketId === ticketId
@@ -163,7 +197,14 @@ export const cancelTicket = (
  * be retried on the next login rather than losing the passenger's ticket.
  */
 export const migrateLegacyTicket = (userId: string, userEmail: string): void => {
-  const raw = readRaw(STORAGE_KEYS.LEGACY_TICKET);
+  let raw: string | null;
+
+  try {
+    raw = localStorage.getItem(STORAGE_KEYS.LEGACY_TICKET);
+  } catch {
+    return;
+  }
+
   if (!raw) return;
 
   try {
@@ -180,17 +221,13 @@ export const migrateLegacyTicket = (userId: string, userEmail: string): void => 
     const alreadyStored =
       legacyId !== null && existing.some((t) => t.ticketId === legacyId);
 
-    const route = isRouteId(legacy.route) ? legacy.route : "101";
-    const fromStop = isStopName(legacy.from) ? legacy.from : null;
-    const toStop = isStopName(legacy.to) ? legacy.to : null;
-
-    if (legacyId && !alreadyStored && fromStop && toStop) {
-      const migrated = createTicket({
+    if (legacyId && !alreadyStored) {
+      const candidate = createTicket({
         userId,
         userEmail,
-        route,
-        fromStop,
-        toStop,
+        route: "101",
+        fromStop: "HNLU",
+        toStop: "CBD",
         fare: typeof legacy.fare === "number" ? legacy.fare : 0,
         departureTime: typeof legacy.departure === "string" ? legacy.departure : "",
         arrivalTime: typeof legacy.arrival === "string" ? legacy.arrival : "",
@@ -200,20 +237,24 @@ export const migrateLegacyTicket = (userId: string, userEmail: string): void => 
             : new Date().toISOString(),
       });
 
-      const saved = saveTickets(userId, [
-        {
-          ...migrated,
-          ticketId: legacyId,
-          paymentId:
-            typeof legacy.paymentId === "string"
-              ? legacy.paymentId
-              : migrated.paymentId,
-        },
-        ...existing,
-      ]);
+      const migrated = {
+        ...candidate,
+        ticketId: legacyId,
+        paymentId:
+          typeof legacy.paymentId === "string" ? legacy.paymentId : candidate.paymentId,
+        route: legacy.route,
+        fromStop: legacy.from,
+        toStop: legacy.to,
+      };
 
-      // Keep the legacy record so the next login can try again.
-      if (!saved) return;
+      // The legacy record's stops and route are free-form strings from an
+      // older schema; only migrate it if it validates against the current one.
+      const parsed = ticketSchema.safeParse(migrated);
+
+      if (parsed.success && !saveTickets(userId, [parsed.data, ...existing])) {
+        // Keep the legacy record so the next login can try again.
+        return;
+      }
     }
 
     removeKey(STORAGE_KEYS.LEGACY_TICKET);

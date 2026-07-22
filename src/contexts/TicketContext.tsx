@@ -29,6 +29,7 @@ import {
   cancelTicket as cancelTicketInStorage,
   loadTickets,
   migrateLegacyTicket,
+  purgeOtherUsersTickets,
   saveTickets,
   type BookingResult,
 } from "@/services/ticketService";
@@ -62,6 +63,14 @@ export const TicketProvider = ({ children }: { children: ReactNode }) => {
     if (!userId) {
       setTickets(NO_TICKETS);
       return;
+    }
+
+    // Shared devices: no other account's tickets, QR payloads or validation
+    // tokens may remain at rest once someone else signs in.
+    const purged = purgeOtherUsersTickets(userId);
+
+    if (purged > 0) {
+      console.info(`Cleared cached tickets for ${purged} other account(s).`);
     }
 
     migrateLegacyTicket(userId, userEmail);
@@ -107,7 +116,7 @@ export const TicketProvider = ({ children }: { children: ReactNode }) => {
 
   const bookTicket = useCallback(
     (draft: TicketDraft): BookingResult => {
-      if (!userId) return { ok: false, reason: "STORAGE_FAILED" };
+      if (!userId) return { ok: false, reason: "NOT_AUTHENTICATED" };
 
       const result = bookTicketInStorage(userId, tickets, draft);
 

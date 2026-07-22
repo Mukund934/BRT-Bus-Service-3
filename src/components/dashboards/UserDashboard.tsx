@@ -1,7 +1,9 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import { BookOpen, History, IndianRupee, Route, Ticket } from "lucide-react";
 import VirtualTicket from "@/components/VirtualTicket";
+import { useAnnounce } from "@/components/a11y/LiveAnnouncer";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTickets } from "@/contexts/TicketContext";
 import { STATUS_LABELS } from "@/domain/ticket/status";
@@ -31,8 +33,22 @@ const UserDashboard = () => {
   const { user } = useAuth();
   const { activeTicket, ticketHistory, stats, cancelTicket } = useTickets();
   const navigate = useNavigate();
+  const announce = useAnnounce();
 
   const [filter, setFilter] = useState<HistoryFilter>("ALL");
+
+  /**
+   * Cancelling removes the ticket from view, so without an explicit
+   * confirmation the only feedback is that something vanished.
+   */
+  const handleCancel = useCallback(
+    (ticketId: string) => {
+      cancelTicket(ticketId);
+      toast.success("Ticket cancelled.");
+      announce("Your ticket has been cancelled.");
+    },
+    [cancelTicket, announce]
+  );
 
   const visibleHistory = useMemo(
     () =>
@@ -101,7 +117,7 @@ const UserDashboard = () => {
           </div>
 
           {activeTicket ? (
-            <VirtualTicket ticket={activeTicket} onCancel={cancelTicket} />
+            <VirtualTicket ticket={activeTicket} onCancel={handleCancel} />
           ) : (
             <div className="text-center p-8 bg-gray-50 rounded-xl border-2 border-dashed border-gray-300">
               <BookOpen className="w-12 h-12 text-gray-400 mx-auto mb-3" />
@@ -126,12 +142,18 @@ const UserDashboard = () => {
               <h2 className="text-2xl font-bold text-gray-900">Ticket History</h2>
             </div>
 
-            <div className="flex gap-2">
+            {/*
+              A single-select group: aria-pressed tells a screen reader which
+              filter is currently applied, which colour alone cannot.
+            */}
+            <div className="flex gap-2" role="group" aria-label="Filter ticket history">
               {FILTERS.map((option) => (
                 <button
                   key={option}
+                  type="button"
                   onClick={() => setFilter(option)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                  aria-pressed={filter === option}
+                  className={`px-3 py-2 rounded-lg text-xs font-semibold transition-colors ${
                     filter === option
                       ? "bg-purple-600 text-white"
                       : "bg-gray-100 text-gray-600 hover:bg-gray-200"
@@ -144,9 +166,9 @@ const UserDashboard = () => {
           </div>
 
           {visibleHistory.length ? (
-            <div className="space-y-3">
+            <ul className="space-y-3">
               {visibleHistory.map((ticket) => (
-                <div
+                <li
                   key={ticket.ticketId}
                   className="flex flex-wrap items-center justify-between gap-3 p-4 rounded-xl border border-gray-200 bg-gray-50"
                 >
@@ -178,9 +200,9 @@ const UserDashboard = () => {
                       {STATUS_LABELS[ticket.status]}
                     </span>
                   </div>
-                </div>
+                </li>
               ))}
-            </div>
+            </ul>
           ) : (
             <div className="text-center p-8 bg-gray-50 rounded-xl border-2 border-dashed border-gray-300">
               <History className="w-10 h-10 text-gray-400 mx-auto mb-3" />

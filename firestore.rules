@@ -1,0 +1,133 @@
+rules_version = '2';
+
+// BRT Bus Service - Firestore security rules.
+//
+// Design stance: deny by default, then grant the narrowest capability each
+// screen actually needs. The client is treated as hostile - every rule here
+// must hold even if the React app is bypassed entirely and requests are made
+// straight against the REST API with a stolen-but-valid ID token.
+//
+// The single most important invariant: a user can create and edit their own
+// profile, but can NEVER set or change their own `role`. Role changes are an
+// admin-only operation, which is what stops privilege escalation.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---- helpers -------------------------------------------------------
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Reads the caller's own profile to discover their role. This costs one
+    // document read per rule evaluation, which is the accepted trade-off for
+    // storing roles in Firestore rather than in custom claims.
+    function callerRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+
+    function isAdmin() {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && callerRole() == 'admin';
+    }
+
+    function isValidRole(role) {
+      return role is string && role in ['user', 'admin', 'driver'];
+    }
+
+    // Fields a user is allowed to author on their own profile.
+    function selfWritableKeys() {
+      return ['name', 'email', 'photoURL', 'notifications_enabled', 'updatedAt'];
+    }
+
+    // ---- users ---------------------------------------------------------
+    //
+    // Holds identity and the role that every other authorization decision in
+    // the app derives from. Treated as the crown jewels.
+
+    match /users/{userId} {
+
+      // Single-document reads: your own profile, or any profile if admin.
+      allow get: if isOwner(userId) || isAdmin();
+
+      // Collection queries are admin-only. Without splitting `list` from
+      // `get`, any signed-in user could enumerate every account's name and
+      // email - the mass-read the audit called out.
+      allow list: if isAdmin();
+
+      // Self-registration. Constrained so a new account cannot mint itself
+      // as an admin, and cannot smuggle in unexpected fields.
+      allow create: if isOwner(userId)
+        && request.resource.data.role == 'user'
+        && request.resource.data.keys().hasOnly(
+             ['name', 'email', 'role', 'createdAt', 'photoURL', 'notifications_enabled']
+           );
+
+      // An admin provisioning a record for someone else (used when a role is
+      // assigned to a user whose profile does not exist yet).
+      allow create: if isAdmin()
+        && isValidRole(request.resource.data.role);
+
+      // Self-service profile edits. `role`, `email` and `createdAt` are
+      // absent from the allowlist, so this path can never escalate privilege
+      // or rewrite provenance.
+      allow update: if isOwner(userId)
+        && request.resource.data.diff(resource.data)
+             .affectedKeys().hasOnly(selfWritableKeys());
+
+      // Role administration. Deliberately narrow: an admin may change a
+      // role, but may not edit anyone else's name, email or photo.
+      allow update: if isAdmin()
+        && isValidRole(request.resource.data.role)
+        && request.resource.data.diff(resource.data)
+             .affectedKeys().hasOnly(['role', 'updatedAt']);
+
+      // Account deletion is an out-of-band operation. Leaving it closed
+      // prevents a compromised session from destroying the audit trail.
+      allow delete: if false;
+    }
+
+    // ---- tickets -------------------------------------------------------
+    //
+    // Tickets are currently held in the passenger's own browser storage and
+    // this collection is not yet written to (see `services/ticketService.ts`).
+    // The rule is stated now so that the ownership boundary is already in
+    // place the day tickets move server-side, rather than being retrofitted.
+    //
+    // `userId` is required on the document and pinned to the caller, so a
+    // ticket cannot be created on someone else's behalf or reassigned.
+
+    match /tickets/{ticketId} {
+      allow get: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow list: if isSignedIn() && request.query.limit <= 100;
+
+      allow create: if isSignedIn()
+        && request.resource.data.userId == request.auth.uid;
+
+      // Only the mutable lifecycle fields; fare, stops and identity are
+      // fixed at purchase so a holder cannot retro-price their own journey.
+      allow update: if isSignedIn()
+        && resource.data.userId == request.auth.uid
+        && request.resource.data.userId == resource.data.userId
+        && request.resource.data.diff(resource.data)
+             .affectedKeys().hasOnly(['status', 'updatedAt']);
+
+      allow delete: if false;
+    }
+
+    // ---- deny by default -----------------------------------------------
+    //
+    // Any collection not named above is closed. New features must add an
+    // explicit rule, which means forgetting to write one fails safe.
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -1,4 +1,12 @@
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { findConflictingTicket } from "@/domain/ticket/conflicts";
 import type { JourneySelection } from "@/domain/ticket/types";
 import { calculateFare } from "@/domain/transit/fares";
@@ -20,8 +28,21 @@ interface BookingModalProps {
   onProceedPayment: (selection: JourneySelection) => void;
 }
 
+/**
+ * Stop selection for a chosen trip.
+ *
+ * Built on Radix Dialog rather than a bare overlay so focus is trapped inside
+ * the dialog, Escape closes it, focus returns to the "Book" button that
+ * opened it, and the page behind cannot be scrolled or tabbed into.
+ */
 const BookingModal = ({ open, onClose, trip, onProceedPayment }: BookingModalProps) => {
   const { tickets } = useTickets();
+
+  const fieldId = useId();
+  const fromId = `${fieldId}-from`;
+  const toId = `${fieldId}-to`;
+  const summaryId = `${fieldId}-summary`;
+  const problemId = `${fieldId}-problem`;
 
   const servedStops = useMemo(() => getTripStops(trip), [trip]);
 
@@ -51,113 +72,130 @@ const BookingModal = ({ open, onClose, trip, onProceedPayment }: BookingModalPro
     };
   }, [toStop, departureTime, arrivalTime, tickets]);
 
-  if (!open) return null;
-
   const blocked = !toStop || hasDeparted || conflict !== null;
+  const hasProblem = hasDeparted || conflict !== null;
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
-      onClick={onClose}
-    >
-      <div
-        className="bg-card rounded-2xl p-8 w-full max-w-md mx-4 animate-scale-in"
-        style={{ boxShadow: "0 16px 48px hsla(284,33%,30%,0.15)" }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h2 className="text-xl font-bold text-foreground mb-1 tracking-tight">
-          Book Your Ticket
-        </h2>
+    <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
+      <DialogContent className="max-w-md rounded-2xl">
+        <DialogHeader>
+          <DialogTitle className="text-xl tracking-tight">Book your ticket</DialogTitle>
+          <DialogDescription>
+            Route {trip.routeId}, departing {departureTime}. Choose where you are
+            boarding and where you are travelling to.
+          </DialogDescription>
+        </DialogHeader>
 
-        <p className="text-sm text-muted-foreground mb-6">
-          Route {trip.routeId} · {departureTime} departure
-        </p>
+        <div>
+          <label htmlFor={fromId} className="block text-sm font-medium text-foreground mb-1">
+            From stop
+          </label>
+          <select
+            id={fromId}
+            value={fromStop}
+            onChange={(e) => {
+              setFromStop(e.target.value as StopName);
+              setToStop("");
+            }}
+            className="brt-input mb-4"
+          >
+            {servedStops.map((stop) => (
+              <option key={stop} value={stop}>
+                {stop}
+              </option>
+            ))}
+          </select>
 
-        <label className="block text-sm font-medium text-foreground mb-1">
-          From Stop
-        </label>
-        <select
-          value={fromStop}
-          onChange={(e) => {
-            setFromStop(e.target.value as StopName);
-            setToStop("");
-          }}
-          className="brt-input mb-4"
-        >
-          {servedStops.map((stop) => (
-            <option key={stop} value={stop}>
-              {stop}
-            </option>
-          ))}
-        </select>
+          <label htmlFor={toId} className="block text-sm font-medium text-foreground mb-1">
+            To stop
+            <span className="text-destructive" aria-hidden="true">
+              {" "}
+              *
+            </span>
+            <span className="sr-only"> (required)</span>
+          </label>
+          <select
+            id={toId}
+            value={toStop}
+            required
+            aria-describedby={hasProblem ? problemId : undefined}
+            onChange={(e) => setToStop(e.target.value as StopName)}
+            className="brt-input"
+          >
+            <option value="">Select destination</option>
+            {destinations.map((stop) => (
+              <option key={stop} value={stop}>
+                {stop}
+              </option>
+            ))}
+          </select>
+        </div>
 
-        <label className="block text-sm font-medium text-foreground mb-1">
-          To Stop
-        </label>
-        <select
-          value={toStop}
-          onChange={(e) => setToStop(e.target.value as StopName)}
-          className="brt-input mb-6"
-        >
-          <option value="">Select destination</option>
-          {destinations.map((stop) => (
-            <option key={stop} value={stop}>
-              {stop}
-            </option>
-          ))}
-        </select>
-
-        {toStop && (
-          <div className="bg-secondary rounded-xl p-4 mb-6">
-            <div className="flex justify-between text-sm mb-1">
-              <span className="text-muted-foreground">From</span>
-              <span className="font-medium text-foreground">{fromStop}</span>
+        {/*
+          Announced politely: changing stops recalculates the fare, and a
+          screen reader user needs to hear the new price without having to go
+          looking for it.
+        */}
+        <div id={summaryId} aria-live="polite" aria-atomic="true">
+          {toStop && (
+            <div className="bg-secondary rounded-xl p-4">
+              <dl className="text-sm">
+                <div className="flex justify-between mb-1">
+                  <dt className="text-muted-foreground">From</dt>
+                  <dd className="font-medium text-foreground">{fromStop}</dd>
+                </div>
+                <div className="flex justify-between mb-1">
+                  <dt className="text-muted-foreground">To</dt>
+                  <dd className="font-medium text-foreground">{toStop}</dd>
+                </div>
+                <div className="flex justify-between mb-1">
+                  <dt className="text-muted-foreground">Departure</dt>
+                  <dd className="font-medium text-foreground">{departureTime}</dd>
+                </div>
+                <div className="flex justify-between mb-1">
+                  <dt className="text-muted-foreground">Arrival</dt>
+                  <dd className="font-medium text-foreground">{arrivalTime}</dd>
+                </div>
+                <div className="flex justify-between pt-2 border-t border-border mt-2">
+                  <dt className="font-semibold text-foreground">Fare</dt>
+                  <dd className="font-bold text-primary text-lg">₹{fare}/-</dd>
+                </div>
+              </dl>
             </div>
-            <div className="flex justify-between text-sm mb-1">
-              <span className="text-muted-foreground">To</span>
-              <span className="font-medium text-foreground">{toStop}</span>
-            </div>
-            <div className="flex justify-between text-sm mb-1">
-              <span className="text-muted-foreground">Departure</span>
-              <span className="font-medium text-foreground">{departureTime}</span>
-            </div>
-            <div className="flex justify-between text-sm mb-1">
-              <span className="text-muted-foreground">Arrival</span>
-              <span className="font-medium text-foreground">{arrivalTime}</span>
-            </div>
-            <div className="flex justify-between text-sm pt-2 border-t border-border mt-2">
-              <span className="font-semibold text-foreground">Fare</span>
-              <span className="font-bold text-primary text-lg">₹{fare}/-</span>
-            </div>
-          </div>
-        )}
+          )}
+        </div>
 
-        {hasDeparted && (
-          <div className="rounded-xl bg-destructive/10 border border-destructive/30 px-4 py-3 mb-4">
-            <p className="text-sm text-destructive font-medium">
-              This bus has already departed. Please choose a later service.
-            </p>
-          </div>
-        )}
+        {/* Blocking problems interrupt, because they change what the user can do. */}
+        <div id={problemId} role="alert">
+          {hasDeparted && (
+            <div className="rounded-xl bg-destructive/10 border border-destructive/30 px-4 py-3">
+              <p className="text-sm text-destructive font-medium">
+                This bus has already departed. Please choose a later service.
+              </p>
+            </div>
+          )}
 
-        {conflict && !hasDeparted && (
-          <div className="rounded-xl bg-destructive/10 border border-destructive/30 px-4 py-3 mb-4">
-            <p className="text-sm text-destructive font-medium">
-              You already have a ticket from {conflict.fromStop} to {conflict.toStop}{" "}
-              that overlaps this journey.
-            </p>
-          </div>
-        )}
+          {conflict && !hasDeparted && (
+            <div className="rounded-xl bg-destructive/10 border border-destructive/30 px-4 py-3">
+              <p className="text-sm text-destructive font-medium">
+                You already have a ticket from {conflict.fromStop} to {conflict.toStop}{" "}
+                that overlaps this journey.
+              </p>
+            </div>
+          )}
+        </div>
 
-        <div className="flex gap-3">
+        <DialogFooter className="gap-3 sm:gap-3">
           <button
+            type="button"
             onClick={onClose}
-            className="flex-1 py-2.5 rounded-xl border border-border text-foreground font-medium transition-all duration-300 hover:bg-secondary"
+            className="flex-1 py-2.5 rounded-xl border border-border text-foreground font-medium transition-all duration-300 hover:bg-secondary touch-target"
           >
             Cancel
           </button>
 
           <button
+            type="button"
             disabled={blocked}
             onClick={() => {
               if (!toStop) return;
@@ -172,13 +210,13 @@ const BookingModal = ({ open, onClose, trip, onProceedPayment }: BookingModalPro
                 bookingTime: new Date().toISOString(),
               });
             }}
-            className="flex-1 brt-button disabled:opacity-40 disabled:cursor-not-allowed"
+            className="flex-1 brt-button disabled:opacity-40 disabled:cursor-not-allowed touch-target"
           >
-            Proceed to Pay
+            Proceed to pay
           </button>
-        </div>
-      </div>
-    </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 };
 

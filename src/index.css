@@ -66,9 +66,65 @@
   html {
     scroll-behavior: smooth;
   }
+
+  /*
+    Baseline visible focus indicator (WCAG 2.4.7).
+
+    Scoped to :focus-visible so it appears for keyboard and assistive-tech
+    users without drawing a ring on every mouse click. Components that define
+    their own ring use the `focus:` variant, whose higher specificity wins, so
+    this only fills the gaps rather than fighting existing styles.
+  */
+  :focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  /*
+    Respect a reduced-motion preference (WCAG 2.3.3).
+
+    Animations are collapsed rather than removed so any logic that waits on
+    animationend or transitionend still fires.
+  */
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
 }
 
 @layer components {
+  /*
+    Skip link: the first thing a keyboard user reaches, letting them jump the
+    navigation instead of tabbing through it on every page (WCAG 2.4.1).
+    Visually hidden until focused.
+  */
+  .skip-link {
+    @apply absolute left-4 z-[100] rounded-lg bg-primary px-4 py-2 font-semibold text-primary-foreground;
+    top: -100px;
+    transition: top 0.2s ease;
+  }
+
+  .skip-link:focus {
+    top: 1rem;
+  }
+
+  /* Minimum comfortable touch target (WCAG 2.5.5). */
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
   .brt-header {
     @apply bg-primary text-primary-foreground text-center py-6;
   }

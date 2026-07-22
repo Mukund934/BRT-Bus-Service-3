@@ -13,6 +13,20 @@ dist-ssr
 *.local
 *.tsbuildinfo
 
+# Environment. Firebase web config is public by design, but a personal
+# project's values should not be committed - see .env.example.
+.env
+.env.*
+!.env.example
+
+# Firebase tooling
+.firebase/
+firebase-debug.log
+firestore-debug.log
+database-debug.log
+ui-debug.log
+pubsub-debug.log
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

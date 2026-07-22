@@ -25,7 +25,7 @@ const Fares = () => {
 		<div className="min-h-screen bg-[#f5f3ff]">
 			<Header />
 
-			<main className="py-24 px-4">
+			<main id="main-content" tabIndex={-1} className="py-24 px-4">
 				<div className="max-w-6xl mx-auto">
 					<div className="bg-[#fbfaff] rounded-[28px] px-6 md:px-12 py-14 shadow-[0_25px_80px_rgba(0,0,0,0.06)]">
 						<div className="text-center mb-14">
