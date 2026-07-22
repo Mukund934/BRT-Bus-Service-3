@@ -1,12 +1,12 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { useUser } from "@/contexts/UserContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { useState, useEffect, useRef } from "react";
 import { Home, MapPin, Clock, DollarSign, Phone, LayoutDashboard, LogOut, Menu, X } from "lucide-react";
 
 const Header = () => {
 	const location = useLocation();
 	const navigate = useNavigate();
-	const { user, logout } = useUser();
+	const { user, logout } = useAuth();
 	const [isMenuOpen, setIsMenuOpen] = useState(false);
 	const [isScrolled, setIsScrolled] = useState(false);
 	const [isProfileOpen, setIsProfileOpen] = useState(false);

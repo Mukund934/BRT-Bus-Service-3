@@ -1,30 +1,35 @@
 import { useEffect, useState } from "react";
 import { rtdb } from "@/firebase";
 import { ref, set, remove } from "firebase/database";
-import { useUser } from "@/contexts/UserContext";
+import { POLLING, REMOTE_PATHS } from "@/constants/config";
+import { useAuth } from "@/contexts/AuthContext";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 
+interface DriverCoords {
+  latitude: number;
+  longitude: number;
+}
+
 const Driver = () => {
-  const { user, role } = useUser();
+  const { user, role } = useAuth();
 
   const [isSharing, setIsSharing] = useState(false);
-  const [coords, setCoords] = useState<any>(null);
+  const [coords, setCoords] = useState<DriverCoords | null>(null);
+
+  const busRefPath = user ? `${REMOTE_PATHS.BUS_LOCATIONS}/${user.uid}` : null;
 
   useEffect(() => {
-  if (!user || role !== "driver") return;
+    if (!user || role !== "driver" || !isSharing || !busRefPath) return;
 
-  let interval: any;
-
-  if (isSharing) {
-    interval = setInterval(() => {
+    const interval = setInterval(() => {
       navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const { latitude, longitude } = pos.coords;
+        (position) => {
+          const { latitude, longitude } = position.coords;
 
           setCoords({ latitude, longitude });
 
-          set(ref(rtdb, `busLocations/${user.uid}`), {
+          void set(ref(rtdb, busRefPath), {
             lat: latitude,
             lng: longitude,
             name: user.displayName || "Driver",
@@ -32,18 +37,18 @@ const Driver = () => {
             updatedAt: Date.now(),
           });
         },
-        (err) => console.log(err),
+        (error) => console.error("Geolocation failed:", error),
         { enableHighAccuracy: true }
       );
-    }, 3000); // 🔥 every 3 sec
-  }
+    }, POLLING.DRIVER_LOCATION_MS);
 
-  return () => clearInterval(interval);
-}, [user, role, isSharing]);
+    return () => clearInterval(interval);
+  }, [user, role, isSharing, busRefPath]);
 
   const stopSharing = async () => {
-    if (!user) return;
-    await remove(ref(rtdb, `busLocations/${user.uid}`));
+    if (!busRefPath) return;
+
+    await remove(ref(rtdb, busRefPath));
     setIsSharing(false);
   };
 

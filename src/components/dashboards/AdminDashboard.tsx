@@ -1,27 +1,18 @@
-
-import { useState, useEffect } from "react";
-import { useUser } from "@/contexts/UserContext";
-import { Shield, Users, TrendingUp, Search, Edit2, CheckCircle, X, Loader } from "lucide-react";
-
-interface User {
-  uid: string;
-  name?: string;
-  email?: string;
-  role: string;
-  createdAt?: any;
-  photoURL?: string;
-}
-
-type UserRole = "user" | "admin" | "driver";
+import { useCallback, useEffect, useState } from "react";
+import { Timestamp } from "firebase/firestore";
+import { CheckCircle, Edit2, Loader, Search, Shield, TrendingUp, Users, X } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { fetchAllUsers, updateUserRole } from "@/services/userService";
+import type { UserRecord, UserRole } from "@/types/user";
 
 interface AdminDashboardProps {
   onError?: (error: string) => void;
 }
 
 const AdminDashboard = ({ onError }: AdminDashboardProps) => {
-  const { user, role, getAllUsers, updateUserRole } = useUser();
-  const [allUsers, setAllUsers] = useState<User[]>([]);
-  const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
+  const { user, role, actor, refreshUserRecord } = useAuth();
+  const [allUsers, setAllUsers] = useState<UserRecord[]>([]);
+  const [filteredUsers, setFilteredUsers] = useState<UserRecord[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
@@ -30,41 +21,34 @@ const AdminDashboard = ({ onError }: AdminDashboardProps) => {
   const [success, setSuccess] = useState("");
   const [saving, setSaving] = useState(false);
 
-  // 🔥 CHECK IF USER IS ADMIN
   useEffect(() => {
     if (!loading && role !== "admin") {
       setError("You don't have permission to access this page");
-      if (onError) {
-        onError("Access Denied: Admin only");
-      }
+      onError?.("Access Denied: Admin only");
     }
   }, [role, loading, onError]);
 
-  // Fetch all users
-  useEffect(() => {
-    if (role === "admin") {
-      fetchAllUsers();
-    }
-  }, [role]);
-
-  const fetchAllUsers = async () => {
+  const loadUsers = useCallback(async () => {
     setLoading(true);
+
     try {
-      const users = await getAllUsers();
+      const users = await fetchAllUsers(actor);
       setAllUsers(users);
       setFilteredUsers(users);
       setError("");
-    } catch (err: any) {
-      const errorMsg = err.message || "Failed to load users";
-      setError(errorMsg);
-      if (onError) {
-        onError(errorMsg);
-      }
-      console.error(err);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to load users";
+      console.error("Failed to load users:", err);
+      setError(message);
+      onError?.(message);
     } finally {
       setLoading(false);
     }
-  };
+  }, [actor, onError]);
+
+  useEffect(() => {
+    if (role === "admin") void loadUsers();
+  }, [role, loadUsers]);
 
   // Search functionality
   useEffect(() => {
@@ -80,23 +64,19 @@ const AdminDashboard = ({ onError }: AdminDashboardProps) => {
     }
   }, [searchTerm, allUsers]);
 
-  // Format date
-  const formatDate = (timestamp: any) => {
+  const formatJoinedDate = (timestamp?: Timestamp): string => {
     if (!timestamp) return "N/A";
+
     try {
-      if (timestamp instanceof Object && "toDate" in timestamp) {
-        return timestamp.toDate().toLocaleDateString();
-      }
-      return new Date(timestamp).toLocaleDateString();
+      return timestamp.toDate().toLocaleDateString();
     } catch {
       return "N/A";
     }
   };
 
-  // Start editing
-  const startEdit = (userId: string, currentRole: string) => {
+  const startEdit = (userId: string, currentRole: UserRole) => {
     setEditingUserId(userId);
-    setEditingRole(currentRole as UserRole);
+    setEditingRole(currentRole);
     setError("");
   };
 
@@ -115,40 +95,42 @@ const AdminDashboard = ({ onError }: AdminDashboardProps) => {
     }
 
     setSaving(true);
+
     try {
-      const err = await updateUserRole(userId, editingRole as UserRole);
+      const err = await updateUserRole(actor, userId, editingRole);
+
       if (err) {
         setError(err);
-        if (onError) {
-          onError(err);
-        }
-      } else {
-        // Update local state
-        const updatedUsers = allUsers.map((u) =>
-          u.uid === userId ? { ...u, role: editingRole } : u
-        );
-        setAllUsers(updatedUsers);
-        setFilteredUsers(updatedUsers);
-        setSuccess("Role updated successfully!");
-        setEditingUserId(null);
-        setEditingRole("user");
+        onError?.(err);
+        return;
+      }
 
-        // Clear success message after 3 seconds
-        setTimeout(() => setSuccess(""), 3000);
-      }
-    } catch (err: any) {
-      const errorMsg = err.message || "Failed to update role";
-      setError(errorMsg);
-      if (onError) {
-        onError(errorMsg);
-      }
+      const updatedUsers = allUsers.map((entry) =>
+        entry.uid === userId ? { ...entry, role: editingRole } : entry
+      );
+
+      setAllUsers(updatedUsers);
+      setFilteredUsers(updatedUsers);
+      setSuccess("Role updated successfully!");
+      setEditingUserId(null);
+      setEditingRole("user");
+
+      setTimeout(() => setSuccess(""), 3000);
+
+      // Demoting yourself must take effect immediately: a Firestore write
+      // does not fire the auth listener, so the session would otherwise keep
+      // the admin panel and admin privileges until a full reload.
+      if (userId === user?.uid) await refreshUserRecord();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to update role";
+      setError(message);
+      onError?.(message);
     } finally {
       setSaving(false);
     }
   };
 
-  // Get role color
-  const getRoleColor = (role: string) => {
+  const getRoleColor = (role: UserRole) => {
     switch (role) {
       case "admin":
         return "bg-red-100 text-red-800 border-red-300";
@@ -159,8 +141,7 @@ const AdminDashboard = ({ onError }: AdminDashboardProps) => {
     }
   };
 
-  // Get role icon
-  const getRoleIcon = (role: string) => {
+  const getRoleIcon = (role: UserRole) => {
     switch (role) {
       case "admin":
         return "👨‍💼";
@@ -289,7 +270,7 @@ const AdminDashboard = ({ onError }: AdminDashboardProps) => {
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-2xl font-bold text-gray-900">User Management</h2>
             <button
-              onClick={fetchAllUsers}
+              onClick={() => void loadUsers()}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
             >
               Refresh
@@ -348,7 +329,9 @@ const AdminDashboard = ({ onError }: AdminDashboardProps) => {
 
                     <td className="px-6 py-4 text-gray-600">{u.email || "N/A"}</td>
 
-                    <td className="px-6 py-4 text-gray-600">{formatDate(u.createdAt)}</td>
+                    <td className="px-6 py-4 text-gray-600">
+                      {formatJoinedDate(u.createdAt)}
+                    </td>
 
                     <td className="px-6 py-4">
                       {editingUserId === u.uid ? (

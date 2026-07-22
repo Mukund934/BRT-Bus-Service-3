@@ -4,6 +4,7 @@ import Footer from "@/components/Footer";
 import RouteCard from "@/components/RouteCard";
 import heroBus from "@/assets/Raipur-Naya_Raipur_BRTS.png";
 import { Clock, MapPin, Shield, Zap } from "lucide-react";
+import { getTripStops, getTrips, type Trip } from "@/domain/transit/schedule";
 
 const rotatingTexts = [
   "Experience the Best BRT Service",
@@ -12,16 +13,24 @@ const rotatingTexts = [
   "Welcome to the Bus Tracker",
 ];
 
-const busStops =
-  "Balco, Sector 27, IIIM, Indrawati Bhawan, Telibandha, Railway Station";
+/**
+ * The first few weekday departures, read from the timetable.
+ *
+ * These were previously a hardcoded list next to a hand-written stop summary
+ * that named a stop ("IIIM") the network does not have and misspelled two
+ * others.
+ */
+const FEATURED_TRIPS = getTrips("weekday").slice(0, 5);
 
-const buses = [
-  "BUS 1 - 7:25 AM Departure",
-  "BUS 2 - 7:55 AM Departure",
-  "BUS 3 - 8:25 AM Departure",
-  "BUS 4 - 8:55 AM Departure",
-  "BUS 5 - 9:25 AM Departure",
-];
+/** "A, B, C, … Z" - enough to convey the corridor without filling the card. */
+const summariseStops = (trip: Trip): string => {
+  const stops = getTripStops(trip);
+  const last = stops[stops.length - 1];
+
+  if (stops.length <= 5) return stops.join(", ");
+
+  return `${stops.slice(0, 4).join(", ")}, … ${last}`;
+};
 
 const features = [
   {
@@ -156,12 +165,15 @@ const Home = () => {
 
             <div className="relative grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 
-              {buses.map((bus) => (
+              {FEATURED_TRIPS.map((trip, index) => (
                 <div
-                  key={bus}
+                  key={trip.id}
                   className="group transition-all duration-300 hover:-translate-y-[5px]"
                 >
-                  <RouteCard title={bus} stops={busStops} />
+                  <RouteCard
+                    title={`BUS ${index + 1} - ${trip.calls[0]?.time} Departure`}
+                    stops={summariseStops(trip)}
+                  />
                 </div>
               ))}
 

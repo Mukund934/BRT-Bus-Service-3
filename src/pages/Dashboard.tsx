@@ -2,14 +2,14 @@ import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import { useUser } from "@/contexts/UserContext";
+import { useAuth } from "@/contexts/AuthContext";
 import UserDashboard from "@/components/dashboards/UserDashboard";
 import DriverDashboard from "@/components/dashboards/DriverDashboard";
 import AdminDashboard from "@/components/dashboards/AdminDashboard";
 import { AlertCircle, Loader } from "lucide-react";
 
 const Dashboard = () => {
-  const { user, role, loading } = useUser();
+  const { user, role, loading } = useAuth();
   const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
 
@@ -75,13 +75,8 @@ const Dashboard = () => {
           </div>
         )}
 
-        {/* USER DASHBOARD */}
-        {userRole === "user" && <UserDashboard onError={setError} />}
-
-        {/* DRIVER DASHBOARD */}
-        {userRole === "driver" && <DriverDashboard onError={setError} />}
-
-        {/* ADMIN DASHBOARD */}
+        {userRole === "user" && <UserDashboard />}
+        {userRole === "driver" && <DriverDashboard />}
         {userRole === "admin" && <AdminDashboard onError={setError} />}
       </main>
 

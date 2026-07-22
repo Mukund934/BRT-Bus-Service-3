@@ -1,29 +1,21 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { off, onValue, ref, type DataSnapshot } from "firebase/database";
 import { rtdb } from "@/firebase";
-import { ref, onValue, off } from "firebase/database";
+import { MAP_CONFIG, REMOTE_PATHS } from "@/constants/config";
+import { DEFAULT_MAP_CENTER } from "@/domain/transit/stops";
+import type { BusPosition } from "@/services/notificationService";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 
-type Bus = {
-  lat: number;
-  lng: number;
-  name: string;
-  email: string;
-};
-
 const MapPage = () => {
-  const [buses, setBuses] = useState<Record<string, Bus>>({});
+  const [buses, setBuses] = useState<Record<string, BusPosition>>({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const busRef = ref(rtdb, "busLocations");
+    const busRef = ref(rtdb, REMOTE_PATHS.BUS_LOCATIONS);
 
-    const handleValue = (snapshot: any) => {
-      if (snapshot.exists()) {
-        setBuses(snapshot.val());
-      } else {
-        setBuses({});
-      }
+    const handleValue = (snapshot: DataSnapshot) => {
+      setBuses(snapshot.exists() ? snapshot.val() : {});
       setLoading(false);
     };
 
@@ -32,20 +24,26 @@ const MapPage = () => {
     return () => off(busRef, "value", handleValue);
   }, []);
 
-  const busArray = Object.values(buses);
+  const busArray = useMemo(() => Object.values(buses), [buses]);
 
-  // 🔥 default location
-  let lat = 21.2514;
-  let lng = 81.6296;
+  /** Centre on the fleet, falling back to the first stop before any bus reports. */
+  const { lat, lng } = useMemo(() => {
+    if (busArray.length === 0) return DEFAULT_MAP_CENTER;
 
-  // 🔥 auto-center (fix initial wrong position)
-  if (busArray.length > 0) {
-    const sumLat = busArray.reduce((acc, b) => acc + b.lat, 0);
-    const sumLng = busArray.reduce((acc, b) => acc + b.lng, 0);
+    const total = busArray.reduce(
+      (acc, bus) => ({ lat: acc.lat + bus.lat, lng: acc.lng + bus.lng }),
+      { lat: 0, lng: 0 }
+    );
 
-    lat = sumLat / busArray.length;
-    lng = sumLng / busArray.length;
-  }
+    return { lat: total.lat / busArray.length, lng: total.lng / busArray.length };
+  }, [busArray]);
+
+  const bbox = [
+    lng - MAP_CONFIG.BBOX_DELTA_DEG,
+    lat - MAP_CONFIG.BBOX_DELTA_DEG,
+    lng + MAP_CONFIG.BBOX_DELTA_DEG,
+    lat + MAP_CONFIG.BBOX_DELTA_DEG,
+  ].join(",");
 
   return (
     <div className="min-h-screen bg-[#f4f2ff]">
@@ -62,10 +60,11 @@ const MapPage = () => {
           <div className="w-full h-[400px] rounded-xl overflow-hidden shadow mb-4 relative">
             
             <iframe
+              title="Live bus locations"
               width="100%"
               height="100%"
               loading="lazy"
-              src={`https://www.openstreetmap.org/export/embed.html?bbox=${lng-0.02},${lat-0.02},${lng+0.02},${lat+0.02}&layer=mapnik&marker=${lat},${lng}`}
+              src={`https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${lat},${lng}`}
             />
 
             {/* 🔥 Overlay info */}

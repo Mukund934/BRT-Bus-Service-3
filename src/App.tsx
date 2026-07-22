@@ -2,9 +2,10 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 
-import { UserProvider, useUser } from "@/contexts/UserContext";
+import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { TicketProvider } from "@/contexts/TicketContext";
 import { NotificationProvider } from "@/components/NotificationPopup";
 import ArrivalMonitor from "@/components/ArrivalMonitor";
 
@@ -20,9 +21,9 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
-// 🔒 Protected Route
+/** Redirects signed-out visitors to the login page. */
 const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
-  const { user, loading } = useUser();
+  const { user, loading } = useAuth();
 
   if (loading) return <div>Loading...</div>;
 
@@ -31,20 +32,20 @@ const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
   return children;
 };
 
-// 🚫 Public Route
+/** Keeps signed-in users off the login page. */
 const PublicRoute = ({ children }: { children: JSX.Element }) => {
-  const { user } = useUser();
+  const { user } = useAuth();
 
   if (user) return <Navigate to="/dashboard" replace />;
 
   return children;
 };
 
-const App = () => {
-  return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <UserProvider>
+const App = () => (
+  <QueryClientProvider client={queryClient}>
+    <TooltipProvider>
+      <AuthProvider>
+        <TicketProvider>
           <NotificationProvider>
             <Toaster />
             <Sonner />
@@ -53,14 +54,13 @@ const App = () => {
               <ArrivalMonitor />
 
               <Routes>
-                {/* PUBLIC */}
+                {/* Public */}
                 <Route path="/" element={<Home />} />
                 <Route path="/fares" element={<Fares />} />
                 <Route path="/timetable" element={<Timetable />} />
                 <Route path="/contact" element={<Contact />} />
                 <Route path="/map" element={<MapPage />} />
 
-                {/* LOGIN */}
                 <Route
                   path="/login"
                   element={
@@ -70,7 +70,6 @@ const App = () => {
                   }
                 />
 
-                {/* DRIVER */}
                 <Route
                   path="/driver"
                   element={
@@ -80,7 +79,6 @@ const App = () => {
                   }
                 />
 
-                {/* DASHBOARD */}
                 <Route
                   path="/dashboard"
                   element={
@@ -90,15 +88,14 @@ const App = () => {
                   }
                 />
 
-                {/* 404 */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </BrowserRouter>
           </NotificationProvider>
-        </UserProvider>
-      </TooltipProvider>
-    </QueryClientProvider>
-  );
-};
+        </TicketProvider>
+      </AuthProvider>
+    </TooltipProvider>
+  </QueryClientProvider>
+);
 
 export default App;

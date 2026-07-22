@@ -1,87 +1,122 @@
-import { useState, useEffect, useCallback, createContext, useContext, ReactNode, useRef } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
+import { NOTIFICATION_RULES } from "@/constants/config";
+import { createAlertThrottle } from "@/services/notificationService";
 
-interface Notification {
+interface ArrivalNotification {
   id: string;
-  busNumber: string;
+  routeId: string;
   stop: string;
-  eta: number; // minutes
+  /** Minutes until the bus reaches the stop. */
+  eta: number;
   timestamp: number;
 }
 
-interface NotificationContextType {
-  notify: (busNumber: string, stop: string, eta: number) => void;
+interface NotificationContextValue {
+  notify: (routeId: string, stop: string, eta: number) => void;
 }
 
-const NotificationContext = createContext<NotificationContextType>({ notify: () => {} });
+const NotificationContext = createContext<NotificationContextValue>({
+  notify: () => {},
+});
 
-export const useNotification = () => useContext(NotificationContext);
+export const useNotification = (): NotificationContextValue =>
+  useContext(NotificationContext);
 
 export function NotificationProvider({ children }: { children: ReactNode }) {
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const lastSentRef = useRef<Record<string, number>>({});
+  const [notifications, setNotifications] = useState<ArrivalNotification[]>([]);
 
-  const notify = useCallback((busNumber: string, stop: string, eta: number) => {
-    const key = `${busNumber}-${stop}`;
+  /**
+   * Suppresses repeat alerts for the same route and stop.
+   *
+   * Built lazily so the throttle is not reconstructed and thrown away on
+   * every render.
+   */
+  const throttleRef = useRef<ReturnType<typeof createAlertThrottle> | null>(null);
+  throttleRef.current ??= createAlertThrottle();
+
+  const notify = useCallback((routeId: string, stop: string, eta: number) => {
     const now = Date.now();
-    // Spam prevention: only once per stop per 5 minutes
-    if (lastSentRef.current[key] && now - lastSentRef.current[key] < 300000) return;
-    lastSentRef.current[key] = now;
 
-    const id = `notif-${now}`;
-    setNotifications(prev => [...prev, { id, busNumber, stop, eta, timestamp: now }]);
+    if (!throttleRef.current!.claim(routeId, stop, now)) return;
 
-    // Browser push
+    setNotifications((previous) => [
+      ...previous,
+      { id: `notif-${now}`, routeId, stop, eta, timestamp: now },
+    ]);
+
     if ("Notification" in window && Notification.permission === "granted") {
       new Notification("Bus Arrival Alert", {
-        body: `Bus ${busNumber} arriving at ${stop} in ~${eta} minutes`,
-        icon: "https://cdn-icons-png.freepik.com/512/1719/1719609.png",
+        body: `Bus ${routeId} arriving at ${stop} in ~${eta} minutes`,
+        icon: NOTIFICATION_RULES.ICON_URL,
       });
     }
   }, []);
 
-  // Request permission on mount
   useEffect(() => {
     if ("Notification" in window && Notification.permission === "default") {
-      Notification.requestPermission();
+      void Notification.requestPermission();
     }
   }, []);
 
-  // Auto dismiss after 6s
   useEffect(() => {
     if (notifications.length === 0) return;
-    const timer = setTimeout(() => {
-      setNotifications(prev => prev.slice(1));
-    }, 6000);
+
+    const timer = setTimeout(
+      () => setNotifications((previous) => previous.slice(1)),
+      NOTIFICATION_RULES.AUTO_DISMISS_MS
+    );
+
     return () => clearTimeout(timer);
   }, [notifications]);
 
-  const dismiss = (id: string) => setNotifications(prev => prev.filter(n => n.id !== id));
+  const dismiss = (id: string) =>
+    setNotifications((previous) => previous.filter((n) => n.id !== id));
+
+  const value = useMemo<NotificationContextValue>(() => ({ notify }), [notify]);
 
   return (
-    <NotificationContext.Provider value={{ notify }}>
+    <NotificationContext.Provider value={value}>
       {children}
-      {/* Floating popups */}
+
       <div className="fixed top-4 right-4 z-[200] flex flex-col gap-3 max-w-sm">
-        {notifications.map(n => (
+        {notifications.map((notification) => (
           <div
-            key={n.id}
+            key={notification.id}
             className="notification-popup animate-slide-in-right"
-            onMouseEnter={e => e.currentTarget.classList.add("paused")}
-            onMouseLeave={e => e.currentTarget.classList.remove("paused")}
-            onClick={() => dismiss(n.id)}
+            onMouseEnter={(e) => e.currentTarget.classList.add("paused")}
+            onMouseLeave={(e) => e.currentTarget.classList.remove("paused")}
+            onClick={() => dismiss(notification.id)}
           >
             <div className="flex items-start gap-3">
               <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
                 <span className="text-lg">🚌</span>
               </div>
               <div className="flex-1 min-w-0">
-                <p className="font-bold text-foreground text-sm">Bus {n.busNumber}</p>
-                <p className="text-sm text-muted-foreground">
-                  Arriving at <span className="font-medium text-foreground">{n.stop}</span>
+                <p className="font-bold text-foreground text-sm">
+                  Bus {notification.routeId}
                 </p>
-                <p className="text-xs text-primary font-semibold mt-0.5">In approx {n.eta} minutes</p>
+                <p className="text-sm text-muted-foreground">
+                  Arriving at{" "}
+                  <span className="font-medium text-foreground">
+                    {notification.stop}
+                  </span>
+                </p>
+                <p className="text-xs text-primary font-semibold mt-0.5">
+                  In approx {notification.eta} minutes
+                </p>
               </div>
-              <button className="text-muted-foreground hover:text-foreground text-lg leading-none">&times;</button>
+              <button className="text-muted-foreground hover:text-foreground text-lg leading-none">
+                &times;
+              </button>
             </div>
           </div>
         ))}

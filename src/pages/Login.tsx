@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
-import { useUser } from "@/contexts/UserContext";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Login = () => {
   const [isActive, setIsActive] = useState(false);
-  const { signIn, signUp, signInWithGoogle, user } = useUser();
+  const { signIn, signUp, signInWithGoogle, user } = useAuth();
 
   // Sign In States
   const [signInEmail, setSignInEmail] = useState("");

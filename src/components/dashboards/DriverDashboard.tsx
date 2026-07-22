@@ -1,14 +1,10 @@
-import { useUser } from "@/contexts/UserContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { Zap, Radio, Users, MapPin } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 
-interface DriverDashboardProps {
-  onError?: (error: string) => void;
-}
-
-const DriverDashboard = (_props: DriverDashboardProps) => {
-  const { user } = useUser();
+const DriverDashboard = () => {
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [isLive, setIsLive] = useState(false);
 

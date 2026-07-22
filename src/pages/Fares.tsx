@@ -1,26 +1,24 @@
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import { getFareBandsFrom } from "@/domain/transit/fares";
 
-const fares = [
-	{
-		destination:
-			"Balco Medical Centre, Sector 30, Sector 29, Sector 27, and South Block",
-		price: "₹ 5 /-",
-	},
-	{
-		destination:
-			"Indravati Bhawan, Mahanadi Bhawan, North Block, Ekatm Path, CBD, Sector 15",
-		price: "₹ 10 /-",
-	},
-	{
-		destination: "Telibandha",
-		price: "₹ 30 /-",
-	},
-	{
-		destination: "DKS Bhawan and Railway Station",
-		price: "₹ 40 /-",
-	},
-];
+const ORIGIN = "HNLU" as const;
+
+/**
+ * Derived from the fare table rather than restated.
+ *
+ * The hardcoded list this replaced had drifted: it advertised ₹30 to
+ * Telibandha and ₹40 to the railway station, while the fare actually charged
+ * at booking was ₹25 and ₹35. It also omitted several stops entirely.
+ */
+const fareBands = getFareBandsFrom(ORIGIN);
+
+/** "A, B, and C" - matching how the page has always read. */
+const formatDestinations = (stops: readonly string[]): string => {
+	if (stops.length === 1) return stops[0]!;
+
+	return `${stops.slice(0, -1).join(", ")}, and ${stops[stops.length - 1]}`;
+};
 
 const Fares = () => {
 	return (
@@ -47,21 +45,21 @@ const Fares = () => {
 
 							<div className="relative bg-white rounded-[24px] px-6 md:px-10 py-8 border border-purple-100 shadow-[0_15px_50px_rgba(0,0,0,0.08)] transition-all duration-300 hover:-translate-y-[2px] hover:shadow-[0_25px_70px_rgba(0,0,0,0.12)]">
 								<h2 className="text-[22px] md:text-[24px] font-semibold text-[#6b4fa3] mb-6 pb-3 border-b border-purple-200">
-									From HNLU to:
+									From {ORIGIN} to:
 								</h2>
 
 								<div className="space-y-0">
-									{fares.map((f, i) => (
+									{fareBands.map((band) => (
 										<div
-											key={i}
+											key={band.fare}
 											className="group flex justify-between items-center py-4 px-3 border-b border-purple-200 last:border-none transition-all duration-200 hover:bg-purple-50/60"
 										>
 											<span className="font-semibold text-gray-800 text-[15px] md:text-[16px] transition-transform duration-200 group-hover:translate-x-[2px]">
-												{f.destination}
+												{formatDestinations(band.destinations)}
 											</span>
 
 											<span className="text-[#6b4fa3] font-semibold text-[16px] md:text-[18px]">
-												{f.price}
+												₹ {band.fare} /-
 											</span>
 										</div>
 									))}

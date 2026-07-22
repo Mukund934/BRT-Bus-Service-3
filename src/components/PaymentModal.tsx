@@ -1,36 +1,32 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
-import { useUser } from "@/contexts/UserContext";
-import { PaymentStatus } from "@/types/ticket";
+import { PAYMENT_CONFIG, QR_CONFIG } from "@/constants/config";
+import { useAuth } from "@/contexts/AuthContext";
+import { useTickets } from "@/contexts/TicketContext";
+import type { JourneySelection, PaymentStatus } from "@/domain/ticket/types";
+import { BOOKING_FAILURE_MESSAGES } from "@/services/ticketService";
 
 interface PaymentModalProps {
   open: boolean;
   onClose: () => void;
-  route: string;
-  fromStop: string;
-  toStop: string;
-  fare: number;
-  departureTime: string;
-  arrivalTime: string;
-  bookingTime: string; // ✅ ADDED
+  /** The journey being paid for. */
+  selection: JourneySelection;
   onSuccess: () => void;
 }
 
-const PaymentModal = ({
-  open,
-  onClose,
-  route,
-  fromStop,
-  toStop,
-  fare,
-  departureTime,
-  arrivalTime,
-  bookingTime, // ✅ ADDED
-  onSuccess,
-}: PaymentModalProps) => {
-  const { user, bookTicket } = useUser();
+/** UPI deep link for the simulated payment QR. */
+const buildUpiLink = (amount: number): string =>
+  `upi://pay?pa=${PAYMENT_CONFIG.UPI_VPA}&pn=${PAYMENT_CONFIG.UPI_PAYEE}` +
+  `&am=${amount}&cu=${PAYMENT_CONFIG.CURRENCY}`;
+
+const PaymentModal = ({ open, onClose, selection, onSuccess }: PaymentModalProps) => {
+  const { user } = useAuth();
+  const { bookTicket } = useTickets();
+
   const [status, setStatus] = useState<PaymentStatus>("PENDING");
   const [error, setError] = useState("");
+
+  const { fromStop, toStop, fare, departureTime, arrivalTime } = selection;
 
   useEffect(() => {
     if (open) {
@@ -51,31 +47,25 @@ const PaymentModal = ({
     setStatus("PROCESSING");
 
     try {
-      await new Promise((r) => setTimeout(r, 2000));
+      await new Promise((resolve) =>
+        setTimeout(resolve, PAYMENT_CONFIG.SIMULATED_DELAY_MS)
+      );
 
-      const ticket = bookTicket({
+      const result = bookTicket({
+        ...selection,
         userId: user.uid,
-        userEmail: user.email || "",
-        route,
-        fromStop,
-        toStop,
-        fare,
-        departureTime,
-        arrivalTime,
-        bookingTime,
+        userEmail: user.email ?? "",
       });
 
-      if (!ticket) {
-        setError(
-          "We could not confirm this booking. The service may have departed, you may already have an overlapping ticket, or your device storage is full."
-        );
+      if (!result.ok) {
+        setError(BOOKING_FAILURE_MESSAGES[result.reason]);
         setStatus("FAILED");
         return;
       }
 
       setStatus("SUCCESS");
     } catch (err) {
-      console.error("Payment error:", err);
+      console.error("Payment failed:", err);
       setError("Could not save your ticket. Please try again.");
       setStatus("FAILED");
     }
@@ -103,16 +93,11 @@ const PaymentModal = ({
               <p className="text-sm">
                 {departureTime} - {arrivalTime}
               </p>
-              <p className="text-2xl font-bold text-primary mt-2">
-                ₹{fare}/-
-              </p>
+              <p className="text-2xl font-bold text-primary mt-2">₹{fare}/-</p>
             </div>
 
             <div className="flex justify-center mb-6">
-              <QRCodeSVG
-                value={`upi://pay?pa=brtbus@upi&pn=BRT Bus&am=${fare}&cu=INR`}
-                size={140}
-              />
+              <QRCodeSVG value={buildUpiLink(fare)} size={QR_CONFIG.PAYMENT_SIZE} />
             </div>
 
             <button onClick={handlePay} className="w-full brt-button">
@@ -137,9 +122,7 @@ const PaymentModal = ({
 
         {status === "SUCCESS" && (
           <div className="flex flex-col items-center py-8">
-            <h3 className="text-xl font-bold mb-3">
-              Payment Successful 🎉
-            </h3>
+            <h3 className="text-xl font-bold mb-3">Payment Successful 🎉</h3>
 
             <button
               onClick={() => {
@@ -155,9 +138,7 @@ const PaymentModal = ({
 
         {status === "FAILED" && (
           <div className="flex flex-col items-center py-8">
-            <h3 className="text-xl font-bold mb-3 text-red-500">
-              Payment Failed
-            </h3>
+            <h3 className="text-xl font-bold mb-3 text-red-500">Payment Failed</h3>
 
             <p className="text-sm text-muted-foreground text-center mb-5">
               {error || "Something went wrong while processing your payment."}
@@ -171,10 +152,7 @@ const PaymentModal = ({
                 Close
               </button>
 
-              <button
-                onClick={() => setStatus("PENDING")}
-                className="brt-button"
-              >
+              <button onClick={() => setStatus("PENDING")} className="brt-button">
                 Try Again
               </button>
             </div>

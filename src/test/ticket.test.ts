@@ -1,14 +1,10 @@
 import { describe, it, expect } from "vitest";
-import {
-  calculateFare,
-  createTicket,
-  resolveTicketStatus,
-  findConflictingTicket,
-  getDepartureAt,
-  getArrivalAt,
-  isLiveStatus,
-  TicketDraft,
-} from "@/types/ticket";
+import { findConflictingTicket } from "@/domain/ticket/conflicts";
+import { createTicket } from "@/domain/ticket/factory";
+import { isLiveStatus, resolveTicketStatus } from "@/domain/ticket/status";
+import { getArrivalAt, getDepartureAt } from "@/domain/ticket/timing";
+import type { TicketDraft } from "@/domain/ticket/types";
+import { calculateFare } from "@/domain/transit/fares";
 
 const BOOKED_ON = new Date(2026, 6, 19, 7, 0, 0).toISOString();
 
