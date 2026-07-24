@@ -34,9 +34,9 @@ describe("fare calculation", () => {
     expect(calculateFare("Telibandha", "HNLU")).toBeGreaterThan(0);
   });
 
-  it("returns zero for identical or empty stops", () => {
+  it("returns zero for identical stops and no fare for empty ones", () => {
     expect(calculateFare("HNLU", "HNLU")).toBe(0);
-    expect(calculateFare("", "CBD")).toBe(0);
+    expect(calculateFare("", "CBD")).toBeNull();
   });
 });
 

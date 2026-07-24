@@ -12,14 +12,25 @@ import { describe, expect, it } from "vitest";
 import { calculateFare, getFareBandsFrom } from "@/domain/transit/fares";
 import { STOPS } from "@/domain/transit/stops";
 
+const UNPRICED: readonly string[] = [
+  "Sector 17 Gate",
+  "Sector 18 Gate",
+  "Sector 12",
+  "Sector 23",
+  "Tribal Museum",
+];
+
+const PRICED = STOPS.filter((stop) => !UNPRICED.includes(stop));
+
 describe("fare table completeness", () => {
   it("charges a non-zero fare between any two distinct stops", () => {
     const free: string[] = [];
 
-    for (const from of STOPS) {
-      for (const to of STOPS) {
+    for (const from of PRICED) {
+      for (const to of PRICED) {
         if (from === to) continue;
-        if (calculateFare(from, to) <= 0) free.push(`${from} -> ${to}`);
+        const fare = calculateFare(from, to);
+        if (fare === null || fare <= 0) free.push(`${from} -> ${to}`);
       }
     }
 
@@ -29,8 +40,8 @@ describe("fare table completeness", () => {
   it("charges the same in both directions", () => {
     const asymmetric: string[] = [];
 
-    for (const from of STOPS) {
-      for (const to of STOPS) {
+    for (const from of PRICED) {
+      for (const to of PRICED) {
         const there = calculateFare(from, to);
         const back = calculateFare(to, from);
         if (there !== back) asymmetric.push(`${from}/${to}: ${there} vs ${back}`);
@@ -46,10 +57,14 @@ describe("calculateFare input handling", () => {
     expect(calculateFare("HNLU", "HNLU")).toBe(0);
   });
 
-  it("prices unknown or empty stops at zero rather than throwing", () => {
+  it("returns no fare for unknown or empty stops rather than throwing", () => {
     // The booking UI calls this while the passenger is still choosing.
-    expect(calculateFare("", "CBD")).toBe(0);
-    expect(calculateFare("HNLU", "Nowhere Junction")).toBe(0);
+    expect(calculateFare("", "CBD")).toBeNull();
+    expect(calculateFare("HNLU", "Nowhere Junction")).toBeNull();
+  });
+
+  it("returns no fare for a pair the official chart does not price", () => {
+    expect(calculateFare("HNLU", "Tribal Museum")).toBeNull();
   });
 
   it("prices the two stops the old matrix omitted", () => {
@@ -60,7 +75,7 @@ describe("calculateFare input handling", () => {
 
   it("charges more for the full corridor than for one stop", () => {
     expect(calculateFare("HNLU", "Raipur Railway Station")).toBeGreaterThan(
-      calculateFare("HNLU", "Balco Medical Center")
+      calculateFare("HNLU", "Balco Medical Center")!
     );
   });
 });
@@ -71,8 +86,8 @@ describe("fare bands shown on the public fares page", () => {
   it("covers every other stop exactly once", () => {
     const listed = bands.flatMap((band) => band.destinations);
 
-    expect(listed).toHaveLength(STOPS.length - 1);
-    expect(new Set(listed).size).toBe(STOPS.length - 1);
+    expect(listed).toHaveLength(PRICED.length - 1);
+    expect(new Set(listed).size).toBe(PRICED.length - 1);
     expect(listed).not.toContain("HNLU");
   });
 

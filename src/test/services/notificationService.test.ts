@@ -19,7 +19,7 @@ import type { LiveBus } from "@/services/locationService";
 import { STOP_COORDS } from "@/domain/transit/stops";
 
 const NOW = 1_700_000_000_000;
-const stop = STOP_COORDS["HNLU"];
+const stop = STOP_COORDS["HNLU"]!;
 
 const bus = (over: Partial<LiveBus> = {}): LiveBus => ({
   busId: "BUS-0001",

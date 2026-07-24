@@ -12,10 +12,12 @@ export interface Coordinate {
 }
 
 /**
- * Stops in travel order, HNLU to Raipur Railway Station.
+ * Every stop in the official BRTS network.
  *
- * Order is meaningful: it drives timetable column order and the
- * "you can only travel forward along the route" rule in booking.
+ * The first fifteen are the corridor the timetable serves, in travel order
+ * from HNLU to Raipur Railway Station; that order drives the timetable
+ * columns and the "you can only travel forward along the route" rule in
+ * booking. The remainder are the feeder and extension stops.
  */
 export const STOPS = [
   "HNLU",
@@ -33,11 +35,35 @@ export const STOPS = [
   "Telibandha",
   "DKS Bhawan",
   "Raipur Railway Station",
+  "Agriculture College",
+  "IIM",
+  "Sector 17 Gate",
+  "Sector 18 Gate",
+  "Sector 17",
+  "Sector 12",
+  "Satya Sai Hospital",
+  "Stadium",
+  "Nawagaon",
+  "Sector 22",
+  "CBD Railway Station",
+  "Office Complex Block A B",
+  "Sector 23",
+  "Mantri Aawas",
+  "Rakhi Village",
+  "Sector 27-29 Mid",
+  "Jungle Safari",
+  "Rawatpura Sarkar University",
+  "Thanaud",
+  "HNLU Gate",
+  "NH 30 Chowk",
+  "IIIT",
+  "Tribal Museum",
+  "Muktangan",
 ] as const;
 
 export type StopName = (typeof STOPS)[number];
 
-export const STOP_COORDS: Record<StopName, Coordinate> = {
+export const STOP_COORDS: Partial<Record<StopName, Coordinate>> = {
   "HNLU": { lat: 21.2514, lng: 81.6296 },
   "Balco Medical Center": { lat: 21.248, lng: 81.635 },
   "Sector 30": { lat: 21.246, lng: 81.64 },
@@ -61,10 +87,17 @@ const STOP_SET: ReadonlySet<string> = new Set(STOPS);
 export const isStopName = (value: unknown): value is StopName =>
   typeof value === "string" && STOP_SET.has(value);
 
+export const findStops = (query: string): StopName[] => {
+  const term = query.trim().toLowerCase();
+  if (!term) return [];
+
+  return STOPS.filter((stop) => stop.toLowerCase().includes(term));
+};
+
 /**
  * Map centre used before any live bus position is known.
  *
  * Derived from the first stop rather than re-typed, so the map and the stop
  * registry can never drift apart.
  */
-export const DEFAULT_MAP_CENTER: Coordinate = STOP_COORDS["HNLU"];
+export const DEFAULT_MAP_CENTER: Coordinate = STOP_COORDS["HNLU"]!;

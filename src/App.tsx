@@ -28,6 +28,7 @@ import { PERMISSIONS } from "@/domain/auth/permissions";
   looks at the timetable.
 */
 const Home = lazy(() => import("./pages/Home"));
+const Plan = lazy(() => import("./pages/Plan"));
 const Fares = lazy(() => import("./pages/Fares"));
 const Timetable = lazy(() => import("./pages/Timetable"));
 const Contact = lazy(() => import("./pages/Contact"));
@@ -80,6 +81,7 @@ const App = () => (
                 <Routes>
                   {/* Public */}
                   <Route path="/" element={<Home />} />
+                  <Route path="/plan" element={<Plan />} />
                   <Route path="/fares" element={<Fares />} />
                   <Route path="/timetable" element={<Timetable />} />
                   <Route path="/contact" element={<Contact />} />

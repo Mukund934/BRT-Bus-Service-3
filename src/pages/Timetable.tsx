@@ -14,7 +14,7 @@ import {
   type ServiceDay,
   type Trip,
 } from "@/domain/transit/schedule";
-import { STOPS } from "@/domain/transit/stops";
+import { STOPS, type StopName } from "@/domain/transit/stops";
 
 const CORRIDOR = getRoute("101").headline;
 
@@ -28,6 +28,16 @@ interface TimetableTableProps {
   trips: readonly Trip[];
   onBook: (trip: Trip) => void;
 }
+
+/**
+ * The stops these trips actually call at, in registry order.
+ *
+ * The registry covers the whole network, so a column is only drawn for a stop
+ * some trip in this table calls at - otherwise every feeder and extension stop
+ * would render as an always-blank column.
+ */
+const columnStops = (trips: readonly Trip[]): readonly StopName[] =>
+  STOPS.filter((stop) => trips.some((trip) => getCallTime(trip, stop) !== null));
 
 /**
  * Renders trips as a stop-per-column grid.
@@ -69,7 +79,7 @@ const TimetableTable = ({ caption, trips, onBook }: TimetableTableProps) => (
           >
             Route
           </th>
-          {STOPS.map((stop) => (
+          {columnStops(trips).map((stop) => (
             <th
               key={stop}
               scope="col"
@@ -104,7 +114,7 @@ const TimetableTable = ({ caption, trips, onBook }: TimetableTableProps) => (
                 {trip.routeId}
               </th>
 
-              {STOPS.map((stop) => (
+              {columnStops(trips).map((stop) => (
                 <td
                   key={stop}
                   className="px-2 py-1.5 text-[10px] lg:text-xs text-center whitespace-nowrap text-foreground border-b border-border"

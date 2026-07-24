@@ -25,6 +25,7 @@ const ArrivalMonitor = () => {
 
     const boardingStop = activeTicket.fromStop;
     const stopCoord = STOP_COORDS[boardingStop];
+    if (!stopCoord) return;
 
     return subscribeToBuses((buses) => {
       const eta = selectNearestEta(buses, stopCoord);

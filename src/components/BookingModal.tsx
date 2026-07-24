@@ -25,6 +25,9 @@ interface BookingModalProps {
   onClose: () => void;
   /** The scheduled run the passenger tapped "Book" on. */
   trip: Trip;
+  /** Stops the passenger already chose elsewhere, so they are not re-entered. */
+  initialFromStop?: StopName;
+  initialToStop?: StopName;
   onProceedPayment: (selection: JourneySelection) => void;
 }
 
@@ -35,7 +38,14 @@ interface BookingModalProps {
  * the dialog, Escape closes it, focus returns to the "Book" button that
  * opened it, and the page behind cannot be scrolled or tabbed into.
  */
-const BookingModal = ({ open, onClose, trip, onProceedPayment }: BookingModalProps) => {
+const BookingModal = ({
+  open,
+  onClose,
+  trip,
+  initialFromStop,
+  initialToStop,
+  onProceedPayment,
+}: BookingModalProps) => {
   const { tickets } = useTickets();
 
   const fieldId = useId();
@@ -46,8 +56,10 @@ const BookingModal = ({ open, onClose, trip, onProceedPayment }: BookingModalPro
 
   const servedStops = useMemo(() => getTripStops(trip), [trip]);
 
-  const [fromStop, setFromStop] = useState<StopName>(() => servedStops[0]!);
-  const [toStop, setToStop] = useState<StopName | "">("");
+  const [fromStop, setFromStop] = useState<StopName>(
+    () => initialFromStop ?? servedStops[0]!
+  );
+  const [toStop, setToStop] = useState<StopName | "">(() => initialToStop ?? "");
 
   const destinations = useMemo(
     () => getDestinationsFrom(trip, fromStop),
@@ -56,7 +68,8 @@ const BookingModal = ({ open, onClose, trip, onProceedPayment }: BookingModalPro
 
   const departureTime = getCallTime(trip, fromStop) ?? "";
   const arrivalTime = toStop ? getCallTime(trip, toStop) ?? "" : "";
-  const fare = toStop ? calculateFare(fromStop, toStop) : 0;
+  const fare = toStop ? calculateFare(fromStop, toStop) : null;
+  const unpriced = toStop !== "" && fare === null;
 
   const { hasDeparted, conflict } = useMemo(() => {
     if (!toStop) return { hasDeparted: false, conflict: null };
@@ -72,8 +85,8 @@ const BookingModal = ({ open, onClose, trip, onProceedPayment }: BookingModalPro
     };
   }, [toStop, departureTime, arrivalTime, tickets]);
 
-  const blocked = !toStop || hasDeparted || conflict !== null;
-  const hasProblem = hasDeparted || conflict !== null;
+  const blocked = !toStop || hasDeparted || conflict !== null || unpriced;
+  const hasProblem = hasDeparted || conflict !== null || unpriced;
 
   return (
     <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
@@ -137,7 +150,7 @@ const BookingModal = ({ open, onClose, trip, onProceedPayment }: BookingModalPro
           looking for it.
         */}
         <div id={summaryId} aria-live="polite" aria-atomic="true">
-          {toStop && (
+          {toStop && fare !== null && (
             <div className="bg-secondary rounded-xl p-4">
               <dl className="text-sm">
                 <div className="flex justify-between mb-1">
@@ -175,7 +188,16 @@ const BookingModal = ({ open, onClose, trip, onProceedPayment }: BookingModalPro
             </div>
           )}
 
-          {conflict && !hasDeparted && (
+          {unpriced && !hasDeparted && (
+            <div className="rounded-xl bg-destructive/10 border border-destructive/30 px-4 py-3">
+              <p className="text-sm text-destructive font-medium">
+                No fare is published for this journey yet, so it cannot be
+                booked. Please choose a different destination.
+              </p>
+            </div>
+          )}
+
+          {conflict && !hasDeparted && !unpriced && (
             <div className="rounded-xl bg-destructive/10 border border-destructive/30 px-4 py-3">
               <p className="text-sm text-destructive font-medium">
                 You already have a ticket from {conflict.fromStop} to {conflict.toStop}{" "}
@@ -198,7 +220,7 @@ const BookingModal = ({ open, onClose, trip, onProceedPayment }: BookingModalPro
             type="button"
             disabled={blocked}
             onClick={() => {
-              if (!toStop) return;
+              if (!toStop || fare === null) return;
 
               onProceedPayment({
                 route: trip.routeId,

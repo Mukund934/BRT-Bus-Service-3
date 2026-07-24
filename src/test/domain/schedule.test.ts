@@ -16,7 +16,6 @@ import {
   getTripStops,
   getTrips,
 } from "@/domain/transit/schedule";
-import { STOPS } from "@/domain/transit/stops";
 
 const allTrips = [...getTrips("weekday"), ...getTrips("weekend")];
 
@@ -78,7 +77,7 @@ describe("the express route skips the two Bhavan stops", () => {
   it("still calls at every other stop", () => {
     const skipped = new Set(["Indravati Bhavan", "Mahanadi Bhavan"]);
 
-    for (const stop of STOPS) {
+    for (const stop of getRoute("101").servedStops) {
       if (skipped.has(stop)) continue;
       expect(getCallTime(express[0]!, stop)).not.toBeNull();
     }

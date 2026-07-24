@@ -14,6 +14,7 @@ import { useAnnounce } from "./LiveAnnouncer";
 /** Human-readable page names, keyed by route. */
 const ROUTE_TITLES: Record<string, string> = {
   "/": "Home",
+  "/plan": "Plan your journey",
   "/map": "Live bus tracking",
   "/timetable": "Timetable",
   "/fares": "Fares",

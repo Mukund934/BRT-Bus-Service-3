@@ -10,11 +10,13 @@ import {
 	MapPin,
 	Menu,
 	Phone,
+	Route,
 	X,
 } from "lucide-react";
 
 const navLinks = [
 	{ to: "/", label: "Home", icon: Home },
+	{ to: "/plan", label: "Plan Journey", icon: Route },
 	{ to: "/map", label: "Live Map", icon: MapPin },
 	{ to: "/timetable", label: "Time Table", icon: Clock },
 	{ to: "/fares", label: "Bus Fares", icon: DollarSign },

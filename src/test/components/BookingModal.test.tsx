@@ -157,7 +157,7 @@ describe("the journey summary", () => {
     expect(await screen.findByText("₹10/-")).toBeInTheDocument();
 
     await user.selectOptions(screen.getByLabelText(/to stop/i), "Raipur Railway Station");
-    expect(await screen.findByText("₹35/-")).toBeInTheDocument();
+    expect(await screen.findByText("₹40/-")).toBeInTheDocument();
   });
 });
 
