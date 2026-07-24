@@ -15,6 +15,7 @@ import { useAnnounce } from "./LiveAnnouncer";
 const ROUTE_TITLES: Record<string, string> = {
   "/": "Home",
   "/plan": "Plan your journey",
+  "/routes": "Route explorer",
   "/map": "Live bus tracking",
   "/timetable": "Timetable",
   "/fares": "Fares",
