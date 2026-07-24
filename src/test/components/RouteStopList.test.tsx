@@ -1,14 +1,15 @@
-import { render, screen, within } from "@testing-library/react";
+import { screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import RouteStopList from "@/components/RouteStopList";
 import { getNetworkRoute } from "@/domain/transit/routes";
 import type { StopName } from "@/domain/transit/stops";
+import { renderWithProviders } from "@/test/helpers/render";
 
 const feeder = getNetworkRoute("feeder-2");
 const scheduled: ReadonlySet<StopName> = new Set<StopName>(["CBD", "South Block"]);
 
 const renderList = () =>
-  render(
+  renderWithProviders(
     <RouteStopList
       routeId={feeder.id}
       stops={feeder.servedStops}

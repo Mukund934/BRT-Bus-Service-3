@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { getConnectedRoutes, isInterchange, type NetworkRouteId } from "@/domain/transit/routes";
 import type { StopName } from "@/domain/transit/stops";
 
@@ -35,7 +36,13 @@ const RouteStopList = ({ routeId, stops, scheduled }: RouteStopListProps) => (
 
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="font-semibold text-foreground">{stop}</span>
+              <Link
+                to={`/plan?from=${encodeURIComponent(stop)}`}
+                className="font-semibold text-foreground rounded transition-colors duration-200 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+              >
+                {stop}
+                <span className="sr-only"> - plan a journey from here</span>
+              </Link>
 
               {terminus && (
                 <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary">
