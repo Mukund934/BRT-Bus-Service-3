@@ -74,6 +74,13 @@ const RouteExplorer = () => {
               Every route published in the official Tatpar BRTS network, the
               stops it serves, and where you can change buses.
             </p>
+
+            <Link
+              to="/nearby"
+              className="inline-block mt-3 text-primary font-medium underline underline-offset-2 touch-target"
+            >
+              Places you can reach on these routes
+            </Link>
           </div>
 
           <section className="mb-12" aria-labelledby="scheduled-heading">

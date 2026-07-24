@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import RouteCard from "@/components/RouteCard";
 import heroBus from "@/assets/hero-brts.webp";
-import { Clock, MapPin, Shield, Zap } from "lucide-react";
+import { Clock, Compass, MapPin, Shield, Zap } from "lucide-react";
 import { getTripStops, getTrips, type Trip } from "@/domain/transit/schedule";
 
 const rotatingTexts = [
@@ -159,6 +160,37 @@ const Home = () => {
               ))}
 
             </div>
+
+          </div>
+
+        </div>
+
+      </section>
+
+      <section className="pb-12 px-4" aria-labelledby="explore-heading">
+
+        <div className="max-w-7xl mx-auto">
+
+          <div className="relative rounded-[30px] bg-[#faf9ff] px-6 md:px-12 py-10 shadow-[0_25px_80px_rgba(0,0,0,0.06)] flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+
+            <div>
+              <h2 id="explore-heading" className="text-[26px] md:text-[32px] font-semibold text-[#874f9c] tracking-tight">
+                Places to explore
+              </h2>
+
+              <p className="text-[#7a6aa8] text-[15px] md:text-[16px] mt-3 max-w-2xl">
+                Campuses, hospitals, government offices and attractions across
+                Nava Raipur, each with its nearest BRT stop.
+              </p>
+            </div>
+
+            <Link
+              to="/nearby"
+              className="inline-flex items-center gap-2 px-7 py-3 rounded-xl bg-[#874f9c] text-white font-semibold whitespace-nowrap transition-all duration-300 hover:-translate-y-[2px] hover:shadow-[0_15px_35px_rgba(135,79,156,0.35)]"
+            >
+              <Compass className="w-5 h-5" aria-hidden="true" />
+              Explore nearby places
+            </Link>
 
           </div>
 

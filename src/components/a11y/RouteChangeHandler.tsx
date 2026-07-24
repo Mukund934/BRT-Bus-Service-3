@@ -16,6 +16,7 @@ const ROUTE_TITLES: Record<string, string> = {
   "/": "Home",
   "/plan": "Plan your journey",
   "/routes": "Route explorer",
+  "/nearby": "Nearby places",
   "/map": "Live bus tracking",
   "/timetable": "Timetable",
   "/fares": "Fares",

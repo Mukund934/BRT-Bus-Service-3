@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { ArrowRight, Clock, Repeat, Search } from "lucide-react";
 import Header from "@/components/Header";
@@ -166,6 +166,13 @@ const Plan = () => {
               Choose where you are boarding and where you are going. Fares come
               from the official BRTS fare chart.
             </p>
+
+            <Link
+              to="/nearby"
+              className="inline-block mt-3 text-primary font-medium underline underline-offset-2 touch-target"
+            >
+              Not sure where to go? Browse nearby places
+            </Link>
           </div>
 
           <div className="brt-search-card animate-fade-in-up animate-stagger-1">
