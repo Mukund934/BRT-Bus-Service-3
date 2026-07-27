@@ -1,87 +1,145 @@
-import { useState, useEffect, useCallback, createContext, useContext, ReactNode, useRef } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
+import { X } from "lucide-react";
+import { NOTIFICATION_RULES } from "@/constants/config";
+import { useAnnounce } from "@/components/a11y/LiveAnnouncer";
+import { createAlertThrottle } from "@/services/notificationService";
 
-interface Notification {
+interface ArrivalNotification {
   id: string;
-  busNumber: string;
+  routeId: string;
   stop: string;
-  eta: number; // minutes
+  /** Minutes until the bus reaches the stop. */
+  eta: number;
   timestamp: number;
 }
 
-interface NotificationContextType {
-  notify: (busNumber: string, stop: string, eta: number) => void;
+interface NotificationContextValue {
+  notify: (routeId: string, stop: string, eta: number) => void;
 }
 
-const NotificationContext = createContext<NotificationContextType>({ notify: () => {} });
+const NotificationContext = createContext<NotificationContextValue>({
+  notify: () => {},
+});
 
-export const useNotification = () => useContext(NotificationContext);
+export const useNotification = (): NotificationContextValue =>
+  useContext(NotificationContext);
 
 export function NotificationProvider({ children }: { children: ReactNode }) {
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const lastSentRef = useRef<Record<string, number>>({});
+  const [notifications, setNotifications] = useState<ArrivalNotification[]>([]);
+  const announce = useAnnounce();
 
-  const notify = useCallback((busNumber: string, stop: string, eta: number) => {
-    const key = `${busNumber}-${stop}`;
-    const now = Date.now();
-    // Spam prevention: only once per stop per 5 minutes
-    if (lastSentRef.current[key] && now - lastSentRef.current[key] < 300000) return;
-    lastSentRef.current[key] = now;
+  /** Suppresses repeat alerts for the same route and stop. */
+  const throttleRef = useRef<ReturnType<typeof createAlertThrottle> | null>(null);
+  throttleRef.current ??= createAlertThrottle();
 
-    const id = `notif-${now}`;
-    setNotifications(prev => [...prev, { id, busNumber, stop, eta, timestamp: now }]);
+  const notify = useCallback(
+    (routeId: string, stop: string, eta: number) => {
+      const now = Date.now();
 
-    // Browser push
-    if ("Notification" in window && Notification.permission === "granted") {
-      new Notification("Bus Arrival Alert", {
-        body: `Bus ${busNumber} arriving at ${stop} in ~${eta} minutes`,
-        icon: "https://cdn-icons-png.freepik.com/512/1719/1719609.png",
-      });
-    }
-  }, []);
+      if (!throttleRef.current!.claim(routeId, stop, now)) return;
 
-  // Request permission on mount
+      setNotifications((previous) => [
+        ...previous,
+        { id: `notif-${now}`, routeId, stop, eta, timestamp: now },
+      ]);
+
+      // Spoken to screen-reader users, who cannot see the popup appear.
+      announce(`Bus ${routeId} arriving at ${stop} in about ${eta} minutes.`);
+
+      if ("Notification" in window && Notification.permission === "granted") {
+        new Notification("Bus Arrival Alert", {
+          body: `Bus ${routeId} arriving at ${stop} in ~${eta} minutes`,
+          icon: NOTIFICATION_RULES.ICON_URL,
+        });
+      }
+    },
+    [announce]
+  );
+
   useEffect(() => {
     if ("Notification" in window && Notification.permission === "default") {
-      Notification.requestPermission();
+      void Notification.requestPermission();
     }
   }, []);
 
-  // Auto dismiss after 6s
   useEffect(() => {
     if (notifications.length === 0) return;
-    const timer = setTimeout(() => {
-      setNotifications(prev => prev.slice(1));
-    }, 6000);
+
+    const timer = setTimeout(
+      () => setNotifications((previous) => previous.slice(1)),
+      NOTIFICATION_RULES.AUTO_DISMISS_MS
+    );
+
     return () => clearTimeout(timer);
   }, [notifications]);
 
-  const dismiss = (id: string) => setNotifications(prev => prev.filter(n => n.id !== id));
+  const dismiss = useCallback(
+    (id: string) =>
+      setNotifications((previous) => previous.filter((n) => n.id !== id)),
+    []
+  );
+
+  const value = useMemo<NotificationContextValue>(() => ({ notify }), [notify]);
 
   return (
-    <NotificationContext.Provider value={{ notify }}>
+    <NotificationContext.Provider value={value}>
       {children}
-      {/* Floating popups */}
-      <div className="fixed top-4 right-4 z-[200] flex flex-col gap-3 max-w-sm">
-        {notifications.map(n => (
-          <div
-            key={n.id}
-            className="notification-popup animate-slide-in-right"
-            onMouseEnter={e => e.currentTarget.classList.add("paused")}
-            onMouseLeave={e => e.currentTarget.classList.remove("paused")}
-            onClick={() => dismiss(n.id)}
-          >
+
+      {/*
+        The announcement itself goes through the shared live region, so this
+        stack is a purely visual affordance. It is aria-hidden to avoid a
+        screen reader hearing every alert twice.
+      */}
+      <div
+        className="fixed top-4 right-4 z-[200] flex flex-col gap-3 w-[min(24rem,calc(100vw-2rem))]"
+        aria-hidden="true"
+      >
+        {notifications.map((notification) => (
+          <div key={notification.id} className="notification-popup !cursor-default">
             <div className="flex items-start gap-3">
               <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
                 <span className="text-lg">🚌</span>
               </div>
+
               <div className="flex-1 min-w-0">
-                <p className="font-bold text-foreground text-sm">Bus {n.busNumber}</p>
-                <p className="text-sm text-muted-foreground">
-                  Arriving at <span className="font-medium text-foreground">{n.stop}</span>
+                <p className="font-bold text-foreground text-sm">
+                  Bus {notification.routeId}
                 </p>
-                <p className="text-xs text-primary font-semibold mt-0.5">In approx {n.eta} minutes</p>
+                <p className="text-sm text-muted-foreground">
+                  Arriving at{" "}
+                  <span className="font-medium text-foreground">
+                    {notification.stop}
+                  </span>
+                </p>
+                <p className="text-xs text-primary font-semibold mt-0.5">
+                  In approx {notification.eta} minutes
+                </p>
               </div>
-              <button className="text-muted-foreground hover:text-foreground text-lg leading-none">&times;</button>
+
+              {/*
+                A real button rather than a decorative glyph, so it can be
+                clicked reliably and carries an accessible name. Keyboard
+                users dismiss via the surrounding page rather than reaching
+                into an aria-hidden stack.
+              */}
+              <button
+                type="button"
+                onClick={() => dismiss(notification.id)}
+                className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+                tabIndex={-1}
+              >
+                <X className="w-4 h-4" />
+                <span className="sr-only">Dismiss notification</span>
+              </button>
             </div>
           </div>
         ))}

@@ -5,6 +5,27 @@ interface FooterProps {
 	text?: string;
 }
 
+const FOOTER_LINKS = [
+	{ to: "/", label: "Home" },
+	{ to: "/map", label: "Live Map" },
+	{ to: "/timetable", label: "Time Table" },
+	{ to: "/fares", label: "Bus Fares" },
+	{ to: "/contact", label: "Contact Us" },
+];
+
+/**
+ * Social destinations.
+ *
+ * These are placeholders: the project has no social accounts yet, so they
+ * point at "#". They are labelled so assistive technology can still announce
+ * them, but they should be given real URLs or removed before launch.
+ */
+const SOCIAL_LINKS = [
+	{ label: "BRT Bus Service on Facebook", href: "#", Icon: Facebook },
+	{ label: "BRT Bus Service on Twitter", href: "#", Icon: Twitter },
+	{ label: "BRT Bus Service on Instagram", href: "#", Icon: Instagram },
+];
+
 const Footer = ({
 	text = "© BRT Bus Services. All Rights Reserved.",
 }: FooterProps) => {
@@ -19,9 +40,11 @@ const Footer = ({
 							className="flex items-center gap-3 text-primary-foreground group"
 						>
 							<div className="bg-white/10 p-2 rounded-xl group-hover:bg-white/20 transition-all duration-300">
+								{/* Decorative: the brand name is right beside it. */}
 								<img
 									src="/logo1.png"
-									alt="logo"
+									alt=""
+									aria-hidden="true"
 									className="w-10 h-10 lg:w-12 lg:h-12 object-contain"
 								/>
 							</div>
@@ -41,91 +64,57 @@ const Footer = ({
 						</p>
 					</div>
 
-					{/* Quick Links */}
-					<div>
-						<h4 className="font-semibold text-lg mb-4">
+					{/*
+						Internal destinations use Link. The raw anchors these
+						replaced triggered a full page reload, discarding the
+						session and scroll position on every footer click.
+					*/}
+					<nav aria-labelledby="footer-links-heading">
+						<h2 id="footer-links-heading" className="font-semibold text-lg mb-4">
 							Quick Links
-						</h4>
+						</h2>
 						<ul className="space-y-2 text-sm">
-							<li>
-								<a
-									href="/"
-									className="text-primary-foreground/80 hover:text-white transition-colors duration-200"
-								>
-									Home
-								</a>
-							</li>
-							<li>
-								<a
-									href="/map"
-									className="text-primary-foreground/80 hover:text-white transition-colors duration-200"
-								>
-									Live Map
-								</a>
-							</li>
-							<li>
-								<a
-									href="/timetable"
-									className="text-primary-foreground/80 hover:text-white transition-colors duration-200"
-								>
-									Time Table
-								</a>
-							</li>
-							<li>
-								<a
-									href="/fares"
-									className="text-primary-foreground/80 hover:text-white transition-colors duration-200"
-								>
-									Bus Fares
-								</a>
-							</li>
-							<li>
-								<Link
-									to="/contact"
-									className="text-primary-foreground/80 hover:text-white transition-colors duration-200"
-								>
-									Contact Us
-								</Link>
-							</li>
+							{FOOTER_LINKS.map(({ to, label }) => (
+								<li key={to}>
+									<Link
+										to={to}
+										className="text-primary-foreground/80 hover:text-white transition-colors duration-200"
+									>
+										{label}
+									</Link>
+								</li>
+							))}
+						</ul>
+					</nav>
+
+					<div>
+						<h2 className="font-semibold text-lg mb-4">Follow Us</h2>
+						<ul className="flex gap-3 mb-4 list-none p-0">
+							{SOCIAL_LINKS.map(({ label, href, Icon }) => (
+								<li key={label}>
+									{/*
+										Icon-only links carry no text, so without an
+										explicit name a screen reader announces only
+										"link" (WCAG 2.4.4).
+									*/}
+									<a
+										href={href}
+										aria-label={label}
+										className="flex items-center justify-center bg-white/10 p-3 rounded-lg hover:bg-white/20 transition-all duration-300 hover:scale-110 touch-target"
+									>
+										<Icon className="w-5 h-5" aria-hidden="true" />
+									</a>
+								</li>
+							))}
 						</ul>
 					</div>
 
-					{/* Social Media */}
 					<div>
-						<h4 className="font-semibold text-lg mb-4">
-							Follow Us
-						</h4>
-						<div className="flex gap-3 mb-4">
-							<a
-								href="#"
-								className="bg-white/10 p-3 rounded-lg hover:bg-white/20 transition-all duration-300 hover:scale-110"
-							>
-								<Facebook className="w-5 h-5" />
-							</a>
-							<a
-								href="#"
-								className="bg-white/10 p-3 rounded-lg hover:bg-white/20 transition-all duration-300 hover:scale-110"
-							>
-								<Twitter className="w-5 h-5" />
-							</a>
-							<a
-								href="#"
-								className="bg-white/10 p-3 rounded-lg hover:bg-white/20 transition-all duration-300 hover:scale-110"
-							>
-								<Instagram className="w-5 h-5" />
-							</a>
-						</div>
-					</div>
-
-					{/* Location */}
-					<div>
-						<h4 className="font-semibold text-lg mb-4">Location</h4>
-						<div className="flex items-start gap-2 text-primary-foreground/80 text-sm mt-4">
-							<MapPin className="w-4 h-4 mt-0.5 flex-shrink-0" />
-							<span>
-								Sector 24, IIIT Naya Raipur, Chhattisgarh
-							</span>
-						</div>
+						<h2 className="font-semibold text-lg mb-4">Location</h2>
+						<address className="flex items-start gap-2 text-primary-foreground/80 text-sm mt-4 not-italic">
+							<MapPin className="w-4 h-4 mt-0.5 flex-shrink-0" aria-hidden="true" />
+							<span>Sector 24, IIIT Naya Raipur, Chhattisgarh</span>
+						</address>
 					</div>
 				</div>
 

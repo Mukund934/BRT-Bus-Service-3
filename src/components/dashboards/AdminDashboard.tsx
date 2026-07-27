@@ -1,27 +1,37 @@
-
-import { useState, useEffect } from "react";
-import { useUser } from "@/contexts/UserContext";
-import { Shield, Users, TrendingUp, Search, Edit2, CheckCircle, X, Loader } from "lucide-react";
-
-interface User {
-  uid: string;
-  name?: string;
-  email?: string;
-  role: string;
-  createdAt?: any;
-  photoURL?: string;
-}
-
-type UserRole = "user" | "admin" | "driver";
+import { useCallback, useEffect, useId, useState } from "react";
+import { CheckCircle, Edit2, Loader, Search, Shield, TrendingUp, Users, X } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { toSafeMessage } from "@/domain/auth/errors";
+import { PERMISSIONS, can } from "@/domain/auth/permissions";
+import {
+  MAX_USERS_PER_READ,
+  fetchAllUsers,
+  updateUserRole,
+} from "@/services/userService";
+import {
+  USER_ROLES,
+  type TimestampLike,
+  type UserRecord,
+  type UserRole,
+} from "@/types/user";
 
 interface AdminDashboardProps {
   onError?: (error: string) => void;
 }
 
+const ROLE_LABELS: Record<UserRole, string> = {
+  user: "👤 User (Passenger)",
+  driver: "🚌 Driver",
+  admin: "👨‍💼 Admin",
+};
+
 const AdminDashboard = ({ onError }: AdminDashboardProps) => {
-  const { user, role, getAllUsers, updateUserRole } = useUser();
-  const [allUsers, setAllUsers] = useState<User[]>([]);
-  const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
+  const { user, actor, refreshUserRecord } = useAuth();
+
+  const mayViewPanel = can(actor, PERMISSIONS.VIEW_ADMIN_PANEL);
+  const mayAssignRoles = can(actor, PERMISSIONS.ASSIGN_ROLES);
+  const [allUsers, setAllUsers] = useState<UserRecord[]>([]);
+  const [filteredUsers, setFilteredUsers] = useState<UserRecord[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
@@ -29,42 +39,36 @@ const AdminDashboard = ({ onError }: AdminDashboardProps) => {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [saving, setSaving] = useState(false);
+  const [truncated, setTruncated] = useState(false);
 
-  // 🔥 CHECK IF USER IS ADMIN
-  useEffect(() => {
-    if (!loading && role !== "admin") {
-      setError("You don't have permission to access this page");
-      if (onError) {
-        onError("Access Denied: Admin only");
-      }
-    }
-  }, [role, loading, onError]);
+  const searchId = useId();
 
-  // Fetch all users
-  useEffect(() => {
-    if (role === "admin") {
-      fetchAllUsers();
-    }
-  }, [role]);
-
-  const fetchAllUsers = async () => {
+  const loadUsers = useCallback(async () => {
     setLoading(true);
+
     try {
-      const users = await getAllUsers();
-      setAllUsers(users);
-      setFilteredUsers(users);
+      const roster = await fetchAllUsers(actor);
+      setAllUsers(roster.users);
+      setFilteredUsers(roster.users);
+      setTruncated(roster.truncated);
       setError("");
-    } catch (err: any) {
-      const errorMsg = err.message || "Failed to load users";
-      setError(errorMsg);
-      if (onError) {
-        onError(errorMsg);
-      }
-      console.error(err);
+    } catch (err) {
+      const message = toSafeMessage(err, "Could not load users.");
+      setError(message);
+      onError?.(message);
     } finally {
       setLoading(false);
     }
-  };
+  }, [actor, onError]);
+
+  useEffect(() => {
+    if (!mayViewPanel) {
+      setLoading(false);
+      return;
+    }
+
+    void loadUsers();
+  }, [mayViewPanel, loadUsers]);
 
   // Search functionality
   useEffect(() => {
@@ -80,23 +84,19 @@ const AdminDashboard = ({ onError }: AdminDashboardProps) => {
     }
   }, [searchTerm, allUsers]);
 
-  // Format date
-  const formatDate = (timestamp: any) => {
+  const formatJoinedDate = (timestamp?: TimestampLike): string => {
     if (!timestamp) return "N/A";
+
     try {
-      if (timestamp instanceof Object && "toDate" in timestamp) {
-        return timestamp.toDate().toLocaleDateString();
-      }
-      return new Date(timestamp).toLocaleDateString();
+      return timestamp.toDate().toLocaleDateString();
     } catch {
       return "N/A";
     }
   };
 
-  // Start editing
-  const startEdit = (userId: string, currentRole: string) => {
+  const startEdit = (userId: string, currentRole: UserRole) => {
     setEditingUserId(userId);
-    setEditingRole(currentRole as UserRole);
+    setEditingRole(currentRole);
     setError("");
   };
 
@@ -114,41 +114,48 @@ const AdminDashboard = ({ onError }: AdminDashboardProps) => {
       return;
     }
 
-    setSaving(true);
-    try {
-      const err = await updateUserRole(userId, editingRole as UserRole);
-      if (err) {
-        setError(err);
-        if (onError) {
-          onError(err);
-        }
-      } else {
-        // Update local state
-        const updatedUsers = allUsers.map((u) =>
-          u.uid === userId ? { ...u, role: editingRole } : u
-        );
-        setAllUsers(updatedUsers);
-        setFilteredUsers(updatedUsers);
-        setSuccess("Role updated successfully!");
-        setEditingUserId(null);
-        setEditingRole("user");
+    if (!mayAssignRoles) {
+      setError("You do not have permission to change roles.");
+      return;
+    }
 
-        // Clear success message after 3 seconds
-        setTimeout(() => setSuccess(""), 3000);
+    setSaving(true);
+
+    try {
+      const result = await updateUserRole(actor, userId, editingRole);
+
+      if (!result.ok) {
+        setError(result.message);
+        onError?.(result.message);
+        return;
       }
-    } catch (err: any) {
-      const errorMsg = err.message || "Failed to update role";
-      setError(errorMsg);
-      if (onError) {
-        onError(errorMsg);
-      }
+
+      const updatedUsers = allUsers.map((entry) =>
+        entry.uid === userId ? { ...entry, role: editingRole } : entry
+      );
+
+      setAllUsers(updatedUsers);
+      setFilteredUsers(updatedUsers);
+      setSuccess("Role updated successfully!");
+      setEditingUserId(null);
+      setEditingRole("user");
+
+      setTimeout(() => setSuccess(""), 3000);
+
+      // Demoting yourself must take effect immediately: a Firestore write
+      // does not fire the auth listener, so the session would otherwise keep
+      // the admin panel and admin privileges until a full reload.
+      if (userId === user?.uid) await refreshUserRecord();
+    } catch (err) {
+      const message = toSafeMessage(err, "Could not update that role.");
+      setError(message);
+      onError?.(message);
     } finally {
       setSaving(false);
     }
   };
 
-  // Get role color
-  const getRoleColor = (role: string) => {
+  const getRoleColor = (role: UserRole) => {
     switch (role) {
       case "admin":
         return "bg-red-100 text-red-800 border-red-300";
@@ -159,8 +166,7 @@ const AdminDashboard = ({ onError }: AdminDashboardProps) => {
     }
   };
 
-  // Get role icon
-  const getRoleIcon = (role: string) => {
+  const getRoleIcon = (role: UserRole) => {
     switch (role) {
       case "admin":
         return "👨‍💼";
@@ -179,8 +185,7 @@ const AdminDashboard = ({ onError }: AdminDashboardProps) => {
     users: allUsers.filter((u) => u.role === "user").length,
   };
 
-  // 🔥 Check admin access
-  if (role !== "admin") {
+  if (!mayViewPanel) {
     return (
       <div className="max-w-5xl mx-auto">
         <div className="bg-red-50 border-2 border-red-200 rounded-2xl p-8 text-center">
@@ -289,47 +294,72 @@ const AdminDashboard = ({ onError }: AdminDashboardProps) => {
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-2xl font-bold text-gray-900">User Management</h2>
             <button
-              onClick={fetchAllUsers}
+              onClick={() => void loadUsers()}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
             >
               Refresh
             </button>
           </div>
 
-          {/* Search Bar */}
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+            <label htmlFor={searchId} className="sr-only">
+              Search users by name or email
+            </label>
+            <Search
+              className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5"
+              aria-hidden="true"
+            />
             <input
-              type="text"
-              placeholder="Search by name or email..."
+              id={searchId}
+              type="search"
+              placeholder="Search by name or email…"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
+
+          {/* Result count, announced as the search narrows. */}
+          <p className="sr-only" role="status" aria-live="polite">
+            {filteredUsers.length} of {allUsers.length} users shown
+          </p>
         </div>
 
         {/* Table */}
         {loading ? (
-          <div className="p-12 text-center">
-            <Loader className="w-8 h-8 text-blue-600 animate-spin mx-auto mb-2" />
-            <p className="text-gray-600">Loading users...</p>
+          <div className="p-12 text-center" role="status" aria-live="polite">
+            <Loader className="w-8 h-8 text-blue-600 animate-spin mx-auto mb-2" aria-hidden="true" />
+            <p className="text-gray-600">Loading users…</p>
           </div>
         ) : filteredUsers.length === 0 ? (
           <div className="p-12 text-center">
-            <Users className="w-12 h-12 text-gray-400 mx-auto mb-2" />
-            <p className="text-gray-600">No users found</p>
+            <Users className="w-12 h-12 text-gray-400 mx-auto mb-2" aria-hidden="true" />
+            <p className="text-gray-600 font-medium">
+              {searchTerm ? `No users match "${searchTerm}"` : "No users yet"}
+            </p>
+            {searchTerm && (
+              <button
+                type="button"
+                onClick={() => setSearchTerm("")}
+                className="mt-3 text-blue-600 hover:text-blue-700 font-medium underline underline-offset-2"
+              >
+                Clear search
+              </button>
+            )}
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
+              <caption className="sr-only">
+                Registered users and their roles
+              </caption>
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Name</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Email</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Joined Date</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Role</th>
-                  <th className="px-6 py-3 text-center text-sm font-semibold text-gray-900">Action</th>
+                  <th scope="col" className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Name</th>
+                  <th scope="col" className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Email</th>
+                  <th scope="col" className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Joined date</th>
+                  <th scope="col" className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Role</th>
+                  <th scope="col" className="px-6 py-3 text-center text-sm font-semibold text-gray-900">Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -348,18 +378,30 @@ const AdminDashboard = ({ onError }: AdminDashboardProps) => {
 
                     <td className="px-6 py-4 text-gray-600">{u.email || "N/A"}</td>
 
-                    <td className="px-6 py-4 text-gray-600">{formatDate(u.createdAt)}</td>
+                    <td className="px-6 py-4 text-gray-600">
+                      {formatJoinedDate(u.createdAt)}
+                    </td>
 
                     <td className="px-6 py-4">
                       {editingUserId === u.uid ? (
                         <select
                           value={editingRole}
-                          onChange={(e) => setEditingRole(e.target.value as UserRole)}
+                          aria-label={`Role for ${u.name || u.email || "this user"}`}
+                          onChange={(e) => {
+                            // Narrowed against the registry rather than cast,
+                            // so a tampered DOM cannot inject a role value.
+                            const next = USER_ROLES.find(
+                              (candidate) => candidate === e.target.value
+                            );
+                            if (next) setEditingRole(next);
+                          }}
                           className="px-3 py-1 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                         >
-                          <option value="user">👤 User (Passenger)</option>
-                          <option value="driver">🚌 Driver</option>
-                          <option value="admin">👨‍💼 Admin</option>
+                          {USER_ROLES.map((option) => (
+                            <option key={option} value={option}>
+                              {ROLE_LABELS[option]}
+                            </option>
+                          ))}
                         </select>
                       ) : (
                         <span
@@ -378,16 +420,18 @@ const AdminDashboard = ({ onError }: AdminDashboardProps) => {
                         {editingUserId === u.uid ? (
                           <>
                             <button
+                              type="button"
                               onClick={() => saveRoleChange(u.uid)}
                               disabled={saving}
-                              className="px-4 py-1 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-semibold disabled:opacity-50"
+                              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-semibold disabled:opacity-50"
                             >
-                              {saving ? "Saving..." : "Save"}
+                              {saving ? "Saving…" : "Save"}
                             </button>
                             <button
+                              type="button"
                               onClick={cancelEdit}
                               disabled={saving}
-                              className="px-4 py-1 bg-gray-400 text-white rounded-lg hover:bg-gray-500 transition-colors text-sm font-semibold disabled:opacity-50"
+                              className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors text-sm font-semibold disabled:opacity-50"
                             >
                               Cancel
                             </button>
@@ -395,10 +439,16 @@ const AdminDashboard = ({ onError }: AdminDashboardProps) => {
                         ) : (
                           <button
                             onClick={() => startEdit(u.uid, u.role)}
-                            className="flex items-center gap-2 px-4 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-semibold"
+                            disabled={!mayAssignRoles}
+                            className="flex items-center gap-2 px-4 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
                           >
-                            <Edit2 className="w-4 h-4" />
+                            <Edit2 className="w-4 h-4" aria-hidden="true" />
                             Edit
+                            {/* Every row's button would otherwise read as "Edit". */}
+                            <span className="sr-only">
+                              {" "}
+                              role for {u.name || u.email || "this user"}
+                            </span>
                           </button>
                         )}
                       </div>
@@ -418,6 +468,17 @@ const AdminDashboard = ({ onError }: AdminDashboardProps) => {
             Showing <span className="font-bold">{filteredUsers.length}</span> of{" "}
             <span className="font-bold">{allUsers.length}</span> users
           </p>
+
+          {/*
+            A truncated roster must never look complete: the counts above and
+            the statistics cards describe only what was loaded.
+          */}
+          {truncated && (
+            <p className="text-center text-amber-700 text-sm mt-2">
+              Only the first {MAX_USERS_PER_READ} accounts were loaded. Counts and
+              search cover this subset only.
+            </p>
+          )}
         </div>
       )}
     </div>

@@ -1,80 +1,280 @@
+import { useState } from "react";
+import { Link } from "react-router-dom";
+import { ArrowRight, Download, ExternalLink, FileText } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import StopField from "@/components/StopField";
+import { calculateFare, getFareBandsFrom } from "@/domain/transit/fares";
+import { findStops, isStopName, type StopName } from "@/domain/transit/stops";
 
-const fares = [
-	{
-		destination:
-			"Balco Medical Centre, Sector 30, Sector 29, Sector 27, and South Block",
-		price: "₹ 5 /-",
-	},
-	{
-		destination:
-			"Indravati Bhawan, Mahanadi Bhawan, North Block, Ekatm Path, CBD, Sector 15",
-		price: "₹ 10 /-",
-	},
-	{
-		destination: "Telibandha",
-		price: "₹ 30 /-",
-	},
-	{
-		destination: "DKS Bhawan and Railway Station",
-		price: "₹ 40 /-",
-	},
+const FARE_CHART_URL = "/docs/FareChart.pdf";
+
+const POPULAR: ReadonlyArray<readonly [StopName, StopName]> = [
+  ["Raipur Railway Station", "CBD"],
+  ["HNLU", "Telibandha"],
+  ["Sector 30", "CBD"],
+  ["HNLU", "Raipur Railway Station"],
 ];
 
+const FARE_NOTES: readonly string[] = [
+  "Fares follow the official Tatpar BRTS fare chart for Nava Raipur Atal Nagar.",
+  "The price depends on the stop you board at and the stop you alight at, not on distance travelled inside the bus.",
+  "The same fare applies in both directions between any two stops.",
+  "Where the official chart publishes no fare for a pair, the journey cannot be booked.",
+];
+
+const resolveStop = (value: string): StopName | null => {
+  const trimmed = value.trim();
+  if (isStopName(trimmed)) return trimmed;
+
+  const matches = findStops(trimmed);
+  return matches.length === 1 ? matches[0]! : null;
+};
+
+/**
+ * Derived from the fare table rather than restated.
+ *
+ * The hardcoded list this replaced had drifted out of step with the fare
+ * actually charged at booking, and omitted several stops entirely.
+ */
+const formatDestinations = (stops: readonly string[]): string => {
+  if (stops.length === 1) return stops[0]!;
+
+  return `${stops.slice(0, -1).join(", ")}, and ${stops[stops.length - 1]}`;
+};
+
 const Fares = () => {
-	return (
-		<div className="min-h-screen bg-[#f5f3ff]">
-			<Header />
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
 
-			<main className="py-24 px-4">
-				<div className="max-w-6xl mx-auto">
-					<div className="bg-[#fbfaff] rounded-[28px] px-6 md:px-12 py-14 shadow-[0_25px_80px_rgba(0,0,0,0.06)]">
-						<div className="text-center mb-14">
-							<h1 className="text-[40px] md:text-[48px] font-semibold text-[#6b4fa3] tracking-tight">
-								Fare Details
-							</h1>
+  const origin = resolveStop(from);
+  const destination = resolveStop(to);
 
-							<p className="mt-5 text-[#7c6aa6] text-[15px] md:text-base max-w-2xl mx-auto leading-relaxed">
-								Explore the affordable bus fares from HNLU to
-								various destinations. Enjoy a comfortable and
-								convenient travel experience.
-							</p>
-						</div>
+  const sameStop = Boolean(origin && destination && origin === destination);
+  const fare =
+    origin && destination && !sameStop ? calculateFare(origin, destination) : null;
+  const bands = origin ? getFareBandsFrom(origin) : [];
 
-						<div className="relative">
-							<div className="absolute inset-0 rounded-[24px] bg-gradient-to-br from-purple-200/30 via-purple-100/20 to-transparent blur-2xl opacity-70"></div>
+  const choose = (pair: readonly [StopName, StopName]) => {
+    setFrom(pair[0]);
+    setTo(pair[1]);
+  };
 
-							<div className="relative bg-white rounded-[24px] px-6 md:px-10 py-8 border border-purple-100 shadow-[0_15px_50px_rgba(0,0,0,0.08)] transition-all duration-300 hover:-translate-y-[2px] hover:shadow-[0_25px_70px_rgba(0,0,0,0.12)]">
-								<h2 className="text-[22px] md:text-[24px] font-semibold text-[#6b4fa3] mb-6 pb-3 border-b border-purple-200">
-									From HNLU to:
-								</h2>
+  return (
+    <div className="min-h-screen bg-background">
+      <Header />
 
-								<div className="space-y-0">
-									{fares.map((f, i) => (
-										<div
-											key={i}
-											className="group flex justify-between items-center py-4 px-3 border-b border-purple-200 last:border-none transition-all duration-200 hover:bg-purple-50/60"
-										>
-											<span className="font-semibold text-gray-800 text-[15px] md:text-[16px] transition-transform duration-200 group-hover:translate-x-[2px]">
-												{f.destination}
-											</span>
+      <main id="main-content" tabIndex={-1} className="py-12 px-4">
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center mb-10 animate-fade-in-up">
+            <h1 className="text-3xl md:text-4xl font-bold text-primary tracking-tight">
+              Official fare information
+            </h1>
+            <p className="mt-3 text-muted-foreground max-w-2xl mx-auto">
+              Travel confidently using the official BRTS fare structure. Check
+              the fare between any two stops, or read the full chart.
+            </p>
+          </div>
 
-											<span className="text-[#6b4fa3] font-semibold text-[16px] md:text-[18px]">
-												{f.price}
-											</span>
-										</div>
-									))}
-								</div>
-							</div>
-						</div>
-					</div>
-				</div>
-			</main>
+          <div className="brt-search-card animate-fade-in-up animate-stagger-1">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <StopField
+                label="From"
+                value={from}
+                onChange={setFrom}
+                exclude={destination ?? ""}
+              />
+              <StopField
+                label="To"
+                value={to}
+                onChange={setTo}
+                exclude={origin ?? ""}
+              />
+            </div>
 
-			<Footer />
-		</div>
-	);
+            <div aria-live="polite" className="mt-6">
+              {sameStop && (
+                <p className="text-sm text-destructive font-medium">
+                  Choose two different stops.
+                </p>
+              )}
+
+              {origin && destination && !sameStop && (
+                <div className="rounded-xl bg-secondary p-5">
+                  <div className="flex flex-wrap items-center justify-between gap-4">
+                    <div className="flex items-center gap-3 font-semibold text-foreground">
+                      <span>{origin}</span>
+                      <ArrowRight
+                        className="w-4 h-4 text-primary"
+                        aria-hidden="true"
+                      />
+                      <span>{destination}</span>
+                    </div>
+
+                    <p className="text-3xl font-bold text-primary">
+                      {fare === null ? "Not published" : `₹${fare}/-`}
+                    </p>
+                  </div>
+
+                  {fare !== null && (
+                    <Link
+                      to={`/plan?from=${encodeURIComponent(origin)}&to=${encodeURIComponent(destination)}`}
+                      className="brt-button inline-block mt-4 touch-target"
+                    >
+                      Find departures and book
+                    </Link>
+                  )}
+
+                  {fare === null && (
+                    <p className="text-sm text-destructive font-medium mt-3">
+                      The official chart does not publish a fare for this
+                      journey, so it cannot be booked yet.
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <section className="mt-12" aria-labelledby="popular-heading">
+            <h2 id="popular-heading" className="brt-section-title text-primary">
+              Popular journeys
+            </h2>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {POPULAR.map((pair) => {
+                const price = calculateFare(pair[0], pair[1]);
+
+                return (
+                  <button
+                    key={`${pair[0]}-${pair[1]}`}
+                    type="button"
+                    onClick={() => choose(pair)}
+                    className="brt-card text-left touch-target"
+                  >
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                        <span>{pair[0]}</span>
+                        <ArrowRight
+                          className="w-3.5 h-3.5 text-primary flex-shrink-0"
+                          aria-hidden="true"
+                        />
+                        <span>{pair[1]}</span>
+                      </div>
+
+                      <span className="text-lg font-bold text-primary whitespace-nowrap">
+                        ₹{price}/-
+                      </span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+
+          {origin && bands.length > 0 && (
+            <section className="mt-12" aria-labelledby="bands-heading">
+              <h2 id="bands-heading" className="brt-section-title text-primary">
+                All fares from {origin}
+              </h2>
+
+              <div className="brt-container">
+                {bands.map((band) => (
+                  <div
+                    key={band.fare}
+                    className="fare-row-alt flex justify-between items-center gap-6"
+                  >
+                    <span className="font-medium text-foreground text-sm">
+                      {formatDestinations(band.destinations)}
+                    </span>
+                    <span className="text-primary font-bold whitespace-nowrap">
+                      ₹ {band.fare} /-
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
+          <section className="mt-12" aria-labelledby="chart-heading">
+            <h2 id="chart-heading" className="brt-section-title text-primary">
+              Official fare chart
+            </h2>
+
+            <div className="brt-card">
+              <div className="flex flex-wrap gap-3 mb-5">
+                <a
+                  href={FARE_CHART_URL}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="brt-button inline-flex items-center gap-2 touch-target"
+                >
+                  <ExternalLink className="w-4 h-4" aria-hidden="true" />
+                  Open full screen
+                </a>
+
+                <a
+                  href={FARE_CHART_URL}
+                  download
+                  className="px-6 py-3 rounded-xl border border-border text-foreground font-medium transition-all duration-300 hover:bg-secondary inline-flex items-center gap-2 touch-target"
+                >
+                  <Download className="w-4 h-4" aria-hidden="true" />
+                  Download
+                </a>
+              </div>
+
+              <object
+                data={FARE_CHART_URL}
+                type="application/pdf"
+                title="Official Tatpar BRTS fare chart"
+                className="w-full h-[420px] md:h-[560px] rounded-xl border border-border"
+              >
+                <div className="p-6 text-center">
+                  <FileText
+                    className="w-8 h-8 text-primary mx-auto mb-3"
+                    aria-hidden="true"
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    Your browser cannot display the fare chart inline.{" "}
+                    <a
+                      href={FARE_CHART_URL}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-primary font-semibold underline underline-offset-2"
+                    >
+                      Open it in a new tab
+                    </a>
+                    .
+                  </p>
+                </div>
+              </object>
+            </div>
+          </section>
+
+          <section className="mt-12" aria-labelledby="notes-heading">
+            <h2 id="notes-heading" className="brt-section-title text-primary">
+              Fare information
+            </h2>
+
+            <div className="brt-container">
+              <ul className="space-y-3">
+                {FARE_NOTES.map((note) => (
+                  <li
+                    key={note}
+                    className="text-sm text-muted-foreground leading-relaxed pl-4 border-l-2 border-primary/30"
+                  >
+                    {note}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </section>
+        </div>
+      </main>
+
+      <Footer />
+    </div>
+  );
 };
 
 export default Fares;

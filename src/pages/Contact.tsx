@@ -29,7 +29,7 @@ const Contact = () => {
 
 			<Header />
 
-			<main className="py-24 px-4 relative">
+			<main id="main-content" tabIndex={-1} className="py-24 px-4 relative">
 
 				<div className="absolute top-[-120px] left-1/2 -translate-x-1/2 w-[750px] h-[750px] bg-purple-300/20 blur-[160px] rounded-full"></div>
 

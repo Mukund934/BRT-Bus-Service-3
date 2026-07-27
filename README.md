@@ -207,7 +207,22 @@ npm install
 
 ---
 
-### 3️⃣ Run Development Server
+### 3️⃣ Configure Firebase
+
+```bash
+cp .env.example .env
+```
+
+Fill in the values from **Firebase console → Project settings → General → Your apps → SDK setup**.
+
+> These values are **not secrets**. Firebase web configuration is compiled into
+> the JavaScript bundle every visitor downloads and can be read from any
+> deployed Firebase app. What protects the data is the security rules below,
+> which run on Google's servers and cannot be bypassed by a modified client.
+
+---
+
+### 4️⃣ Run Development Server
 
 ```bash
 npm run dev
@@ -216,7 +231,125 @@ npm run dev
 Open:
 
 ```
-http://localhost:5173
+http://localhost:8080
+```
+
+---
+
+## 🧪 Testing
+
+```bash
+npm test              # run the suite once
+npm run test:watch    # re-run on change
+npm run test:coverage # suite + coverage report
+npm run verify        # everything CI runs, in the same order
+```
+
+Coverage lands in `coverage/`; open `coverage/index.html` for the line-by-line view.
+
+### Philosophy
+
+Tests here protect **behaviour**, not implementation. A test that breaks when a
+component is refactored but the user experience is unchanged is a liability, so
+the suite avoids snapshots of markup, shallow rendering, and assertions about
+internal state.
+
+Practically that means:
+
+- **Query the way a user finds things** — by role, label and visible text.
+  `getByRole("button", { name: /proceed to pay/i })` breaks only if the button
+  genuinely stops being reachable.
+- **Drive with `user-event`, not `fireEvent`** — it dispatches the same event
+  sequence a browser does, so a click on a disabled or covered element fails
+  like it would in real life.
+- **Coverage is measured only where decisions live** (`domain`, `services`,
+  `contexts`, `components`). Including presentational pages would raise the
+  percentage without telling anyone whether booking works.
+- **Thresholds are a ratchet, not a target.** They sit just below what the suite
+  achieves so a regression fails CI; they are raised deliberately.
+
+### Layout
+
+| Path | What lives there |
+|---|---|
+| `src/test/domain/` | Pure business rules: fares, timetable, ticket lifecycle, selectors |
+| `src/test/services/` | Persistence, booking rules, user records, alerts, location |
+| `src/test/contexts/` | Provider wiring: sign-in, sign-out, account switching, polling |
+| `src/test/components/` | UI behaviour and accessibility |
+| `src/test/integration/` | Whole user journeys through real pages |
+| `src/test/helpers/` | Shared render helper, data factories, mocks |
+
+### Mocking
+
+Firebase is never loaded in tests. `src/test/helpers/firebase.ts` is the single
+place that defines how it behaves — a controllable auth listener and an
+in-memory Firestore document store, so `userService` runs its real logic against
+something that acts like a database rather than against per-call stubs.
+
+Tests that mount the auth provider but are not about user records mock
+`userService` via `src/test/helpers/userService.ts`, which also lets them choose
+a role outright.
+
+Anything time-dependent freezes the clock. The timetable's first departure is
+6:25 AM, so a suite using the real clock would quietly pass in the morning and
+fail in the evening.
+
+---
+
+## 🔄 Continuous Integration
+
+`.github/workflows/ci.yml` runs on every push and pull request to `main`, across
+Node 20 and 22. Each gate is a separate step, so a red run names what broke:
+
+| Gate | Blocks merge on |
+|---|---|
+| `npm ci` | lockfile drift |
+| `npm run typecheck` | any type error |
+| `npm run lint` | any ESLint error |
+| `npm run test:coverage` | a failing test **or** coverage below threshold |
+| `npm run build` | a broken production build |
+
+Coverage and the built `dist/` are uploaded as artifacts. Run the identical
+sequence locally with `npm run verify`.
+
+---
+
+## 🔐 Security Model
+
+Authorization is enforced in two independent places. The browser layer decides
+what to render and which calls to attempt; the server layer decides what is
+actually permitted. Only the second one is a security boundary.
+
+| Layer | Where | What it does |
+|---|---|---|
+| Security rules | `firestore.rules`, `database.rules.json` | The real boundary. Runs on Google's servers. |
+| Permission model | `src/domain/auth/permissions.ts` | Named capabilities per role, asked via `can(actor, PERMISSION)`. |
+| Route guards | `src/components/routing/RouteGuards.tsx` | Keeps unauthorized users off privileged pages and blocks rendering until the role resolves. |
+| Schema validation | `src/domain/validation/schemas.ts` | Everything from storage, Firestore, RTDB and forms is parsed before use. |
+
+**Key invariants**
+
+- A user may create and edit their own profile but can **never** set or change
+  their own `role`. Role assignment is admin-only, enforced in `firestore.rules`.
+- Listing the `users` collection is admin-only, so a signed-in passenger cannot
+  enumerate every account.
+- Any collection without an explicit rule is denied by default.
+- Driver positions publish **coordinates and an opaque bus label only** — never
+  a name or email address. `database.rules.json` rejects any other field.
+
+### Deploying the rules
+
+Rules in this repository do nothing until they are deployed. After changing
+them:
+
+```bash
+npx firebase-tools deploy --only firestore:rules,database
+```
+
+### Testing the rules locally
+
+```bash
+npx firebase-tools emulators:start --only firestore,database
 ```
 
 ---

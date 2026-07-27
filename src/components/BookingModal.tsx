@@ -1,214 +1,245 @@
-import { useState } from "react";
+import { useId, useMemo, useState } from "react";
 import {
-	STOPS,
-	calculateFare,
-	parseTimeToDate,
-	findConflictingTicket,
-} from "@/types/ticket";
-import { useUser } from "@/contexts/UserContext";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { findConflictingTicket } from "@/domain/ticket/conflicts";
+import type { JourneySelection } from "@/domain/ticket/types";
+import { calculateFare } from "@/domain/transit/fares";
+import {
+  getCallTime,
+  getDestinationsFrom,
+  getTripStops,
+  type Trip,
+} from "@/domain/transit/schedule";
+import type { StopName } from "@/domain/transit/stops";
+import { parseTimeToDate } from "@/domain/time";
+import { useTickets } from "@/contexts/TicketContext";
 
 interface BookingModalProps {
-	open: boolean;
-	onClose: () => void;
-	departureTime: string;
-	onProceedPayment: (
-		fromStop: string,
-		toStop: string,
-		fare: number,
-		departureTime: string,
-		arrivalTime: string,
-		bookingTime: string, // ✅ ADDED
-	) => void;
-	rowData: string[];
-	columns: string[];
+  open: boolean;
+  onClose: () => void;
+  /** The scheduled run the passenger tapped "Book" on. */
+  trip: Trip;
+  /** Stops the passenger already chose elsewhere, so they are not re-entered. */
+  initialFromStop?: StopName;
+  initialToStop?: StopName;
+  onProceedPayment: (selection: JourneySelection) => void;
 }
 
+/**
+ * Stop selection for a chosen trip.
+ *
+ * Built on Radix Dialog rather than a bare overlay so focus is trapped inside
+ * the dialog, Escape closes it, focus returns to the "Book" button that
+ * opened it, and the page behind cannot be scrolled or tabbed into.
+ */
 const BookingModal = ({
-	open,
-	onClose,
-	departureTime,
-	onProceedPayment,
-	rowData,
-	columns,
+  open,
+  onClose,
+  trip,
+  initialFromStop,
+  initialToStop,
+  onProceedPayment,
 }: BookingModalProps) => {
-	const { tickets } = useUser();
-	const [fromStop, setFromStop] = useState("HNLU");
-	const [toStop, setToStop] = useState("");
+  const { tickets } = useTickets();
 
-	if (!open) return null;
+  const fieldId = useId();
+  const fromId = `${fieldId}-from`;
+  const toId = `${fieldId}-to`;
+  const summaryId = `${fieldId}-summary`;
+  const problemId = `${fieldId}-problem`;
 
-	const servedStops = STOPS.filter((s) => {
-		const idx = columns.indexOf(s);
-		return idx >= 0 && !!rowData[idx];
-	});
+  const servedStops = useMemo(() => getTripStops(trip), [trip]);
 
-	const fromIdx = servedStops.indexOf(fromStop);
+  const [fromStop, setFromStop] = useState<StopName>(
+    () => initialFromStop ?? servedStops[0]!
+  );
+  const [toStop, setToStop] = useState<StopName | "">(() => initialToStop ?? "");
 
-	const fromColIdx = columns.indexOf(fromStop);
-	const dynamicDepartureTime =
-		fromColIdx >= 0 && rowData[fromColIdx]
-			? rowData[fromColIdx]
-			: departureTime;
+  const destinations = useMemo(
+    () => getDestinationsFrom(trip, fromStop),
+    [trip, fromStop]
+  );
 
-	const availableTo = fromIdx >= 0 ? servedStops.slice(fromIdx + 1) : [];
+  const departureTime = getCallTime(trip, fromStop) ?? "";
+  const arrivalTime = toStop ? getCallTime(trip, toStop) ?? "" : "";
+  const fare = toStop ? calculateFare(fromStop, toStop) : null;
+  const unpriced = toStop !== "" && fare === null;
 
-	const fare = toStop ? calculateFare(fromStop, toStop) : 0;
+  const { hasDeparted, conflict } = useMemo(() => {
+    if (!toStop) return { hasDeparted: false, conflict: null };
 
-	const toColIdx = columns.indexOf(toStop);
-	const arrivalTime =
-		toColIdx >= 0 && rowData[toColIdx] ? rowData[toColIdx] : departureTime;
+    const departureAt = parseTimeToDate(departureTime);
+    const arrivalAt = parseTimeToDate(arrivalTime);
 
-	const departureDate = parseTimeToDate(dynamicDepartureTime);
-	const arrivalDate = parseTimeToDate(arrivalTime);
-	if (arrivalDate < departureDate) arrivalDate.setDate(arrivalDate.getDate() + 1);
+    if (arrivalAt < departureAt) arrivalAt.setDate(arrivalAt.getDate() + 1);
 
-	const hasDeparted = departureDate < new Date();
-	const conflict = toStop
-		? findConflictingTicket(tickets, departureDate, arrivalDate)
-		: null;
+    return {
+      hasDeparted: departureAt < new Date(),
+      conflict: findConflictingTicket(tickets, departureAt, arrivalAt),
+    };
+  }, [toStop, departureTime, arrivalTime, tickets]);
 
-	const blocked = !toStop || hasDeparted || !!conflict;
+  const blocked = !toStop || hasDeparted || conflict !== null || unpriced;
+  const hasProblem = hasDeparted || conflict !== null || unpriced;
 
-	return (
-		<div
-			className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
-			onClick={onClose}
-		>
-			<div
-				className="bg-card rounded-2xl p-8 w-full max-w-md mx-4 animate-scale-in"
-				style={{ boxShadow: "0 16px 48px hsla(284,33%,30%,0.15)" }}
-				onClick={(e) => e.stopPropagation()}
-			>
-				<h2 className="text-xl font-bold text-foreground mb-1 tracking-tight">
-					Book Your Ticket
-				</h2>
+  return (
+    <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
+      <DialogContent className="max-w-md rounded-2xl">
+        <DialogHeader>
+          <DialogTitle className="text-xl tracking-tight">Book your ticket</DialogTitle>
+          <DialogDescription>
+            Route {trip.routeId}, departing {departureTime}. Choose where you are
+            boarding and where you are travelling to.
+          </DialogDescription>
+        </DialogHeader>
 
-				<p className="text-sm text-muted-foreground mb-6">
-					Route 101 · {dynamicDepartureTime} departure
-				</p>
+        <div>
+          <label htmlFor={fromId} className="block text-sm font-medium text-foreground mb-1">
+            From stop
+          </label>
+          <select
+            id={fromId}
+            value={fromStop}
+            onChange={(e) => {
+              setFromStop(e.target.value as StopName);
+              setToStop("");
+            }}
+            className="brt-input mb-4"
+          >
+            {servedStops.map((stop) => (
+              <option key={stop} value={stop}>
+                {stop}
+              </option>
+            ))}
+          </select>
 
-				<label className="block text-sm font-medium text-foreground mb-1">
-					From Stop
-				</label>
-				<select
-					value={fromStop}
-					onChange={(e) => {
-						setFromStop(e.target.value);
-						setToStop("");
-					}}
-					className="brt-input mb-4"
-				>
-					{servedStops.map((s) => (
-						<option key={s} value={s}>
-							{s}
-						</option>
-					))}
-				</select>
+          <label htmlFor={toId} className="block text-sm font-medium text-foreground mb-1">
+            To stop
+            <span className="text-destructive" aria-hidden="true">
+              {" "}
+              *
+            </span>
+            <span className="sr-only"> (required)</span>
+          </label>
+          <select
+            id={toId}
+            value={toStop}
+            required
+            aria-describedby={hasProblem ? problemId : undefined}
+            onChange={(e) => setToStop(e.target.value as StopName)}
+            className="brt-input"
+          >
+            <option value="">Select destination</option>
+            {destinations.map((stop) => (
+              <option key={stop} value={stop}>
+                {stop}
+              </option>
+            ))}
+          </select>
+        </div>
 
-				<label className="block text-sm font-medium text-foreground mb-1">
-					To Stop
-				</label>
-				<select
-					value={toStop}
-					onChange={(e) => setToStop(e.target.value)}
-					className="brt-input mb-6"
-					disabled={!fromStop}
-				>
-					<option value="">Select destination</option>
-					{availableTo.map((s) => (
-						<option key={s} value={s}>
-							{s}
-						</option>
-					))}
-				</select>
+        {/*
+          Announced politely: changing stops recalculates the fare, and a
+          screen reader user needs to hear the new price without having to go
+          looking for it.
+        */}
+        <div id={summaryId} aria-live="polite" aria-atomic="true">
+          {toStop && fare !== null && (
+            <div className="bg-secondary rounded-xl p-4">
+              <dl className="text-sm">
+                <div className="flex justify-between mb-1">
+                  <dt className="text-muted-foreground">From</dt>
+                  <dd className="font-medium text-foreground">{fromStop}</dd>
+                </div>
+                <div className="flex justify-between mb-1">
+                  <dt className="text-muted-foreground">To</dt>
+                  <dd className="font-medium text-foreground">{toStop}</dd>
+                </div>
+                <div className="flex justify-between mb-1">
+                  <dt className="text-muted-foreground">Departure</dt>
+                  <dd className="font-medium text-foreground">{departureTime}</dd>
+                </div>
+                <div className="flex justify-between mb-1">
+                  <dt className="text-muted-foreground">Arrival</dt>
+                  <dd className="font-medium text-foreground">{arrivalTime}</dd>
+                </div>
+                <div className="flex justify-between pt-2 border-t border-border mt-2">
+                  <dt className="font-semibold text-foreground">Fare</dt>
+                  <dd className="font-bold text-primary text-lg">₹{fare}/-</dd>
+                </div>
+              </dl>
+            </div>
+          )}
+        </div>
 
-				{toStop && (
-					<div className="bg-secondary rounded-xl p-4 mb-6">
-						<div className="flex justify-between text-sm mb-1">
-							<span className="text-muted-foreground">From</span>
-							<span className="font-medium text-foreground">
-								{fromStop}
-							</span>
-						</div>
-						<div className="flex justify-between text-sm mb-1">
-							<span className="text-muted-foreground">To</span>
-							<span className="font-medium text-foreground">
-								{toStop}
-							</span>
-						</div>
-						<div className="flex justify-between text-sm mb-1">
-							<span className="text-muted-foreground">
-								Departure
-							</span>
-							<span className="font-medium text-foreground">
-								{dynamicDepartureTime}
-							</span>
-						</div>
-						<div className="flex justify-between text-sm mb-1">
-							<span className="text-muted-foreground">
-								Arrival
-							</span>
-							<span className="font-medium text-foreground">
-								{arrivalTime}
-							</span>
-						</div>
-						<div className="flex justify-between text-sm pt-2 border-t border-border mt-2">
-							<span className="font-semibold text-foreground">
-								Fare
-							</span>
-							<span className="font-bold text-primary text-lg">
-								₹{fare}/-
-							</span>
-						</div>
-					</div>
-				)}
+        {/* Blocking problems interrupt, because they change what the user can do. */}
+        <div id={problemId} role="alert">
+          {hasDeparted && (
+            <div className="rounded-xl bg-destructive/10 border border-destructive/30 px-4 py-3">
+              <p className="text-sm text-destructive font-medium">
+                This bus has already departed. Please choose a later service.
+              </p>
+            </div>
+          )}
 
-				{hasDeparted && (
-					<div className="rounded-xl bg-destructive/10 border border-destructive/30 px-4 py-3 mb-4">
-						<p className="text-sm text-destructive font-medium">
-							This bus has already departed. Please choose a later
-							service.
-						</p>
-					</div>
-				)}
+          {unpriced && !hasDeparted && (
+            <div className="rounded-xl bg-destructive/10 border border-destructive/30 px-4 py-3">
+              <p className="text-sm text-destructive font-medium">
+                No fare is published for this journey yet, so it cannot be
+                booked. Please choose a different destination.
+              </p>
+            </div>
+          )}
 
-				{conflict && !hasDeparted && (
-					<div className="rounded-xl bg-destructive/10 border border-destructive/30 px-4 py-3 mb-4">
-						<p className="text-sm text-destructive font-medium">
-							You already have a ticket from {conflict.fromStop} to{" "}
-							{conflict.toStop} that overlaps this journey.
-						</p>
-					</div>
-				)}
+          {conflict && !hasDeparted && !unpriced && (
+            <div className="rounded-xl bg-destructive/10 border border-destructive/30 px-4 py-3">
+              <p className="text-sm text-destructive font-medium">
+                You already have a ticket from {conflict.fromStop} to {conflict.toStop}{" "}
+                that overlaps this journey.
+              </p>
+            </div>
+          )}
+        </div>
 
-				<div className="flex gap-3">
-					<button
-						onClick={onClose}
-						className="flex-1 py-2.5 rounded-xl border border-border text-foreground font-medium transition-all duration-300 hover:bg-secondary"
-					>
-						Cancel
-					</button>
+        <DialogFooter className="gap-3 sm:gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 py-2.5 rounded-xl border border-border text-foreground font-medium transition-all duration-300 hover:bg-secondary touch-target"
+          >
+            Cancel
+          </button>
 
-					<button
-						disabled={blocked}
-						onClick={() => {
-							onProceedPayment(
-								fromStop,
-								toStop,
-								fare,
-								dynamicDepartureTime,
-								arrivalTime,
-								new Date().toISOString(),
-							);
-						}}
-						className="flex-1 brt-button disabled:opacity-40 disabled:cursor-not-allowed"
-					>
-						Proceed to Pay
-					</button>
-				</div>
-			</div>
-		</div>
-	);
+          <button
+            type="button"
+            disabled={blocked}
+            onClick={() => {
+              if (!toStop || fare === null) return;
+
+              onProceedPayment({
+                route: trip.routeId,
+                fromStop,
+                toStop,
+                fare,
+                departureTime,
+                arrivalTime,
+                bookingTime: new Date().toISOString(),
+              });
+            }}
+            className="flex-1 brt-button disabled:opacity-40 disabled:cursor-not-allowed touch-target"
+          >
+            Proceed to pay
+          </button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
 };
 
 export default BookingModal;

@@ -2,8 +2,9 @@ import { useState, useEffect } from "react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import RouteCard from "@/components/RouteCard";
-import heroBus from "@/assets/Raipur-Naya_Raipur_BRTS.png";
+import heroBus from "@/assets/hero-brts.webp";
 import { Clock, MapPin, Shield, Zap } from "lucide-react";
+import { getTripStops, getTrips, type Trip } from "@/domain/transit/schedule";
 
 const rotatingTexts = [
   "Experience the Best BRT Service",
@@ -12,16 +13,24 @@ const rotatingTexts = [
   "Welcome to the Bus Tracker",
 ];
 
-const busStops =
-  "Balco, Sector 27, IIIM, Indrawati Bhawan, Telibandha, Railway Station";
+/**
+ * The first few weekday departures, read from the timetable.
+ *
+ * These were previously a hardcoded list next to a hand-written stop summary
+ * that named a stop ("IIIM") the network does not have and misspelled two
+ * others.
+ */
+const FEATURED_TRIPS = getTrips("weekday").slice(0, 5);
 
-const buses = [
-  "BUS 1 - 7:25 AM Departure",
-  "BUS 2 - 7:55 AM Departure",
-  "BUS 3 - 8:25 AM Departure",
-  "BUS 4 - 8:55 AM Departure",
-  "BUS 5 - 9:25 AM Departure",
-];
+/** "A, B, C, … Z" - enough to convey the corridor without filling the card. */
+const summariseStops = (trip: Trip): string => {
+  const stops = getTripStops(trip);
+  const last = stops[stops.length - 1];
+
+  if (stops.length <= 5) return stops.join(", ");
+
+  return `${stops.slice(0, 4).join(", ")}, … ${last}`;
+};
 
 const features = [
   {
@@ -64,11 +73,23 @@ const Home = () => {
 
       <Header />
 
+      <main id="main-content" tabIndex={-1}>
+
       <section className="relative w-full h-[420px] md:h-[520px] lg:h-[620px] overflow-hidden">
 
+        {/*
+          The largest-contentful-paint element. Intrinsic dimensions are
+          declared so the browser reserves the space before the image arrives
+          (no layout shift), and fetchPriority marks it as the one image worth
+          competing for bandwidth.
+        */}
         <img
           src={heroBus}
-          alt="BRT Bus"
+          alt="A BRT bus on the Raipur to Naya Raipur corridor"
+          width={1080}
+          height={572}
+          fetchPriority="high"
+          decoding="async"
           className="w-full h-full object-cover scale-[1.03]"
         />
 
@@ -76,12 +97,17 @@ const Home = () => {
 
           <div className="text-center px-4 max-w-4xl">
 
-            <h2
+            {/*
+              The page's h1. The rotating strapline is decorative, so it is
+              not placed in a live region - re-announcing it every three
+              seconds would make the page unusable with a screen reader.
+            */}
+            <h1
               key={animKey}
               className="text-white text-3xl md:text-5xl lg:text-6xl font-semibold tracking-tight drop-shadow-lg transition-all duration-700"
             >
               {rotatingTexts[textIndex]}
-            </h2>
+            </h1>
 
             <p className="text-white/90 text-lg md:text-xl mt-6 max-w-2xl mx-auto leading-relaxed">
               Your Journey, Our Priority — Fast, Safe, and Reliable
@@ -95,7 +121,11 @@ const Home = () => {
 
       </section>
 
-      <section className="py-20 px-4">
+      <section className="py-20 px-4" aria-labelledby="features-heading">
+
+        <h2 id="features-heading" className="sr-only">
+          Why travel with us
+        </h2>
 
         <div className="max-w-7xl mx-auto">
 
@@ -142,7 +172,7 @@ const Home = () => {
 
           <div className="text-center mb-12">
             <h2 className="text-[34px] md:text-[40px] font-semibold text-[#874f9c] tracking-tight">
-              Available Buses
+              Available buses
             </h2>
 
             <p className="text-[#7a6aa8] text-[15px] md:text-[16px] mt-3">
@@ -156,12 +186,15 @@ const Home = () => {
 
             <div className="relative grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 
-              {buses.map((bus) => (
+              {FEATURED_TRIPS.map((trip, index) => (
                 <div
-                  key={bus}
+                  key={trip.id}
                   className="group transition-all duration-300 hover:-translate-y-[5px]"
                 >
-                  <RouteCard title={bus} stops={busStops} />
+                  <RouteCard
+                    title={`BUS ${index + 1} - ${trip.calls[0]?.time} Departure`}
+                    stops={summariseStops(trip)}
+                  />
                 </div>
               ))}
 
@@ -172,6 +205,8 @@ const Home = () => {
         </div>
 
       </section>
+
+      </main>
 
       <Footer />
 
