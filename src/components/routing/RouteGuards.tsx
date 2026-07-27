@@ -12,7 +12,7 @@
  */
 
 import type { ReactNode } from "react";
-import { Navigate, useLocation } from "react-router-dom";
+import { Navigate, useLocation, type Location } from "react-router-dom";
 import { Loader, ShieldAlert } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { can, type Permission } from "@/domain/auth/permissions";
@@ -80,10 +80,23 @@ export const RequirePermission = ({
 /** Keeps an already-signed-in user off pages meant for visitors. */
 export const RedirectIfAuthenticated = ({ children }: { children: ReactNode }) => {
   const { user, loading } = useAuth();
+  const location = useLocation();
 
   if (loading) return <ResolvingSession />;
 
-  if (user) return <Navigate to="/dashboard" replace />;
+  if (user) {
+    const from = location.state?.from as Location | undefined;
+    const target =
+      from &&
+      typeof from.pathname === "string" &&
+      from.pathname.startsWith("/") &&
+      !from.pathname.startsWith("//") &&
+      !from.pathname.startsWith("/\\")
+        ? from
+        : "/dashboard";
+
+    return <Navigate to={target} replace />;
+  }
 
   return <>{children}</>;
 };

@@ -156,4 +156,51 @@ describe("keeping a signed-in user off the sign-in page", () => {
 
     expect(await screen.findByText("dashboard page")).toBeInTheDocument();
   });
+
+  it("returns a signed-in user to the page they first tried to open", async () => {
+    renderWithProviders(
+      <Routes>
+        <Route
+          path="/login"
+          element={
+            <RedirectIfAuthenticated>
+              <p>sign in page</p>
+            </RedirectIfAuthenticated>
+          }
+        />
+        <Route path="/dashboard" element={<p>dashboard page</p>} />
+        <Route
+          path="/protected"
+          element={
+            <RequireAuth>
+              <p>{SECRET}</p>
+            </RequireAuth>
+          }
+        />
+      </Routes>,
+      { route: "/protected" }
+    );
+
+    expect(await screen.findByText("sign in page")).toBeInTheDocument();
+
+    signInAs(makeUser());
+
+    expect(await screen.findByText(SECRET)).toBeInTheDocument();
+  });
+
+  it("ignores a destination outside the app and falls back to the dashboard", async () => {
+    renderWithProviders(
+      withRoutes(<RedirectIfAuthenticated><p>{SECRET}</p></RedirectIfAuthenticated>),
+      {
+        route: {
+          pathname: "/protected",
+          state: { from: { pathname: "//evil.com", search: "", hash: "" } },
+        },
+      }
+    );
+
+    signInAs(makeUser());
+
+    expect(await screen.findByText("dashboard page")).toBeInTheDocument();
+  });
 });

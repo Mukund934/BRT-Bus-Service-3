@@ -9,6 +9,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { Route, Routes, useLocation } from "react-router-dom";
 import Timetable from "@/pages/Timetable";
 import Dashboard from "@/pages/Dashboard";
 import { PAYMENT_CONFIG } from "@/constants/config";
@@ -37,6 +38,13 @@ afterEach(() => {
 
 const signedIn = () => signInAs(makeUser({ uid: "user-1" }));
 
+const SignInTarget = () => {
+  const { state } = useLocation();
+  const from = (state as { from?: { pathname: string } } | null)?.from;
+
+  return <p>came from {from?.pathname ?? "nowhere"}</p>;
+};
+
 describe("a signed-out visitor", () => {
   it("is sent to sign in rather than into the booking dialog", async () => {
     const { user } = renderWithProviders(<Timetable />, { route: "/timetable" });
@@ -45,6 +53,21 @@ describe("a signed-out visitor", () => {
     await user.click(bookButtons[0]!);
 
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("is returned to the timetable once signed in", async () => {
+    const { user } = renderWithProviders(
+      <Routes>
+        <Route path="/timetable" element={<Timetable />} />
+        <Route path="/login" element={<SignInTarget />} />
+      </Routes>,
+      { route: "/timetable" }
+    );
+
+    const bookButtons = await screen.findAllByRole("button", { name: /^book route/i });
+    await user.click(bookButtons[0]!);
+
+    expect(await screen.findByText("came from /timetable")).toBeInTheDocument();
   });
 });
 

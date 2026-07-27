@@ -10,7 +10,8 @@
 import type { ReactElement, ReactNode } from "react";
 import { render, type RenderOptions, type RenderResult } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { vi } from "vitest";
+import { MemoryRouter, Route, Routes, type Location } from "react-router-dom";
 import { LiveAnnouncer } from "@/components/a11y/LiveAnnouncer";
 import { NotificationProvider } from "@/components/NotificationPopup";
 import { AuthProvider } from "@/contexts/AuthContext";
@@ -18,13 +19,13 @@ import { TicketProvider } from "@/contexts/TicketContext";
 
 interface ProviderOptions extends Omit<RenderOptions, "wrapper"> {
   /** Initial URL. Defaults to the site root. */
-  route?: string;
+  route?: string | Partial<Location>;
   /** Path pattern to mount the element at, when the component reads params. */
   path?: string;
 }
 
 const AllProviders =
-  (route: string, path?: string) =>
+  (route: string | Partial<Location>, path?: string) =>
   ({ children }: { children: ReactNode }) => (
     <MemoryRouter initialEntries={[route]}>
       <AuthProvider>
@@ -63,7 +64,11 @@ export const renderWithProviders = (
   ui: ReactElement,
   { route = "/", path, ...options }: ProviderOptions = {}
 ): RenderWithProvidersResult => {
-  const user = userEvent.setup();
+  const user = userEvent.setup({
+    advanceTimers: (delay) => {
+      if (vi.isFakeTimers()) vi.advanceTimersByTime(delay);
+    },
+  });
 
   return {
     user,
