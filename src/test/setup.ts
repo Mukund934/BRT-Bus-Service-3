@@ -8,8 +8,10 @@
  */
 
 import "@testing-library/jest-dom/vitest";
-import { cleanup } from "@testing-library/react";
+import { cleanup, configure } from "@testing-library/react";
 import { afterEach, beforeEach, vi } from "vitest";
+
+configure({ asyncUtilTimeout: 5000 });
 
 /*
   The Firebase SDK is never loaded in tests.
