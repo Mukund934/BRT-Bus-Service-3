@@ -1,11 +1,11 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import ArrivalMonitor from "@/components/ArrivalMonitor";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTickets } from "@/contexts/TicketContext";
 import { STOP_COORDS } from "@/domain/transit/stops";
 import { subscribeToBuses, type LiveBus } from "@/services/locationService";
 import { act, renderWithProviders, screen } from "../helpers/render";
-import { makeUpcomingTicket, seedStoredTickets } from "../helpers/factories";
+import { makeUpcomingTicket, seedStoredTickets, TEST_NOW } from "../helpers/factories";
 import { makeUser, signInAs } from "../helpers/firebase";
 import { setMockNotifications } from "../helpers/userService";
 
@@ -60,6 +60,11 @@ const arrive = async () => {
 
   return subscribe.mock.calls[0]![0];
 };
+
+beforeEach(() => {
+  vi.useFakeTimers({ shouldAdvanceTime: true });
+  vi.setSystemTime(TEST_NOW);
+});
 
 afterEach(() => {
   setMockNotifications(true);
