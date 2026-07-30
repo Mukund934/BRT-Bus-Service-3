@@ -74,4 +74,17 @@ describe("route stop list", () => {
     expect(cbd).toBeDefined();
     expect(cbd!.textContent).not.toContain("No departures yet");
   });
+
+  it("only links the stops a journey can start from", () => {
+    renderList();
+
+    expect(screen.getByRole("link", { name: /^CBD/ })).toHaveAttribute(
+      "href",
+      "/plan?from=CBD"
+    );
+    expect(
+      screen.queryByRole("link", { name: /^Sector 22/ })
+    ).not.toBeInTheDocument();
+    expect(screen.getAllByRole("link")).toHaveLength(scheduled.size);
+  });
 });

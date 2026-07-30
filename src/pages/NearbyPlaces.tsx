@@ -9,6 +9,7 @@ import {
   searchPlaces,
   type PlaceCategory,
 } from "@/domain/places";
+import { hasScheduledService } from "@/domain/transit/schedule";
 
 const NearbyPlaces = () => {
   const searchId = useId();
@@ -120,6 +121,7 @@ const NearbyPlaces = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {places.map((place) => {
                   const routeId = routeIdForPlace(place);
+                  const scheduled = hasScheduledService(place.nearestStop);
 
                   return (
                     <div key={place.name} className="brt-card">
@@ -142,14 +144,23 @@ const NearbyPlaces = () => {
                         Nearest stop: {place.nearestStop}
                       </p>
 
+                      {!scheduled && (
+                        <p className="mt-2 text-xs text-muted-foreground">
+                          This stop is on the published network but has no
+                          departures yet, so a journey cannot be planned to it.
+                        </p>
+                      )}
+
                       <div className="flex flex-wrap gap-2 mt-4">
-                        <Link
-                          to={`/plan?to=${encodeURIComponent(place.nearestStop)}`}
-                          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium transition-all duration-300 hover:-translate-y-0.5 touch-target"
-                        >
-                          Plan journey
-                          <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
-                        </Link>
+                        {scheduled && (
+                          <Link
+                            to={`/plan?to=${encodeURIComponent(place.nearestStop)}`}
+                            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium transition-all duration-300 hover:-translate-y-0.5 touch-target"
+                          >
+                            Plan journey
+                            <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
+                          </Link>
+                        )}
 
                         {routeId && (
                           <Link

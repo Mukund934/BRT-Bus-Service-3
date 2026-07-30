@@ -17,6 +17,7 @@ import {
   getDestinationsFrom,
   getTripStops,
   getTrips,
+  hasScheduledService,
   serviceFor,
   type Trip,
 } from "@/domain/transit/schedule";
@@ -125,6 +126,12 @@ const Plan = () => {
   const sameStop = Boolean(origin && destination && origin === destination);
   const unresolved =
     (params.get("from") ?? "") !== "" && (!origin || !destination);
+  const unserved =
+    origin && !hasScheduledService(origin)
+      ? origin
+      : destination && !hasScheduledService(destination)
+        ? destination
+        : null;
   const bookable = searchedDate === today;
 
   const handleSearch = () => {
@@ -297,11 +304,19 @@ const Plan = () => {
                     <p className="font-semibold text-foreground mb-1">
                       No scheduled service for this journey
                     </p>
-                    <p className="text-sm text-muted-foreground">
-                      The timetable currently runs from HNLU towards Raipur
-                      Railway Station only, and departures are listed for the
-                      selected day after {searchedTime}.
-                    </p>
+                    {unserved ? (
+                      <p className="text-sm text-muted-foreground">
+                        {unserved} is on the published network but has no
+                        departures yet. Browse the routes to see which stops
+                        the timetable covers.
+                      </p>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">
+                        The timetable currently runs from HNLU towards Raipur
+                        Railway Station only, and departures are listed for the
+                        selected day after {searchedTime}.
+                      </p>
+                    )}
                   </div>
                 ) : (
                   <>

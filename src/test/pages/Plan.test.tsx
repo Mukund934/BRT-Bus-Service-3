@@ -69,6 +69,29 @@ describe("pricing a journey", () => {
     ).toBeInTheDocument();
   });
 
+  it("names the stop that has no departures rather than blaming the direction", async () => {
+    renderWithProviders(<Plan />, {
+      route: "/plan?from=HNLU&to=Jungle%20Safari&date=2026-07-20&time=00:00",
+    });
+
+    expect(
+      await screen.findByText(/Jungle Safari is on the published network/)
+    ).toBeInTheDocument();
+    expect(screen.getByRole("main")).not.toHaveTextContent(
+      "The timetable currently runs from HNLU"
+    );
+  });
+
+  it("still explains the one-way timetable when both stops are served", async () => {
+    renderWithProviders(<Plan />, {
+      route: "/plan?from=CBD&to=HNLU&date=2026-07-20&time=00:00",
+    });
+
+    expect(
+      await screen.findByText(/The timetable currently runs from HNLU/)
+    ).toBeInTheDocument();
+  });
+
   it("asks for a firmer choice when what was typed matches several stops", async () => {
     renderWithProviders(<Plan />, {
       route: "/plan?from=Sector&to=CBD&date=2026-07-20&time=00:00",

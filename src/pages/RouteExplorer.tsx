@@ -13,14 +13,10 @@ import {
   type NetworkRoute,
   type NetworkRouteId,
 } from "@/domain/transit/routes";
-import { getTripStops, getTrips } from "@/domain/transit/schedule";
-import { findStops, type StopName } from "@/domain/transit/stops";
+import { SCHEDULED_STOPS, getTrips } from "@/domain/transit/schedule";
+import { findStops } from "@/domain/transit/stops";
 
 const networkRoutes = getNetworkRoutes();
-
-const scheduledStops: ReadonlySet<StopName> = new Set(
-  [...getTrips("weekday"), ...getTrips("weekend")].flatMap(getTripStops)
-);
 
 const routeMatches = (route: NetworkRoute, query: string): boolean => {
   const term = query.trim().toLowerCase();
@@ -177,7 +173,7 @@ const RouteExplorer = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {visible.map((route) => {
                 const withDepartures = route.servedStops.filter((stop) =>
-                  scheduledStops.has(stop)
+                  SCHEDULED_STOPS.has(stop)
                 ).length;
                 const interchanges =
                   route.servedStops.filter(isInterchange).length;
@@ -276,7 +272,7 @@ const RouteExplorer = () => {
                       ],
                       [
                         "With departures",
-                        `${selected.servedStops.filter((stop) => scheduledStops.has(stop)).length} of ${selected.servedStops.length}`,
+                        `${selected.servedStops.filter((stop) => SCHEDULED_STOPS.has(stop)).length} of ${selected.servedStops.length}`,
                       ],
                       ["Terminates", selected.servedStops[selected.servedStops.length - 1]!],
                     ].map(([label, value]) => (
@@ -290,7 +286,7 @@ const RouteExplorer = () => {
                   <RouteStopList
                     routeId={selected.id}
                     stops={selected.servedStops}
-                    scheduled={scheduledStops}
+                    scheduled={SCHEDULED_STOPS}
                   />
                 </div>
               )}

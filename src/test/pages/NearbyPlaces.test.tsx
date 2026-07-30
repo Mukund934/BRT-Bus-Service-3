@@ -24,11 +24,11 @@ describe("linking a place to the rest of the site", () => {
   it("escapes a stop name that contains spaces", () => {
     renderWithProviders(<NearbyPlaces />, { route: "/nearby" });
 
-    const card = cardFor("Rawatpura Sarkar University");
+    const card = cardFor("Balco Medical Center");
 
     expect(
       within(card).getByRole("link", { name: /plan journey/i })
-    ).toHaveAttribute("href", "/plan?to=Rawatpura%20Sarkar%20University");
+    ).toHaveAttribute("href", "/plan?to=Balco%20Medical%20Center");
   });
 
   it("opens the route that serves the stop", () => {
@@ -41,6 +41,26 @@ describe("linking a place to the rest of the site", () => {
     expect(
       within(cardFor("Miraj Cinema")).getByRole("link", { name: "Route" })
     ).toHaveAttribute("href", "/routes?route=trunk");
+  });
+
+  it("does not offer a journey to a stop with no departures", () => {
+    renderWithProviders(<NearbyPlaces />, { route: "/nearby" });
+
+    const card = cardFor("Jungle Safari");
+
+    expect(
+      within(card).queryByRole("link", { name: /plan journey/i })
+    ).not.toBeInTheDocument();
+    expect(within(card).getByText(/no departures yet/i)).toBeInTheDocument();
+  });
+
+  it("keeps the route and fare links for a stop with no departures", () => {
+    renderWithProviders(<NearbyPlaces />, { route: "/nearby" });
+
+    const card = cardFor("Tribal Museum");
+
+    expect(within(card).getByRole("link", { name: "Route" })).toBeInTheDocument();
+    expect(within(card).getByRole("link", { name: "Fare" })).toBeInTheDocument();
   });
 
   it("marks only the places the operator lists itself", () => {
