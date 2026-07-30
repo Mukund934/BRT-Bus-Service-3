@@ -1,133 +1,172 @@
-BRT-Bus-Service-2-main/
-├── .env
+BRT-Bus-Service-3/
+├── .github/
+│   └── workflows/
+│       └── ci.yml
+├── public/
+│   ├── docs/
+│   │   └── FareChart.pdf
+│   ├── favicon.svg
+│   ├── logo1.png
+│   ├── robots.txt
+│   ├── sitemap.xml
+│   └── social-preview.webp
+├── src/
+│   ├── assets/
+│   │   └── hero-brts.webp
+│   ├── components/
+│   │   ├── a11y/
+│   │   │   ├── LiveAnnouncer.tsx
+│   │   │   └── RouteChangeHandler.tsx
+│   │   ├── dashboards/
+│   │   │   ├── AdminDashboard.tsx
+│   │   │   ├── DriverDashboard.tsx
+│   │   │   └── UserDashboard.tsx
+│   │   ├── routing/
+│   │   │   └── RouteGuards.tsx
+│   │   ├── ui/
+│   │   │   ├── dialog.tsx
+│   │   │   ├── sonner.tsx
+│   │   │   ├── toast.tsx
+│   │   │   ├── toaster.tsx
+│   │   │   └── tooltip.tsx
+│   │   ├── ArrivalMonitor.tsx
+│   │   ├── BookingModal.tsx
+│   │   ├── ContactCard.tsx
+│   │   ├── ErrorBoundary.tsx
+│   │   ├── Footer.tsx
+│   │   ├── Header.tsx
+│   │   ├── NotificationPopup.tsx
+│   │   ├── PaymentModal.tsx
+│   │   ├── RouteCard.tsx
+│   │   ├── RouteStopList.tsx
+│   │   ├── StopField.tsx
+│   │   └── VirtualTicket.tsx
+│   ├── config/
+│   │   └── env.ts
+│   ├── constants/
+│   │   └── config.ts
+│   ├── contexts/
+│   │   ├── AuthContext.tsx
+│   │   └── TicketContext.tsx
+│   ├── domain/
+│   │   ├── auth/
+│   │   │   ├── errors.ts
+│   │   │   └── permissions.ts
+│   │   ├── ticket/
+│   │   │   ├── conflicts.ts
+│   │   │   ├── factory.ts
+│   │   │   ├── selectors.ts
+│   │   │   ├── status.ts
+│   │   │   ├── timing.ts
+│   │   │   └── types.ts
+│   │   ├── transit/
+│   │   │   ├── fares.ts
+│   │   │   ├── routes.ts
+│   │   │   ├── schedule.ts
+│   │   │   └── stops.ts
+│   │   ├── validation/
+│   │   │   └── schemas.ts
+│   │   ├── geo.ts
+│   │   ├── places.ts
+│   │   └── time.ts
+│   ├── hooks/
+│   │   ├── use-mobile.tsx
+│   │   └── use-toast.ts
+│   ├── lib/
+│   │   └── utils.ts
+│   ├── pages/
+│   │   ├── Contact.tsx
+│   │   ├── Dashboard.tsx
+│   │   ├── Driver.tsx
+│   │   ├── Fares.tsx
+│   │   ├── Home.tsx
+│   │   ├── Login.tsx
+│   │   ├── MapPage.tsx
+│   │   ├── NearbyPlaces.tsx
+│   │   ├── NotFound.tsx
+│   │   ├── Plan.tsx
+│   │   ├── RouteExplorer.tsx
+│   │   └── Timetable.tsx
+│   ├── services/
+│   │   ├── locationService.ts
+│   │   ├── notificationService.ts
+│   │   ├── storageService.ts
+│   │   ├── ticketService.ts
+│   │   └── userService.ts
+│   ├── test/
+│   │   ├── components/
+│   │   │   ├── ArrivalMonitor.test.tsx
+│   │   │   ├── BookingModal.test.tsx
+│   │   │   ├── DriverDashboard.test.tsx
+│   │   │   ├── ErrorBoundary.test.tsx
+│   │   │   ├── Footer.test.tsx
+│   │   │   ├── Header.test.tsx
+│   │   │   ├── RouteChangeHandler.test.tsx
+│   │   │   ├── RouteGuards.test.tsx
+│   │   │   ├── RouteStopList.test.tsx
+│   │   │   └── VirtualTicket.test.tsx
+│   │   ├── contexts/
+│   │   │   ├── AuthContext.test.tsx
+│   │   │   └── TicketContext.test.tsx
+│   │   ├── domain/
+│   │   │   ├── errors.test.ts
+│   │   │   ├── fares.test.ts
+│   │   │   ├── network.test.ts
+│   │   │   ├── places.test.ts
+│   │   │   ├── schedule.test.ts
+│   │   │   ├── selectors.test.ts
+│   │   │   └── ticket.test.ts
+│   │   ├── helpers/
+│   │   │   ├── factories.ts
+│   │   │   ├── firebase.ts
+│   │   │   ├── render.tsx
+│   │   │   └── userService.ts
+│   │   ├── integration/
+│   │   │   └── booking-flow.test.tsx
+│   │   ├── pages/
+│   │   │   ├── Contact.test.tsx
+│   │   │   ├── Driver.test.tsx
+│   │   │   ├── Fares.test.tsx
+│   │   │   ├── Home.test.tsx
+│   │   │   ├── Login.test.tsx
+│   │   │   ├── MapPage.test.tsx
+│   │   │   ├── NearbyPlaces.test.tsx
+│   │   │   ├── NotFound.test.tsx
+│   │   │   ├── Plan.test.tsx
+│   │   │   └── RouteExplorer.test.tsx
+│   │   ├── services/
+│   │   │   ├── locationService.test.ts
+│   │   │   ├── notificationService.test.ts
+│   │   │   ├── storageService.test.ts
+│   │   │   ├── ticketService.test.ts
+│   │   │   └── userService.test.ts
+│   │   └── setup.ts
+│   ├── types/
+│   │   └── user.ts
+│   ├── App.css
+│   ├── App.tsx
+│   ├── firebase.ts
+│   ├── index.css
+│   ├── main.tsx
+│   └── vite-env.d.ts
+├── .env.example
 ├── .gitignore
+├── bundle-report-BEFORE.json
+├── components.json
+├── database.rules.json
+├── eslint.config.js
+├── firebase.json
+├── firestore.indexes.json
+├── firestore.rules
 ├── index.html
 ├── package.json
-├── package-lock.json
-├── tsconfig.json
-├── tsconfig.app.json
-├── tsconfig.node.json
-├── vite.config.ts
-├── vitest.config.ts
-├── tailwind.config.ts
 ├── postcss.config.js
-├── eslint.config.js
-├── components.json
-├── bun.lockb
-├── README.md
 ├── project-structure.txt
-│
-├── node_modules/
-│
-├── public/
-│   └── robots.txt
-│
-└── src/
-    ├── main.tsx
-    ├── App.tsx
-    ├── App.css
-    ├── index.css
-    ├── firebase.ts
-    ├── vite-env.d.ts
-    │
-    ├── assets/
-    │   └── hero-bus.jpg
-    │
-    ├── components/
-    │   ├── ArrivalMonitor.tsx
-    │   ├── BookingModal.tsx
-    │   ├── ContactCard.tsx
-    │   ├── Footer.tsx
-    │   ├── Header.tsx
-    │   ├── NavLink.tsx
-    │   ├── NotificationPopup.tsx
-    │   ├── PaymentModal.tsx
-    │   ├── RouteCard.tsx
-    │   ├── VirtualTicket.tsx
-    │   └── ui/
-    │       ├── accordion.tsx
-    │       ├── alert-dialog.tsx
-    │       ├── alert.tsx
-    │       ├── aspect-ratio.tsx
-    │       ├── avatar.tsx
-    │       ├── badge.tsx
-    │       ├── breadcrumb.tsx
-    │       ├── button.tsx
-    │       ├── calendar.tsx
-    │       ├── card.tsx
-    │       ├── carousel.tsx
-    │       ├── chart.tsx
-    │       ├── checkbox.tsx
-    │       ├── collapsible.tsx
-    │       ├── command.tsx
-    │       ├── context-menu.tsx
-    │       ├── dialog.tsx
-    │       ├── drawer.tsx
-    │       ├── dropdown-menu.tsx
-    │       ├── form.tsx
-    │       ├── hover-card.tsx
-    │       ├── input-otp.tsx
-    │       ├── input.tsx
-    │       ├── label.tsx
-    │       ├── menubar.tsx
-    │       ├── navigation-menu.tsx
-    │       ├── pagination.tsx
-    │       ├── popover.tsx
-    │       ├── progress.tsx
-    │       ├── radio-group.tsx
-    │       ├── resizable.tsx
-    │       ├── scroll-area.tsx
-    │       ├── select.tsx
-    │       ├── separator.tsx
-    │       ├── sheet.tsx
-    │       ├── sidebar.tsx
-    │       ├── skeleton.tsx
-    │       ├── slider.tsx
-    │       ├── sonner.tsx
-    │       ├── switch.tsx
-    │       ├── table.tsx
-    │       ├── tabs.tsx
-    │       ├── textarea.tsx
-    │       ├── toast.tsx
-    │       ├── toaster.tsx
-    │       ├── toggle-group.tsx
-    │       ├── toggle.tsx
-    │       ├── tooltip.tsx
-    │       └── use-toast.ts
-    │
-    ├── contexts/
-    │   └── UserContext.tsx
-    │
-    ├── hooks/
-    │   ├── use-mobile.tsx
-    │   └── use-toast.ts
-    │
-    ├── lib/
-    │   └── utils.ts
-    │
-    ├── pages/
-    │   ├── Contact.tsx
-    │   ├── Dashboard.tsx
-    │   ├── Driver.tsx
-    │   ├── Fares.tsx
-    │   ├── Home.tsx
-    │   ├── Index.tsx
-    │   ├── Login.tsx
-    │   ├── MapPage.tsx
-    │   ├── NotFound.tsx
-    │   └── Timetable.tsx
-    │
-    └── types/
-        └── ticket.ts
-    │
-    └── pages/
-        ├── Index.tsx
-        ├── Home.tsx
-        ├── Login.tsx
-        ├── Dashboard.tsx
-        ├── Driver.tsx
-        ├── Fares.tsx
-        ├── Timetable.tsx
-        ├── MapPage.tsx
-        ├── Contact.tsx
-        └── NotFound.tsx
+├── README.md
+├── tailwind.config.ts
+├── tsconfig.app.json
+├── tsconfig.json
+├── tsconfig.node.json
+├── vercel.json
+├── vite.config.ts
+└── vitest.config.ts

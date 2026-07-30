@@ -16,7 +16,7 @@ A production-grade smart bus transit web application combining real-time trackin
 
 ⚡ Optimized for modern cloud hosting environments
 
-⚡ Designed for Lovable Cloud / Vercel / Netlify deployment
+⚡ Deployed on Vercel; see `vercel.json` for rewrites and security headers
 
 ---
 
@@ -52,7 +52,7 @@ The platform is engineered to feel:
 
 * Driver GPS location push system
 * Passenger-side live map tracking
-* Google Maps marker updates
+* OpenStreetMap marker updates
 * Backend polling system
 * Real-time location display
 
@@ -362,17 +362,16 @@ Frontend:
 * TypeScript
 * Vite
 * Tailwind CSS
-* Framer Motion
 
 State & Persistence:
 
 * Context API
-* localStorage (MVP mode)
-* Lovable Cloud Database (Production ready path)
+* localStorage (tickets)
+* Firebase Auth, Firestore and Realtime Database
 
 APIs & Integration:
 
-* Google Maps API
+* OpenStreetMap embed
 * Browser Notification API
 * QR Code Generation Library
 
