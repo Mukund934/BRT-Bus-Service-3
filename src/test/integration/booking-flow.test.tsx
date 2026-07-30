@@ -187,6 +187,65 @@ describe("duplicate booking prevention", () => {
   });
 });
 
+describe("services that are not running today", () => {
+  it("refuses a weekend service to a passenger travelling on a Monday", async () => {
+    renderWithProviders(<Timetable />, { route: "/timetable" });
+    signedIn();
+
+    const weekendBook = await screen.findAllByRole("button", {
+      name: /^book route 102/i,
+    });
+
+    expect(weekendBook[0]).toBeDisabled();
+  });
+
+  it("explains why rather than leaving the button mysteriously dead", async () => {
+    renderWithProviders(<Timetable />, { route: "/timetable" });
+    signedIn();
+
+    expect(
+      await screen.findByText(/does not run today/i)
+    ).toBeInTheDocument();
+  });
+
+  it("still lists the times, so the timetable stays useful as a reference", async () => {
+    renderWithProviders(<Timetable />, { route: "/timetable" });
+    signedIn();
+
+    expect(
+      await screen.findByRole("region", { name: /Weekends/i })
+    ).toBeInTheDocument();
+  });
+
+  it("leaves today's own service bookable", async () => {
+    renderWithProviders(<Timetable />, { route: "/timetable" });
+    signedIn();
+
+    const weekdayBook = await screen.findAllByRole("button", {
+      name: /^book route 101 departing 6:25 AM/i,
+    });
+
+    expect(weekdayBook[0]).toBeEnabled();
+  });
+
+  it("turns the restriction around on a Saturday", async () => {
+    vi.setSystemTime(new Date(2026, 6, 25, 5, 0, 0));
+
+    renderWithProviders(<Timetable />, { route: "/timetable" });
+    signedIn();
+
+    const weekdayBook = await screen.findAllByRole("button", {
+      name: /^book route 101 departing 6:25 AM/i,
+    });
+    const weekendBook = await screen.findAllByRole("button", {
+      name: /^book route 102/i,
+    });
+
+    expect(weekdayBook[0]).toBeDisabled();
+    expect(weekendBook[0]).toBeEnabled();
+  });
+});
+
 describe("the ticket on the dashboard", () => {
   it("shows a live ticket with its journey and a way to cancel it", async () => {
     seedStoredTickets("user-1", [
