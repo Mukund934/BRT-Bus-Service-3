@@ -1,12 +1,10 @@
 import { useAuth } from "@/contexts/AuthContext";
-import { Zap, Radio, Users, MapPin } from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { toBusId } from "@/services/locationService";
+import { ArrowRight, Radio } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const DriverDashboard = () => {
   const { user } = useAuth();
-  const navigate = useNavigate();
-  const [isLive, setIsLive] = useState(false);
 
   const getInitials = (name?: string | null) => {
     if (!name) return "D";
@@ -41,54 +39,31 @@ const DriverDashboard = () => {
         </div>
 
         {/* GO LIVE SECTION */}
-        <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-2xl p-8 text-white text-center mb-8">
-          <Radio className="w-12 h-12 mx-auto mb-4" />
+        <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-2xl p-8 text-white text-center">
+          <Radio className="w-12 h-12 mx-auto mb-4" aria-hidden="true" />
           <h2 className="text-3xl font-bold mb-2">Share Live Location</h2>
-          <p className="text-blue-100 mb-6">Start broadcasting your bus location to passengers</p>
+          <p className="text-blue-100 mb-6">
+            Broadcasting runs on the live tracking page and stops when you leave
+            it, so keep that page open while you are on shift.
+          </p>
 
-          <button
-            onClick={() => {
-              setIsLive(!isLive);
-              navigate("/driver");
-            }}
-            className={`px-8 py-4 rounded-xl font-bold text-lg transition-all duration-300 flex items-center justify-center gap-2 mx-auto ${
-              isLive
-                ? "bg-red-500 hover:bg-red-600 text-white"
-                : "bg-white text-blue-600 hover:shadow-lg hover:-translate-y-1"
-            }`}
+          <Link
+            to="/driver"
+            className="px-8 py-4 rounded-xl font-bold text-lg transition-all duration-300 inline-flex items-center justify-center gap-2 mx-auto bg-white text-blue-600 hover:shadow-lg hover:-translate-y-1"
           >
-            <Zap className="w-5 h-5" />
-            {isLive ? "Stop Broadcasting" : "Start Broadcasting"}
-          </button>
-        </div>
+            Open live tracking
+            <ArrowRight className="w-5 h-5" aria-hidden="true" />
+          </Link>
 
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-blue-50 rounded-xl p-6 border border-blue-200">
-            <div className="flex items-center gap-3 mb-2">
-              <Zap className="w-5 h-5 text-blue-600" />
-              <p className="text-gray-600 font-medium">Status</p>
-            </div>
-            <p className="text-2xl font-bold text-gray-900">
-              {isLive ? "🟢 Live" : "⚫ Offline"}
+          {user && (
+            <p className="text-blue-100 text-sm mt-6">
+              Passengers see your bus as{" "}
+              <span className="font-mono font-semibold text-white">
+                {toBusId(user.uid)}
+              </span>
+              . Your name and email address are never published.
             </p>
-          </div>
-
-          <div className="bg-green-50 rounded-xl p-6 border border-green-200">
-            <div className="flex items-center gap-3 mb-2">
-              <Users className="w-5 h-5 text-green-600" />
-              <p className="text-gray-600 font-medium">Passengers Today</p>
-            </div>
-            <p className="text-2xl font-bold text-gray-900">0</p>
-          </div>
-
-          <div className="bg-purple-50 rounded-xl p-6 border border-purple-200">
-            <div className="flex items-center gap-3 mb-2">
-              <MapPin className="w-5 h-5 text-purple-600" />
-              <p className="text-gray-600 font-medium">Distance Covered</p>
-            </div>
-            <p className="text-2xl font-bold text-gray-900">0 km</p>
-          </div>
+          )}
         </div>
       </div>
     </div>
