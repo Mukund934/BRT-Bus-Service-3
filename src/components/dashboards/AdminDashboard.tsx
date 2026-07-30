@@ -273,17 +273,28 @@ const AdminDashboard = ({ onError }: AdminDashboardProps) => {
 
       {/* Alerts */}
       {error && (
-        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center justify-between">
+        <div
+          role="alert"
+          className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center justify-between"
+        >
           <span className="text-red-600">{error}</span>
-          <button onClick={() => setError("")} className="text-red-600 hover:text-red-700">
-            <X className="w-5 h-5" />
+          <button
+            type="button"
+            onClick={() => setError("")}
+            className="text-red-600 hover:text-red-700"
+          >
+            <X className="w-5 h-5" aria-hidden="true" />
+            <span className="sr-only">Dismiss error message</span>
           </button>
         </div>
       )}
 
       {success && (
-        <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2">
-          <CheckCircle className="w-5 h-5 text-green-600" />
+        <div
+          role="status"
+          className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2"
+        >
+          <CheckCircle className="w-5 h-5 text-green-600" aria-hidden="true" />
           <span className="text-green-600">{success}</span>
         </div>
       )}
@@ -294,6 +305,7 @@ const AdminDashboard = ({ onError }: AdminDashboardProps) => {
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-2xl font-bold text-gray-900">User Management</h2>
             <button
+              type="button"
               onClick={() => void loadUsers()}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
             >
@@ -438,6 +450,7 @@ const AdminDashboard = ({ onError }: AdminDashboardProps) => {
                           </>
                         ) : (
                           <button
+                            type="button"
                             onClick={() => startEdit(u.uid, u.role)}
                             disabled={!mayAssignRoles}
                             className="flex items-center gap-2 px-4 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
