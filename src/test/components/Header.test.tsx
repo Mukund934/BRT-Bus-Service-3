@@ -31,12 +31,54 @@ describe("finding your way around", () => {
     renderWithProviders(<Header />, { route: "/fares" });
 
     expect(
-      within(mainNav()).getByRole("link", { name: "Bus Fares" })
+      within(mainNav()).getByRole("link", { name: "Fares" })
     ).toHaveAttribute("aria-current", "page");
 
     expect(
       within(mainNav()).getByRole("link", { name: "Home" })
     ).not.toHaveAttribute("aria-current");
+  });
+
+  it("reaches every public page from the main navigation", () => {
+    renderWithProviders(<Header />, { route: "/" });
+
+    const destinations = within(mainNav())
+      .getAllByRole("link")
+      .map((link) => link.getAttribute("href"));
+
+    expect(destinations).toEqual([
+      "/",
+      "/plan",
+      "/routes",
+      "/nearby",
+      "/map",
+      "/timetable",
+      "/fares",
+      "/contact",
+    ]);
+  });
+
+  it("offers the same destinations in the drawer", () => {
+    renderWithProviders(<Header />, { route: "/" });
+
+    const drawer = controlledBy(menuButton());
+
+    expect(
+      within(drawer).getAllByRole("link", { hidden: true }).map((link) =>
+        link.getAttribute("href")
+      )
+    ).toEqual(
+      expect.arrayContaining([
+        "/",
+        "/plan",
+        "/routes",
+        "/nearby",
+        "/map",
+        "/timetable",
+        "/fares",
+        "/contact",
+      ])
+    );
   });
 
   it("offers a visitor a way to sign in", () => {
@@ -137,7 +179,7 @@ describe("the drawer on a small screen", () => {
     await user.click(menuButton());
 
     const drawer = controlledBy(menuButton());
-    await user.click(within(drawer).getByRole("link", { name: "Bus Fares" }));
+    await user.click(within(drawer).getByRole("link", { name: "Fares" }));
 
     await waitFor(() =>
       expect(menuButton()).toHaveAttribute("aria-expanded", "false")

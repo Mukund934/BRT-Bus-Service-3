@@ -3,6 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import {
 	Clock,
+	Compass,
 	DollarSign,
 	Home,
 	LayoutDashboard,
@@ -19,10 +20,11 @@ const navLinks = [
 	{ to: "/", label: "Home", icon: Home },
 	{ to: "/plan", label: "Plan Journey", icon: Route },
 	{ to: "/routes", label: "Routes", icon: Map },
+	{ to: "/nearby", label: "Nearby", icon: Compass },
 	{ to: "/map", label: "Live Map", icon: MapPin },
-	{ to: "/timetable", label: "Time Table", icon: Clock },
-	{ to: "/fares", label: "Bus Fares", icon: DollarSign },
-	{ to: "/contact", label: "Contact Us", icon: Phone },
+	{ to: "/timetable", label: "Timetable", icon: Clock },
+	{ to: "/fares", label: "Fares", icon: DollarSign },
+	{ to: "/contact", label: "Contact", icon: Phone },
 ];
 
 const getInitials = (name: string): string => {
@@ -203,7 +205,7 @@ const Header = () => {
 						</div>
 					</Link>
 
-					<nav aria-label="Main" className="hidden lg:flex items-center gap-1">
+					<nav aria-label="Main" className="hidden xl:flex items-center gap-1">
 						{navLinks.map(({ to, label, icon: Icon }) => {
 							const active = isActive(to);
 
@@ -211,7 +213,7 @@ const Header = () => {
 								<Link
 									key={to}
 									to={to}
-									className="relative px-4 py-2.5 rounded-xl text-sm font-medium text-white/90 hover:text-white transition-all duration-300 group flex items-center gap-2 hover:bg-white/10"
+									className="relative px-3 py-2.5 rounded-xl text-sm font-medium text-white/90 hover:text-white transition-all duration-300 group flex items-center gap-2 hover:bg-white/10"
 									aria-current={active ? "page" : undefined}
 								>
 									<Icon className="w-4 h-4 opacity-80 group-hover:opacity-100 transition" aria-hidden="true" />
@@ -230,7 +232,7 @@ const Header = () => {
 					</nav>
 
 					<div className="flex items-center gap-4">
-						<div className="hidden lg:block">
+						<div className="hidden xl:block">
 							{!user ? (
 								<Link
 									to="/login"
@@ -321,7 +323,7 @@ const Header = () => {
 							type="button"
 							ref={menuButtonRef}
 							onClick={() => setIsMenuOpen((open) => !open)}
-							className="lg:hidden text-white p-2 rounded-lg hover:bg-white/10 transition focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-[#874f9c] touch-target"
+							className="xl:hidden text-white p-2 rounded-lg hover:bg-white/10 transition focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-[#874f9c] touch-target"
 							aria-expanded={isMenuOpen}
 							aria-controls={mobileMenuId}
 							aria-label={isMenuOpen ? "Close navigation menu" : "Open navigation menu"}
@@ -339,7 +341,7 @@ const Header = () => {
 
 			{isMenuOpen && (
 				<div
-					className="lg:hidden fixed inset-0 top-16 bg-black/40 backdrop-blur-sm z-40"
+					className="xl:hidden fixed inset-0 top-16 bg-black/40 backdrop-blur-sm z-40"
 					onClick={() => closeMenu()}
 					aria-hidden="true"
 				/>
@@ -348,7 +350,7 @@ const Header = () => {
 			<div
 				id={mobileMenuId}
 				ref={mobileMenuRef}
-				className={`lg:hidden fixed inset-y-0 right-0 w-64 max-w-[85vw] bg-[#874f9c] transform transition-transform duration-300 z-50 ${
+				className={`xl:hidden fixed inset-y-0 right-0 w-64 max-w-[85vw] bg-[#874f9c] transform transition-transform duration-300 z-50 ${
 					isMenuOpen ? "translate-x-0" : "translate-x-full"
 				}`}
 			>
