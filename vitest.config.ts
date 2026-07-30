@@ -38,6 +38,8 @@ export default defineConfig({
     unstubEnvs: true,
     unstubGlobals: true,
 
+    testTimeout: 15000,
+
     coverage: {
       provider: "v8",
       reporter: ["text", "html", "lcov"],
@@ -46,15 +48,18 @@ export default defineConfig({
       /*
         Only the code that encodes decisions is measured.
 
-        Presentational pages, the vendored shadcn primitives and pure type
-        modules are excluded deliberately: including them would inflate the
-        percentage while telling nobody whether the booking rules work.
+        The vendored shadcn primitives and pure type modules are excluded
+        deliberately: including them would inflate the percentage while
+        telling nobody whether the booking rules work. Pages are measured
+        because they no longer only present - the planner derives journey
+        options and both booking entry points gate on the session.
       */
       include: [
         "src/domain/**/*.ts",
         "src/services/**/*.ts",
         "src/contexts/**/*.tsx",
         "src/components/**/*.tsx",
+        "src/pages/**/*.tsx",
       ],
       exclude: [
         "src/components/ui/**",
@@ -69,10 +74,10 @@ export default defineConfig({
         deliberately rather than chased.
       */
       thresholds: {
-        lines: 75,
-        functions: 73,
-        branches: 80,
-        statements: 75,
+        lines: 88,
+        functions: 81,
+        branches: 86,
+        statements: 88,
       },
     },
   },

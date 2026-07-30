@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { ArrowRight, Clock, Repeat, Search } from "lucide-react";
 import Header from "@/components/Header";
@@ -17,7 +17,7 @@ import {
   getDestinationsFrom,
   getTripStops,
   getTrips,
-  type ServiceDay,
+  serviceFor,
   type Trip,
 } from "@/domain/transit/schedule";
 import { findStops, isStopName, type StopName } from "@/domain/transit/stops";
@@ -37,11 +37,6 @@ const isoDate = (date: Date): string =>
 
 const clockTime = (date: Date): string =>
   `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
-
-const serviceFor = (iso: string): ServiceDay => {
-  const day = new Date(`${iso}T00:00:00`).getDay();
-  return day === 0 || day === 6 ? "weekend" : "weekday";
-};
 
 /**
  * Resolves whatever the passenger typed to a stop.
@@ -102,7 +97,7 @@ const Plan = () => {
     const [hours = 0, mins = 0] = searchedTime.split(":").map(Number);
     const earliest = hours * 60 + mins;
 
-    return getTrips(serviceFor(searchedDate))
+    return getTrips(serviceFor(new Date(`${searchedDate}T00:00:00`)))
       .filter((trip) => getDestinationsFrom(trip, origin).includes(destination))
       .map((trip) => {
         const departure = getCallTime(trip, origin)!;
@@ -166,6 +161,13 @@ const Plan = () => {
               Choose where you are boarding and where you are going. Fares come
               from the official BRTS fare chart.
             </p>
+
+            <Link
+              to="/nearby"
+              className="inline-block mt-3 text-primary font-medium underline underline-offset-2 touch-target"
+            >
+              Not sure where to go? Browse nearby places
+            </Link>
           </div>
 
           <div className="brt-search-card animate-fade-in-up animate-stagger-1">

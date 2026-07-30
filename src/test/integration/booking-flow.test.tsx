@@ -9,6 +9,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { Route, Routes, useLocation } from "react-router-dom";
 import Timetable from "@/pages/Timetable";
 import Dashboard from "@/pages/Dashboard";
 import { PAYMENT_CONFIG } from "@/constants/config";
@@ -37,6 +38,13 @@ afterEach(() => {
 
 const signedIn = () => signInAs(makeUser({ uid: "user-1" }));
 
+const SignInTarget = () => {
+  const { state } = useLocation();
+  const from = (state as { from?: { pathname: string } } | null)?.from;
+
+  return <p>came from {from?.pathname ?? "nowhere"}</p>;
+};
+
 describe("a signed-out visitor", () => {
   it("is sent to sign in rather than into the booking dialog", async () => {
     const { user } = renderWithProviders(<Timetable />, { route: "/timetable" });
@@ -45,6 +53,21 @@ describe("a signed-out visitor", () => {
     await user.click(bookButtons[0]!);
 
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("is returned to the timetable once signed in", async () => {
+    const { user } = renderWithProviders(
+      <Routes>
+        <Route path="/timetable" element={<Timetable />} />
+        <Route path="/login" element={<SignInTarget />} />
+      </Routes>,
+      { route: "/timetable" }
+    );
+
+    const bookButtons = await screen.findAllByRole("button", { name: /^book route/i });
+    await user.click(bookButtons[0]!);
+
+    expect(await screen.findByText("came from /timetable")).toBeInTheDocument();
   });
 });
 
@@ -161,6 +184,65 @@ describe("duplicate booking prevention", () => {
     expect(
       within(dialog).getByRole("button", { name: /proceed to pay/i })
     ).toBeDisabled();
+  });
+});
+
+describe("services that are not running today", () => {
+  it("refuses a weekend service to a passenger travelling on a Monday", async () => {
+    renderWithProviders(<Timetable />, { route: "/timetable" });
+    signedIn();
+
+    const weekendBook = await screen.findAllByRole("button", {
+      name: /^book route 102/i,
+    });
+
+    expect(weekendBook[0]).toBeDisabled();
+  });
+
+  it("explains why rather than leaving the button mysteriously dead", async () => {
+    renderWithProviders(<Timetable />, { route: "/timetable" });
+    signedIn();
+
+    expect(
+      await screen.findByText(/does not run today/i)
+    ).toBeInTheDocument();
+  });
+
+  it("still lists the times, so the timetable stays useful as a reference", async () => {
+    renderWithProviders(<Timetable />, { route: "/timetable" });
+    signedIn();
+
+    expect(
+      await screen.findByRole("region", { name: /Weekends/i })
+    ).toBeInTheDocument();
+  });
+
+  it("leaves today's own service bookable", async () => {
+    renderWithProviders(<Timetable />, { route: "/timetable" });
+    signedIn();
+
+    const weekdayBook = await screen.findAllByRole("button", {
+      name: /^book route 101 departing 6:25 AM/i,
+    });
+
+    expect(weekdayBook[0]).toBeEnabled();
+  });
+
+  it("turns the restriction around on a Saturday", async () => {
+    vi.setSystemTime(new Date(2026, 6, 25, 5, 0, 0));
+
+    renderWithProviders(<Timetable />, { route: "/timetable" });
+    signedIn();
+
+    const weekdayBook = await screen.findAllByRole("button", {
+      name: /^book route 101 departing 6:25 AM/i,
+    });
+    const weekendBook = await screen.findAllByRole("button", {
+      name: /^book route 102/i,
+    });
+
+    expect(weekdayBook[0]).toBeDisabled();
+    expect(weekendBook[0]).toBeEnabled();
   });
 });
 

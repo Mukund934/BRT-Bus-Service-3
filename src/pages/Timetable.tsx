@@ -11,6 +11,7 @@ import { getRoute } from "@/domain/transit/routes";
 import {
   getCallTime,
   getTrips,
+  serviceFor,
   type ServiceDay,
   type Trip,
 } from "@/domain/transit/schedule";
@@ -26,6 +27,7 @@ const SERVICES: Array<{ day: ServiceDay; caption: string }> = [
 interface TimetableTableProps {
   caption: string;
   trips: readonly Trip[];
+  available: boolean;
   onBook: (trip: Trip) => void;
 }
 
@@ -46,7 +48,12 @@ const columnStops = (trips: readonly Trip[]): readonly StopName[] =>
  * how the express route's skipped stops render as blanks without the data
  * needing empty-string placeholders.
  */
-const TimetableTable = ({ caption, trips, onBook }: TimetableTableProps) => (
+const TimetableTable = ({
+  caption,
+  trips,
+  available,
+  onBook,
+}: TimetableTableProps) => (
   /*
     The scroll container is focusable and labelled so a keyboard user can
     scroll this wide table without a pointer, which WCAG 2.1.1 requires for
@@ -70,6 +77,13 @@ const TimetableTable = ({ caption, trips, onBook }: TimetableTableProps) => (
         <span className="sr-only">
           . Scroll sideways to see all stops. Each row is one departure.
         </span>
+
+        {!available && (
+          <p className="text-sm font-medium text-muted-foreground mt-1">
+            This service does not run today, so it cannot be booked. The times
+            are listed for reference.
+          </p>
+        )}
       </caption>
       <thead>
         <tr className="bg-primary text-primary-foreground">
@@ -126,8 +140,9 @@ const TimetableTable = ({ caption, trips, onBook }: TimetableTableProps) => (
               <td className="px-2 py-1.5 border-b border-border text-center">
                 <button
                   type="button"
+                  disabled={!available}
                   onClick={() => onBook(trip)}
-                  className="px-2 py-1.5 text-[10px] lg:text-xs bg-primary text-primary-foreground rounded-md hover:-translate-y-0.5 transition-all duration-200 hover:shadow-md active:scale-95"
+                  className="px-2 py-1.5 text-[10px] lg:text-xs bg-primary text-primary-foreground rounded-md hover:-translate-y-0.5 transition-all duration-200 hover:shadow-md active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   Book
                   {/*
@@ -155,6 +170,8 @@ const Timetable = () => {
 
   const [selectedTrip, setSelectedTrip] = useState<Trip | null>(null);
   const [selection, setSelection] = useState<JourneySelection | null>(null);
+
+  const today = serviceFor(new Date());
 
   const handleBook = (trip: Trip) => {
     if (!user) {
@@ -186,6 +203,7 @@ const Timetable = () => {
             key={day}
             caption={caption}
             trips={getTrips(day)}
+            available={day === today}
             onBook={handleBook}
           />
         ))}

@@ -1,6 +1,6 @@
 import { useId, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
-import { ArrowRight, Clock, Repeat } from "lucide-react";
+import { Link, useSearchParams } from "react-router-dom";
+import { ArrowRight, Clock, Repeat, Search } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import RouteStopList from "@/components/RouteStopList";
@@ -8,11 +8,13 @@ import {
   getNetworkRoutes,
   getRoute,
   isInterchange,
+  isNetworkRouteId,
   ROUTE_IDS,
+  type NetworkRoute,
   type NetworkRouteId,
 } from "@/domain/transit/routes";
 import { getTripStops, getTrips } from "@/domain/transit/schedule";
-import type { StopName } from "@/domain/transit/stops";
+import { findStops, type StopName } from "@/domain/transit/stops";
 
 const networkRoutes = getNetworkRoutes();
 
@@ -20,14 +22,43 @@ const scheduledStops: ReadonlySet<StopName> = new Set(
   [...getTrips("weekday"), ...getTrips("weekend")].flatMap(getTripStops)
 );
 
+const routeMatches = (route: NetworkRoute, query: string): boolean => {
+  const term = query.trim().toLowerCase();
+  if (!term) return true;
+
+  if (
+    route.id.toLowerCase().includes(term) ||
+    route.name.toLowerCase().includes(term) ||
+    route.headline.toLowerCase().includes(term)
+  ) {
+    return true;
+  }
+
+  return findStops(term).some((stop) => route.servedStops.includes(stop));
+};
+
 const RouteExplorer = () => {
   const panelId = useId();
-  const [selectedId, setSelectedId] = useState<NetworkRouteId | null>(null);
+  const searchId = useId();
+  const [params, setParams] = useSearchParams();
+  const [query, setQuery] = useState("");
+
+  const requested = params.get("route");
+  const selectedId = isNetworkRouteId(requested) ? requested : null;
 
   const selected = useMemo(
     () => networkRoutes.find((route) => route.id === selectedId) ?? null,
     [selectedId]
   );
+
+  const visible = useMemo(
+    () => networkRoutes.filter((route) => routeMatches(route, query)),
+    [query]
+  );
+
+  const select = (id: NetworkRouteId | null) => {
+    setParams(id ? { route: id } : {}, { replace: true });
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -43,6 +74,13 @@ const RouteExplorer = () => {
               Every route published in the official Tatpar BRTS network, the
               stops it serves, and where you can change buses.
             </p>
+
+            <Link
+              to="/nearby"
+              className="inline-block mt-3 text-primary font-medium underline underline-offset-2 touch-target"
+            >
+              Places you can reach on these routes
+            </Link>
           </div>
 
           <section className="mb-12" aria-labelledby="scheduled-heading">
@@ -89,8 +127,55 @@ const RouteExplorer = () => {
               Official network routes
             </h2>
 
+            <div className="mb-6">
+              <label
+                htmlFor={searchId}
+                className="block text-sm font-medium text-foreground mb-1"
+              >
+                Find a route
+              </label>
+
+              <div className="relative">
+                <Search
+                  className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground"
+                  aria-hidden="true"
+                />
+                <input
+                  id={searchId}
+                  type="search"
+                  value={query}
+                  autoComplete="off"
+                  placeholder="Search by route or stop name"
+                  onChange={(event) => setQuery(event.target.value)}
+                  className="brt-input touch-target pl-11"
+                />
+              </div>
+
+              <p className="sr-only" role="status" aria-live="polite">
+                {visible.length} of {networkRoutes.length} routes shown
+              </p>
+            </div>
+
+            {visible.length === 0 && (
+              <div className="brt-card text-center">
+                <p className="font-semibold text-foreground mb-1">
+                  No routes match "{query.trim()}"
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Try a route name, a route id, or the name of a stop.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setQuery("")}
+                  className="mt-3 text-primary font-medium underline underline-offset-2 touch-target"
+                >
+                  Clear search
+                </button>
+              </div>
+            )}
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {networkRoutes.map((route) => {
+              {visible.map((route) => {
                 const withDepartures = route.servedStops.filter((stop) =>
                   scheduledStops.has(stop)
                 ).length;
@@ -104,7 +189,7 @@ const RouteExplorer = () => {
                     type="button"
                     aria-expanded={open}
                     aria-controls={panelId}
-                    onClick={() => setSelectedId(open ? null : route.id)}
+                    onClick={() => select(open ? null : route.id)}
                     className={`brt-card text-left touch-target ${
                       open ? "ring-2 ring-primary/40" : ""
                     }`}
@@ -172,8 +257,35 @@ const RouteExplorer = () => {
                       >
                         Check fares
                       </Link>
+
+                      <Link
+                        to="/timetable"
+                        className="px-6 py-3 rounded-xl border border-border text-foreground font-medium transition-all duration-300 hover:bg-secondary inline-flex items-center gap-2 touch-target"
+                      >
+                        Timetable
+                      </Link>
                     </div>
                   </div>
+
+                  <dl className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+                    {[
+                      ["Stops", `${selected.servedStops.length}`],
+                      [
+                        "Interchanges",
+                        `${selected.servedStops.filter(isInterchange).length}`,
+                      ],
+                      [
+                        "With departures",
+                        `${selected.servedStops.filter((stop) => scheduledStops.has(stop)).length} of ${selected.servedStops.length}`,
+                      ],
+                      ["Terminates", selected.servedStops[selected.servedStops.length - 1]!],
+                    ].map(([label, value]) => (
+                      <div key={label} className="rounded-xl bg-secondary p-4">
+                        <dt className="text-xs text-muted-foreground">{label}</dt>
+                        <dd className="mt-1 font-bold text-foreground">{value}</dd>
+                      </div>
+                    ))}
+                  </dl>
 
                   <RouteStopList
                     routeId={selected.id}

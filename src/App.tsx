@@ -30,6 +30,7 @@ import { PERMISSIONS } from "@/domain/auth/permissions";
 const Home = lazy(() => import("./pages/Home"));
 const Plan = lazy(() => import("./pages/Plan"));
 const RouteExplorer = lazy(() => import("./pages/RouteExplorer"));
+const NearbyPlaces = lazy(() => import("./pages/NearbyPlaces"));
 const Fares = lazy(() => import("./pages/Fares"));
 const Timetable = lazy(() => import("./pages/Timetable"));
 const Contact = lazy(() => import("./pages/Contact"));
@@ -84,6 +85,7 @@ const App = () => (
                   <Route path="/" element={<Home />} />
                   <Route path="/plan" element={<Plan />} />
                   <Route path="/routes" element={<RouteExplorer />} />
+                  <Route path="/nearby" element={<NearbyPlaces />} />
                   <Route path="/fares" element={<Fares />} />
                   <Route path="/timetable" element={<Timetable />} />
                   <Route path="/contact" element={<Contact />} />

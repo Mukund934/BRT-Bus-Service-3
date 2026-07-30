@@ -16,10 +16,16 @@ import { vi } from "vitest";
 import type { UserRole } from "@/types/user";
 
 let role: UserRole = "user";
+let notifications = true;
 
 /** Sets the role every subsequent sign-in resolves to. */
 export const setMockRole = (next: UserRole): void => {
   role = next;
+};
+
+/** Sets whether the resolved profile has arrival alerts switched on. */
+export const setMockNotifications = (next: boolean): void => {
+  notifications = next;
 };
 
 export const resetMockRole = (): void => {
@@ -53,7 +59,7 @@ export const userServiceMock = () => ({
     (user: { displayName?: string | null; email?: string | null }) => ({
       name: user.displayName ?? "Passenger",
       email: user.email ?? "",
-      notifications_enabled: true,
+      notifications_enabled: notifications,
     })
   ),
 

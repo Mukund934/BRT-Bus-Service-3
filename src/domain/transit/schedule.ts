@@ -130,6 +130,9 @@ const TRIPS: Record<ServiceDay, Trip[]> = {
   weekend: buildTrips(WEEKEND_GRID, "weekend"),
 };
 
+export const serviceFor = (date: Date): ServiceDay =>
+  date.getDay() === 0 || date.getDay() === 6 ? "weekend" : "weekday";
+
 /** All trips for a service day, in timetable order. */
 export const getTrips = (service: ServiceDay): readonly Trip[] => TRIPS[service];
 

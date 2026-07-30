@@ -9,7 +9,7 @@
 
 import { act, renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { TicketProvider, useTickets } from "@/contexts/TicketContext";
@@ -20,6 +20,7 @@ import {
   makeTicket,
   makeUpcomingTicket,
   seedStoredTickets,
+  TEST_NOW,
 } from "../helpers/factories";
 import { makeUser, signInAs, signOutMock } from "../helpers/firebase";
 
@@ -103,6 +104,15 @@ describe("signing out", () => {
 });
 
 describe("booking through the context", () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.setSystemTime(TEST_NOW);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("adds the ticket and makes it the active one", async () => {
     const { result } = renderTickets();
     act(() => signInAs(makeUser({ uid: "user-1" })));
@@ -135,6 +145,15 @@ describe("booking through the context", () => {
 });
 
 describe("cancelling through the context", () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.setSystemTime(TEST_NOW);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("moves the ticket into history", async () => {
     const stored = makeUpcomingTicket({ userId: "user-1" });
     seedStoredTickets("user-1", [stored]);
