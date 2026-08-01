@@ -81,6 +81,8 @@ export const REMOTE_PATHS = {
   BUS_LOCATIONS: "busLocations",
   /** Firestore collection holding user profiles and roles. */
   USERS: "users",
+  /** Firestore collection holding booked tickets. */
+  TICKETS: "tickets",
 } as const;
 
 /** How wide a bounding box the embedded map draws around its centre. */

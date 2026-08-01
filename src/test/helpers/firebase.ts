@@ -239,26 +239,50 @@ export const firestoreMock = () => ({
 
   limit: vi.fn((count: number) => ({ kind: "limit" as const, count })),
 
+  where: vi.fn((field: string, _op: string, value: unknown) => ({
+    kind: "where" as const,
+    field,
+    value,
+  })),
+
   query: vi.fn(
     (
       source: { collection: string },
-      ...constraints: Array<{ kind: string; count: number }>
+      ...constraints: Array<{
+        kind: string;
+        count?: number;
+        field?: string;
+        value?: unknown;
+      }>
     ) => ({
       collection: source.collection,
       limit: constraints.find((c) => c.kind === "limit")?.count ?? Infinity,
+      wheres: constraints.filter((c) => c.kind === "where") as Array<{
+        field: string;
+        value: unknown;
+      }>,
     })
   ),
 
-  getDocs: vi.fn(async (q: { collection: string; limit: number }) => {
-    const entries = [...docs.entries()]
-      .filter(([path]) => path.startsWith(`${q.collection}/`))
-      .slice(0, q.limit);
+  getDocs: vi.fn(
+    async (q: {
+      collection: string;
+      limit: number;
+      wheres?: Array<{ field: string; value: unknown }>;
+    }) => {
+      const entries = [...docs.entries()]
+        .filter(([path]) => path.startsWith(`${q.collection}/`))
+        .filter(([, data]) =>
+          (q.wheres ?? []).every((clause) => data[clause.field] === clause.value)
+        )
+        .slice(0, q.limit);
 
-    return {
-      docs: entries.map(([path, data]) => ({
-        id: path.split("/")[1]!,
-        data: () => data,
-      })),
-    };
-  }),
+      return {
+        docs: entries.map(([path, data]) => ({
+          id: path.split("/")[1]!,
+          data: () => data,
+        })),
+      };
+    }
+  ),
 });

@@ -74,8 +74,8 @@ const UserDashboard = () => {
    * confirmation the only feedback is that something vanished.
    */
   const handleCancel = useCallback(
-    (ticketId: string) => {
-      cancelTicket(ticketId);
+    async (ticketId: string) => {
+      await cancelTicket(ticketId);
       toast.success("Ticket cancelled.");
       announce("Your ticket has been cancelled.");
     },

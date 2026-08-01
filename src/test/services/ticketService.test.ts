@@ -12,10 +12,15 @@ import {
   BOOKING_FAILURE_MESSAGES,
   bookTicket,
   cancelTicket,
+  fetchRemoteTickets,
   loadTickets,
+  mergeTickets,
   migrateLegacyTicket,
   purgeOtherUsersTickets,
+  pushTicket,
+  pushTicketStatus,
   saveTickets,
+  syncTickets,
 } from "@/services/ticketService";
 import {
   at,
@@ -23,7 +28,10 @@ import {
   makeTicket,
   seedLegacyStoredTickets,
   seedStoredTickets,
+  TEST_NOW,
 } from "../helpers/factories";
+import { readDoc, seedDoc } from "../helpers/firebase";
+import type { Ticket } from "@/domain/ticket/types";
 
 const USER = "user-1";
 
@@ -278,5 +286,176 @@ describe("when the device refuses to store anything", () => {
     expect(result).toEqual({ ok: false, reason: "STORAGE_FAILED" });
 
     setItem.mockRestore();
+  });
+});
+
+describe("reading tickets the server holds", () => {
+  const seedRemote = (ticket: Ticket) =>
+    seedDoc("tickets", ticket.ticketId, { ...ticket });
+
+  it("asks only for the caller's own tickets", async () => {
+    const mine = makeTicket({ userId: USER });
+    const theirs = makeTicket({ userId: "someone-else" });
+
+    seedRemote(mine);
+    seedRemote(theirs);
+
+    const tickets = await fetchRemoteTickets(USER);
+
+    expect(tickets.map((ticket) => ticket.ticketId)).toEqual([mine.ticketId]);
+  });
+
+  it("drops a document claiming to belong to another account", async () => {
+    const foreign = makeTicket({ userId: USER });
+
+    seedDoc("tickets", foreign.ticketId, { ...foreign, userId: "someone-else" });
+
+    expect(await fetchRemoteTickets(USER)).toEqual([]);
+  });
+
+  it("loses only the unreadable document, not the whole wallet", async () => {
+    const good = makeTicket({ userId: USER });
+
+    seedRemote(good);
+    seedDoc("tickets", "broken", { userId: USER, fare: "free" });
+
+    const tickets = await fetchRemoteTickets(USER);
+
+    expect(tickets.map((ticket) => ticket.ticketId)).toEqual([good.ticketId]);
+  });
+
+  it("reports nothing for a caller with no id", async () => {
+    expect(await fetchRemoteTickets("")).toEqual([]);
+  });
+});
+
+describe("writing a ticket to the server", () => {
+  it("keys the document by the ticket id so a retry cannot duplicate it", async () => {
+    const ticket = makeTicket({ userId: USER });
+
+    expect(await pushTicket(ticket)).toBe(true);
+    expect(await pushTicket(ticket)).toBe(true);
+
+    expect(await fetchRemoteTickets(USER)).toHaveLength(1);
+  });
+
+  it("sends only the two fields a cancellation may move", async () => {
+    const ticket = makeTicket({ userId: USER });
+    await pushTicket(ticket);
+
+    await pushTicketStatus({
+      ...ticket,
+      status: "CANCELLED",
+      updatedAt: at(12, 0).toISOString(),
+      fare: 9999,
+    });
+
+    const stored = readDoc("tickets", ticket.ticketId)!;
+
+    expect(stored.status).toBe("CANCELLED");
+    expect(stored.fare).toBe(ticket.fare);
+  });
+
+  it("reports a refusal rather than throwing into a render", async () => {
+    const { setDoc } = await import("firebase/firestore");
+    vi.mocked(setDoc).mockRejectedValueOnce(new Error("offline"));
+
+    const failed = vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    expect(await pushTicket(makeTicket({ userId: USER }))).toBe(false);
+
+    failed.mockRestore();
+  });
+});
+
+describe("combining what each side holds", () => {
+  it("keeps a ticket only one side knows about", () => {
+    const local = makeTicket({ userId: USER }, TEST_NOW);
+    const remote = makeTicket({ userId: USER, fromStop: "CBD", toStop: "HNLU" }, TEST_NOW);
+
+    const merged = mergeTickets([local], [remote]);
+
+    expect(merged).toHaveLength(2);
+  });
+
+  it("never lists the same ticket twice", () => {
+    const ticket = makeTicket({ userId: USER });
+
+    expect(mergeTickets([ticket], [ticket])).toHaveLength(1);
+  });
+
+  it("lets a cancellation win over a copy that never saw it", () => {
+    const ticket = makeTicket({ userId: USER });
+    const cancelled = { ...ticket, status: "CANCELLED" as const };
+
+    expect(mergeTickets([cancelled], [ticket])[0]!.status).toBe("CANCELLED");
+    expect(mergeTickets([ticket], [cancelled])[0]!.status).toBe("CANCELLED");
+  });
+
+  it("prefers whichever copy was written last", () => {
+    const ticket = makeTicket({ userId: USER });
+    const newer = { ...ticket, updatedAt: at(23, 0).toISOString(), fare: 40 };
+
+    expect(mergeTickets([ticket], [newer])[0]!.fare).toBe(40);
+  });
+
+  it("puts the most recently booked journey first", () => {
+    const older = makeTicket({ userId: USER, bookingTime: at(6, 0).toISOString() });
+    const newer = makeTicket({
+      userId: USER,
+      bookingTime: at(9, 0).toISOString(),
+      fromStop: "CBD",
+      toStop: "HNLU",
+    });
+
+    expect(mergeTickets([older], [newer])[0]!.ticketId).toBe(newer.ticketId);
+  });
+});
+
+describe("reconciling a browser with the server", () => {
+  it("uploads a ticket booked while there was no connection", async () => {
+    const offlineBooking = makeTicket({ userId: USER });
+
+    await syncTickets(USER, [offlineBooking]);
+
+    expect(readDoc("tickets", offlineBooking.ticketId)).toBeDefined();
+  });
+
+  it("publishes a cancellation made while there was no connection", async () => {
+    const ticket = makeTicket({ userId: USER });
+    await pushTicket(ticket);
+
+    await syncTickets(USER, [{ ...ticket, status: "CANCELLED" }]);
+
+    expect(readDoc("tickets", ticket.ticketId)).toMatchObject({
+      status: "CANCELLED",
+    });
+  });
+
+  it("brings down a ticket booked on another device", async () => {
+    const elsewhere = makeTicket({ userId: USER });
+    await pushTicket(elsewhere);
+
+    const merged = await syncTickets(USER, []);
+
+    expect(merged.map((ticket) => ticket.ticketId)).toEqual([elsewhere.ticketId]);
+  });
+
+  it("keeps what the browser holds when the server cannot be reached", async () => {
+    const { getDocs } = await import("firebase/firestore");
+    vi.mocked(getDocs).mockRejectedValueOnce(new Error("offline"));
+
+    const failed = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const held = makeTicket({ userId: USER });
+
+    expect(await syncTickets(USER, [held])).toEqual([held]);
+
+    failed.mockRestore();
+  });
+
+  it("does nothing for a caller with no id", async () => {
+    const held = makeTicket({ userId: USER });
+
+    expect(await syncTickets("", [held])).toEqual([held]);
   });
 });

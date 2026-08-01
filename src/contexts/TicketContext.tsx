@@ -30,7 +30,10 @@ import {
   loadTickets,
   migrateLegacyTicket,
   purgeOtherUsersTickets,
+  pushTicket,
+  pushTicketStatus,
   saveTickets,
+  syncTickets,
   type BookingResult,
 } from "@/services/ticketService";
 import { useAuth } from "./AuthContext";
@@ -42,8 +45,8 @@ interface TicketContextValue {
   /** Completed and cancelled journeys. */
   ticketHistory: Ticket[];
   stats: PassengerStats;
-  bookTicket: (draft: TicketDraft) => BookingResult;
-  cancelTicket: (ticketId: string) => void;
+  bookTicket: (draft: TicketDraft) => Promise<BookingResult>;
+  cancelTicket: (ticketId: string) => Promise<void>;
   refreshTickets: () => void;
 }
 
@@ -81,6 +84,26 @@ export const TicketProvider = ({ children }: { children: ReactNode }) => {
     if (synced !== stored) saveTickets(userId, synced);
 
     setTickets(synced);
+
+    /*
+      The cached copy is published first so a ticket opens with no network at
+      all. Reconciliation follows and may widen the list, but is never allowed
+      to publish into a session that has since moved on to another account.
+    */
+    let stale = false;
+
+    void syncTickets(userId, synced).then((merged) => {
+      if (stale) return;
+
+      const settled = syncTicketStatuses(merged, new Date());
+
+      saveTickets(userId, settled);
+      setTickets(settled);
+    });
+
+    return () => {
+      stale = true;
+    };
   }, [userId, userEmail]);
 
   /**
@@ -114,13 +137,22 @@ export const TicketProvider = ({ children }: { children: ReactNode }) => {
     setTickets(synced);
   }, [userId]);
 
+  /*
+    The ticket is issued from the local write, not from the server round trip,
+    so a passenger standing in a dead spot still walks away holding it. The
+    push is best-effort; anything it misses is sent by the next sync.
+  */
   const bookTicket = useCallback(
-    (draft: TicketDraft): BookingResult => {
+    async (draft: TicketDraft): Promise<BookingResult> => {
       if (!userId) return { ok: false, reason: "NOT_AUTHENTICATED" };
 
       const result = bookTicketInStorage(userId, tickets, draft);
 
-      if (result.ok) setTickets(result.tickets);
+      if (!result.ok) return result;
+
+      setTickets(result.tickets);
+
+      await pushTicket(result.ticket);
 
       return result;
     },
@@ -128,12 +160,18 @@ export const TicketProvider = ({ children }: { children: ReactNode }) => {
   );
 
   const cancelTicket = useCallback(
-    (ticketId: string) => {
+    async (ticketId: string): Promise<void> => {
       if (!userId) return;
 
       const next = cancelTicketInStorage(userId, tickets, ticketId);
 
-      if (next) setTickets(next);
+      if (!next) return;
+
+      setTickets(next);
+
+      const cancelled = next.find((ticket) => ticket.ticketId === ticketId);
+
+      if (cancelled) await pushTicketStatus(cancelled);
     },
     [userId, tickets]
   );

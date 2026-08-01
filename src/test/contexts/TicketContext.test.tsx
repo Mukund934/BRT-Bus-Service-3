@@ -22,7 +22,7 @@ import {
   seedStoredTickets,
   TEST_NOW,
 } from "../helpers/factories";
-import { makeUser, signInAs, signOutMock } from "../helpers/firebase";
+import { makeUser, readDoc, seedDoc, signInAs, signOutMock } from "../helpers/firebase";
 
 // These tests are about tickets, not user records.
 vi.mock("@/services/userService", async () => {
@@ -51,7 +51,7 @@ describe("without a signed-in passenger", () => {
   it("refuses to book", async () => {
     const { result } = renderTickets();
 
-    const outcome = result.current.bookTicket(makeDraft());
+    const outcome = await result.current.bookTicket(makeDraft());
 
     expect(outcome).toEqual({ ok: false, reason: "NOT_AUTHENTICATED" });
   });
@@ -118,10 +118,10 @@ describe("booking through the context", () => {
     act(() => signInAs(makeUser({ uid: "user-1" })));
     await waitFor(() => expect(result.current.tickets).toEqual([]));
 
-    let outcome: ReturnType<typeof result.current.bookTicket> | undefined;
+    let outcome: Awaited<ReturnType<typeof result.current.bookTicket>> | undefined;
 
-    act(() => {
-      outcome = result.current.bookTicket(makeFutureDraft({ userId: "user-1" }));
+    await act(async () => {
+      outcome = await result.current.bookTicket(makeFutureDraft({ userId: "user-1" }));
     });
 
     expect(outcome?.ok).toBe(true);
@@ -134,8 +134,8 @@ describe("booking through the context", () => {
     act(() => signInAs(makeUser({ uid: "user-1" })));
     await waitFor(() => expect(result.current.tickets).toEqual([]));
 
-    act(() => {
-      result.current.bookTicket(makeFutureDraft({ userId: "user-1" }));
+    await act(async () => {
+      await result.current.bookTicket(makeFutureDraft({ userId: "user-1" }));
     });
 
     await waitFor(() =>
@@ -162,7 +162,9 @@ describe("cancelling through the context", () => {
     act(() => signInAs(makeUser({ uid: "user-1" })));
     await waitFor(() => expect(result.current.tickets).toHaveLength(1));
 
-    act(() => result.current.cancelTicket(stored.ticketId));
+    await act(async () => {
+      await result.current.cancelTicket(stored.ticketId);
+    });
 
     await waitFor(() =>
       expect(result.current.tickets[0]!.status).toBe("CANCELLED")
@@ -200,5 +202,129 @@ describe("as time passes", () => {
     expect(result.current.tickets[0]!.status).toBe("COMPLETED");
 
     vi.useRealTimers();
+  });
+});
+
+describe("tickets that live on the server", () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.setSystemTime(TEST_NOW);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("opens an already-synced ticket with no connection at all", async () => {
+    const { getDocs } = await import("firebase/firestore");
+    const failed = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    vi.mocked(getDocs).mockRejectedValue(new Error("offline"));
+
+    const held = makeUpcomingTicket({ userId: "user-1" });
+    seedStoredTickets("user-1", [held]);
+
+    const { result } = renderTickets();
+    act(() => signInAs(makeUser({ uid: "user-1" })));
+
+    await waitFor(() => expect(result.current.tickets).toHaveLength(1));
+    expect(result.current.activeTicket?.ticketId).toBe(held.ticketId);
+
+    vi.mocked(getDocs).mockRestore();
+    failed.mockRestore();
+  });
+
+  it("brings down a ticket booked on another device", async () => {
+    const elsewhere = makeUpcomingTicket({ userId: "user-1" });
+    seedDoc("tickets", elsewhere.ticketId, { ...elsewhere });
+
+    const { result } = renderTickets();
+    act(() => signInAs(makeUser({ uid: "user-1" })));
+
+    await waitFor(() => expect(result.current.tickets).toHaveLength(1));
+    expect(result.current.tickets[0]!.ticketId).toBe(elsewhere.ticketId);
+  });
+
+  it("keeps the newly synced ticket for the next visit", async () => {
+    const elsewhere = makeUpcomingTicket({ userId: "user-1" });
+    seedDoc("tickets", elsewhere.ticketId, { ...elsewhere });
+
+    const { result } = renderTickets();
+    act(() => signInAs(makeUser({ uid: "user-1" })));
+
+    await waitFor(() => expect(result.current.tickets).toHaveLength(1));
+
+    expect(localStorage.getItem("brt.tickets.user-1")).toContain(elsewhere.ticketId);
+  });
+
+  it("sends a new booking to the server", async () => {
+    const { result } = renderTickets();
+    act(() => signInAs(makeUser({ uid: "user-1" })));
+    await waitFor(() => expect(result.current.tickets).toEqual([]));
+
+    let booked: string | undefined;
+
+    await act(async () => {
+      const outcome = await result.current.bookTicket(
+        makeFutureDraft({ userId: "user-1" })
+      );
+
+      if (outcome.ok) booked = outcome.ticket.ticketId;
+    });
+
+    await waitFor(() => expect(readDoc("tickets", booked!)).toBeDefined());
+  });
+
+  it("sends a cancellation to the server", async () => {
+    const stored = makeUpcomingTicket({ userId: "user-1" });
+    seedStoredTickets("user-1", [stored]);
+    seedDoc("tickets", stored.ticketId, { ...stored });
+
+    const { result } = renderTickets();
+    act(() => signInAs(makeUser({ uid: "user-1" })));
+    await waitFor(() => expect(result.current.tickets).toHaveLength(1));
+
+    await act(async () => {
+      await result.current.cancelTicket(stored.ticketId);
+    });
+
+    await waitFor(() =>
+      expect(readDoc("tickets", stored.ticketId)).toMatchObject({
+        status: "CANCELLED",
+      })
+    );
+  });
+
+  it("never lets a slow read publish into the account that followed it", async () => {
+    const theirs = makeUpcomingTicket({ userId: "user-1" });
+    const { getDocs } = await import("firebase/firestore");
+
+    let release = () => {};
+    const stalled = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+
+    vi.mocked(getDocs).mockImplementationOnce(async () => {
+      await stalled;
+
+      return {
+        docs: [{ id: theirs.ticketId, data: () => ({ ...theirs }) }],
+      } as unknown as Awaited<ReturnType<typeof getDocs>>;
+    });
+
+    const { result } = renderTickets();
+    act(() => signInAs(makeUser({ uid: "user-1" })));
+
+    act(() => signOutMock());
+    act(() => signInAs(makeUser({ uid: "user-2" })));
+
+    await act(async () => {
+      release();
+      await stalled;
+    });
+
+    expect(result.current.tickets).toEqual([]);
+    expect(localStorage.getItem("brt.tickets.user-2") ?? "").not.toContain(
+      theirs.ticketId
+    );
   });
 });
