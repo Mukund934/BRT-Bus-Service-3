@@ -32,6 +32,23 @@ export const shouldAlert = (etaMinutes: number | null): etaMinutes is number =>
   etaMinutes !== null && etaMinutes <= ARRIVAL_RULES.ALERT_MINUTES;
 
 /**
+ * Asks the browser to allow arrival alerts.
+ *
+ * Called when a passenger switches alerts on, rather than on page load, so the
+ * prompt follows a deliberate choice instead of interrupting every visitor.
+ * A refusal is not an error: the in-app popup still works without it.
+ */
+export const requestAlertPermission = async (): Promise<void> => {
+  if (!("Notification" in window) || Notification.permission !== "default") return;
+
+  try {
+    await Notification.requestPermission();
+  } catch {
+    return;
+  }
+};
+
+/**
  * Tracks which alerts have already fired so a bus lingering near a stop does
  * not notify repeatedly. Keyed by route and stop.
  */

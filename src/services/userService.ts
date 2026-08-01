@@ -185,6 +185,19 @@ export const fetchAllUsers = async (actor: Actor | null): Promise<UserRoster> =>
   };
 };
 
+/** Switches the signed-in passenger's own arrival alerts on or off. */
+export const updateNotificationPreference = async (
+  uid: string,
+  enabled: boolean
+): Promise<void> => {
+  const { doc, updateDoc, db } = await firestore();
+
+  await updateDoc(doc(db, REMOTE_PATHS.USERS, uid), {
+    notifications_enabled: enabled,
+    updatedAt: new Date(),
+  });
+};
+
 export type RoleUpdateResult = { ok: true } | { ok: false; message: string };
 
 /**

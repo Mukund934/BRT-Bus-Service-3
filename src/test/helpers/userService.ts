@@ -65,5 +65,8 @@ export const userServiceMock = () => ({
 
   fetchAllUsers: vi.fn(async () => ({ users: [], truncated: false })),
   updateUserRole: vi.fn(async () => ({ ok: true as const })),
+  updateNotificationPreference: vi.fn(async (_uid: string, enabled: boolean) => {
+    notifications = enabled;
+  }),
   MAX_USERS_PER_READ: 500,
 });
