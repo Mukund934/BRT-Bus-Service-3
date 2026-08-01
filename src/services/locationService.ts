@@ -91,6 +91,12 @@ export interface Coords {
  *
  * Writes only to the caller's own node; the matching rule pins the path to
  * `auth.uid`, so a driver cannot post a position as another vehicle.
+ *
+ * The position is also armed for removal on disconnect. Stopping deliberately
+ * clears the node, but a crashed tab or a dead connection never gets that far,
+ * and the node lives in a world-readable database - so the server is asked to
+ * clear it too. The registration is renewed on every publish because the
+ * database discards it once it has fired or the socket has been replaced.
  */
 export const publishLocation = async (
   actor: Actor | null,
@@ -100,7 +106,7 @@ export const publishLocation = async (
     throw new AuthorizationError(PERMISSIONS.PUBLISH_LOCATION);
   }
 
-  const { ref, set, rtdb } = await database();
+  const { onDisconnect, ref, set, rtdb } = await database();
   if (!rtdb) return;
 
   const payload = {
@@ -119,7 +125,15 @@ export const publishLocation = async (
     return;
   }
 
-  await set(ref(rtdb, `${REMOTE_PATHS.BUS_LOCATIONS}/${actor!.uid}`), payload);
+  const node = ref(rtdb, `${REMOTE_PATHS.BUS_LOCATIONS}/${actor!.uid}`);
+
+  await set(node, payload);
+
+  try {
+    await onDisconnect(node).remove();
+  } catch (error) {
+    console.error("Could not arm automatic cleanup for this vehicle:", error);
+  }
 };
 
 /** Removes the driver's position when they stop sharing. */

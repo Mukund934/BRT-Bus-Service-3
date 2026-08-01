@@ -94,6 +94,7 @@ export const resetFirebaseMocks = (): void => {
   state.listeners.clear();
   state.nextAuthError = null;
   docs.clear();
+  resetRtdbMock();
 };
 
 /** Replacement for the `firebase/auth` module. */
@@ -161,12 +162,13 @@ export const firebaseModuleMock = () => ({
     ignores, so `userService` exercises its real code path against the
     in-memory store above.
 
-    `getRtdb` resolves to null, which is the documented "live tracking
-    unavailable" case; tests that need bus positions mock `locationService`
-    directly rather than simulating a socket.
+    `getRtdb` resolves to null by default, which is the documented "live
+    tracking unavailable" case. A test that wants the database calls
+    `enableRtdb()` first; leaving it off keeps every existing suite on the
+    path it was written against.
   */
   getDb: vi.fn(async () => ({ __mock: "firestore" })),
-  getRtdb: vi.fn(async () => null),
+  getRtdb: vi.fn(async () => (rtdb.enabled ? { __mock: "rtdb" } : null)),
   prefetchFirestore: vi.fn(),
 
   default: {},
@@ -174,6 +176,148 @@ export const firebaseModuleMock = () => ({
 
 /** Exposed so a test can assert how many listeners are still attached. */
 export const activeAuthListeners = (): number => state.listeners.size;
+
+// ---- Realtime Database -----------------------------------------------
+//
+// A node tree with live listeners, rather than a stub per call, so
+// `locationService` runs its real subscription, parsing and cleanup logic.
+// Disabled by default: `getRtdb` resolving to null is the app's documented
+// "live tracking unavailable" state and several suites depend on it.
+
+interface RtdbRef {
+  path: string;
+}
+
+const rtdb = {
+  enabled: false,
+  failNextSubscription: false,
+  nodes: new Map<string, unknown>(),
+  listeners: new Map<string, Set<(snapshot: unknown) => void>>(),
+  onDisconnects: new Map<string, "remove">(),
+};
+
+/** Switches the in-memory database on for the current test. */
+export const enableRtdb = (): void => {
+  rtdb.enabled = true;
+};
+
+/** Writes a node directly, bypassing the service layer. */
+export const seedRtdb = (path: string, value: unknown): void => {
+  rtdb.nodes.set(path, value);
+  notifyRtdb(path);
+};
+
+export const readRtdb = (path: string): unknown => rtdb.nodes.get(path);
+
+/** Whether the server has been asked to clear a node if the driver drops. */
+export const hasDisconnectCleanup = (path: string): boolean =>
+  rtdb.onDisconnects.get(path) === "remove";
+
+/** Runs what the server would run when a connection is lost. */
+export const dropRtdbConnection = (): void => {
+  for (const path of [...rtdb.onDisconnects.keys()]) {
+    rtdb.nodes.delete(path);
+    rtdb.onDisconnects.delete(path);
+    notifyRtdb(path);
+  }
+};
+
+const childrenOf = (path: string): Record<string, unknown> => {
+  const prefix = `${path}/`;
+  const children: Record<string, unknown> = {};
+
+  for (const [key, value] of rtdb.nodes) {
+    if (key.startsWith(prefix)) children[key.slice(prefix.length)] = value;
+  }
+
+  return children;
+};
+
+const snapshotAt = (path: string) => {
+  const direct = rtdb.nodes.get(path);
+  const children = childrenOf(path);
+  const value = direct ?? (Object.keys(children).length ? children : null);
+
+  return {
+    exists: () => value !== null && value !== undefined,
+    val: () => value,
+  };
+};
+
+const notifyRtdb = (path: string): void => {
+  for (const [listenPath, handlers] of rtdb.listeners) {
+    if (path === listenPath || path.startsWith(`${listenPath}/`)) {
+      handlers.forEach((handler) => handler(snapshotAt(listenPath)));
+    }
+  }
+};
+
+export const resetRtdbMock = (): void => {
+  rtdb.enabled = false;
+  rtdb.failNextSubscription = false;
+  rtdb.nodes.clear();
+  rtdb.listeners.clear();
+  rtdb.onDisconnects.clear();
+};
+
+/** Replacement for the `firebase/database` module. */
+export const firebaseDatabaseMock = () => ({
+  getDatabase: vi.fn(() => ({ __mock: "rtdb" })),
+
+  ref: vi.fn((_db: unknown, path: string): RtdbRef => ({ path })),
+
+  set: vi.fn(async (node: RtdbRef, value: unknown) => {
+    rtdb.nodes.set(node.path, value);
+    notifyRtdb(node.path);
+  }),
+
+  remove: vi.fn(async (node: RtdbRef) => {
+    rtdb.nodes.delete(node.path);
+    notifyRtdb(node.path);
+  }),
+
+  onDisconnect: vi.fn((node: RtdbRef) => ({
+    remove: vi.fn(async () => {
+      rtdb.onDisconnects.set(node.path, "remove");
+    }),
+  })),
+
+  onValue: vi.fn(
+    (
+      node: RtdbRef,
+      handler: (snapshot: unknown) => void,
+      onError?: (error: Error) => void
+    ) => {
+      const handlers = rtdb.listeners.get(node.path) ?? new Set();
+
+      handlers.add(handler);
+      rtdb.listeners.set(node.path, handlers);
+
+      if (rtdb.failNextSubscription) {
+        rtdb.failNextSubscription = false;
+        onError?.(new Error("permission denied"));
+        return () => handlers.delete(handler);
+      }
+
+      handler(snapshotAt(node.path));
+
+      return () => handlers.delete(handler);
+    }
+  ),
+
+  off: vi.fn((node: RtdbRef, _event: string, handler: (snapshot: unknown) => void) => {
+    rtdb.listeners.get(node.path)?.delete(handler);
+  }),
+});
+
+/** Makes the next subscription report a failure instead of delivering data. */
+export const failNextRtdbSubscription = (): void => {
+  rtdb.failNextSubscription = true;
+};
+
+/** How many listeners are still attached to a node. */
+export const rtdbListenerCount = (path: string): number =>
+  rtdb.listeners.get(path)?.size ?? 0;
 
 // ---- Firestore -------------------------------------------------------
 //
