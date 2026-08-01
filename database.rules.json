@@ -27,6 +27,10 @@
           ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 16"
         },
 
+        "routeId": {
+          ".validate": "newData.isString() && newData.val().matches(/^(101|102)$/)"
+        },
+
         "$other": {
           ".validate": false
         }

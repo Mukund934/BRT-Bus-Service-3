@@ -21,6 +21,7 @@ import { getRtdb } from "@/firebase";
 import { ARRIVAL_RULES, REMOTE_PATHS } from "@/constants/config";
 import { AuthorizationError } from "@/domain/auth/errors";
 import { PERMISSIONS, can } from "@/domain/auth/permissions";
+import type { RouteId } from "@/domain/transit/routes";
 import { busPositionSchema, type ValidatedBusPosition } from "@/domain/validation/schemas";
 import type { Actor } from "@/types/user";
 
@@ -100,7 +101,8 @@ export interface Coords {
  */
 export const publishLocation = async (
   actor: Actor | null,
-  coords: Coords
+  coords: Coords,
+  routeId?: RouteId
 ): Promise<void> => {
   if (!can(actor, PERMISSIONS.PUBLISH_LOCATION)) {
     throw new AuthorizationError(PERMISSIONS.PUBLISH_LOCATION);
@@ -114,6 +116,7 @@ export const publishLocation = async (
     lng: coords.longitude,
     updatedAt: Date.now(),
     busId: toBusId(actor!.uid),
+    ...(routeId ? { routeId } : {}),
   };
 
   // Validated before the write so an impossible coordinate is caught here

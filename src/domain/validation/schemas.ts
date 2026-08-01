@@ -83,12 +83,19 @@ export const ticketSchema = z.object({
  */
 export const unknownArraySchema = z.array(z.unknown());
 
-/** A live driver position as published to the Realtime Database. */
+/**
+ * A live driver position as published to the Realtime Database.
+ *
+ * `routeId` is optional because positions published before drivers declared a
+ * route are still in the database; they render without route detail rather
+ * than being dropped from the map.
+ */
 export const busPositionSchema = z.object({
   lat: z.number().min(-90).max(90),
   lng: z.number().min(-180).max(180),
   updatedAt: z.number().int().positive().optional(),
   busId: z.string().max(16).optional(),
+  routeId: routeIdSchema.optional(),
 });
 
 export type ValidatedBusPosition = z.infer<typeof busPositionSchema>;

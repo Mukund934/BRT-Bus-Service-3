@@ -1,8 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import MapPage from "@/pages/MapPage";
 import { ARRIVAL_RULES, POLLING } from "@/constants/config";
+import { STOP_COORDS } from "@/domain/transit/stops";
+import { locateOnRoute } from "@/domain/transit/routes";
 import { subscribeToBuses, type LiveBus } from "@/services/locationService";
-import { act, renderWithProviders, screen } from "../helpers/render";
+import { act, renderWithProviders, screen, within } from "../helpers/render";
 
 vi.mock("@/services/userService", async () => {
   const helper = await import("../helpers/userService");
@@ -67,8 +69,8 @@ describe("showing the buses that are running", () => {
     report(fleet());
 
     expect(screen.getByText("BUS-0001")).toBeInTheDocument();
-    expect(screen.getByText("21.00000")).toBeInTheDocument();
-    expect(screen.getByText("81.50000")).toBeInTheDocument();
+    expect(screen.getByText("BUS-0002")).toBeInTheDocument();
+    expect(screen.queryByText(/driver-/i)).not.toBeInTheDocument();
   });
 
   it("leaves a dash where a bus has never reported a time", () => {
@@ -76,7 +78,9 @@ describe("showing the buses that are running", () => {
 
     report(fleet());
 
-    expect(screen.getByText("—")).toBeInTheDocument();
+    const withoutTime = screen.getByText("BUS-0002").closest("tr")!;
+
+    expect(within(withoutTime).getAllByText("—").length).toBeGreaterThan(0);
   });
 
   it("counts the active buses", () => {
@@ -181,5 +185,56 @@ describe("leaving the map", () => {
     unmount();
 
     expect(unsubscribe).toHaveBeenCalled();
+  });
+});
+
+describe("telling a passenger where a bus is going", () => {
+  const onRoute = (): LiveBus[] => [
+    {
+      busId: "BUS-ROUTE",
+      lat: STOP_COORDS["CBD"]!.lat,
+      lng: STOP_COORDS["CBD"]!.lng,
+      updatedAt: Date.now(),
+      routeId: "101",
+    },
+  ];
+
+  it("names the route it is running", () => {
+    renderWithProviders(<MapPage />, { route: "/map" });
+
+    report(onRoute());
+
+    expect(screen.getByText("Route 101")).toBeInTheDocument();
+  });
+
+  it("names the stop it reaches next", () => {
+    renderWithProviders(<MapPage />, { route: "/map" });
+
+    report(onRoute());
+
+    const expected = locateOnRoute("101", STOP_COORDS["CBD"]!)!.nextStop!;
+
+    expect(screen.getByText(expected)).toBeInTheDocument();
+  });
+
+  it("names where the journey ends", () => {
+    renderWithProviders(<MapPage />, { route: "/map" });
+
+    report(onRoute());
+
+    expect(screen.getByText("Raipur Railway Station")).toBeInTheDocument();
+  });
+
+  it("says nothing it cannot know for a bus with no route", () => {
+    renderWithProviders(<MapPage />, { route: "/map" });
+
+    report([
+      { busId: "BUS-BARE", lat: 21, lng: 81, updatedAt: Date.now() },
+    ]);
+
+    const row = screen.getByText("BUS-BARE").closest("tr")!;
+
+    expect(within(row).queryByText("Route 101")).not.toBeInTheDocument();
+    expect(within(row).getAllByText("—").length).toBeGreaterThanOrEqual(3);
   });
 });

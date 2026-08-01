@@ -3,6 +3,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { MAP_CONFIG, POLLING } from "@/constants/config";
 import { DEFAULT_MAP_CENTER } from "@/domain/transit/stops";
+import { getRoute, locateOnRoute } from "@/domain/transit/routes";
 import {
   selectFreshBuses,
   subscribeToBuses,
@@ -124,24 +125,32 @@ const MapPage = () => {
                 <thead>
                   <tr className="border-b">
                     <th className="text-left py-2">Bus</th>
-                    <th>Latitude</th>
-                    <th>Longitude</th>
+                    <th className="text-left">Route</th>
+                    <th className="text-left">Next stop</th>
+                    <th className="text-left">Towards</th>
                     <th>Last update</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {active.map((bus) => (
-                    <tr key={bus.busId} className="border-b">
-                      <td className="py-2">{bus.busId}</td>
-                      <td>{bus.lat.toFixed(5)}</td>
-                      <td>{bus.lng.toFixed(5)}</td>
-                      <td>
-                        {bus.updatedAt
-                          ? new Date(bus.updatedAt).toLocaleTimeString()
-                          : "—"}
-                      </td>
-                    </tr>
-                  ))}
+                  {active.map((bus) => {
+                    const place = bus.routeId
+                      ? locateOnRoute(bus.routeId, { lat: bus.lat, lng: bus.lng })
+                      : null;
+
+                    return (
+                      <tr key={bus.busId} className="border-b">
+                        <td className="py-2">{bus.busId}</td>
+                        <td>{bus.routeId ? getRoute(bus.routeId).name : "—"}</td>
+                        <td>{place?.nextStop ?? "—"}</td>
+                        <td>{place?.destination ?? "—"}</td>
+                        <td className="text-center">
+                          {bus.updatedAt
+                            ? new Date(bus.updatedAt).toLocaleTimeString()
+                            : "—"}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             )}

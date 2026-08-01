@@ -7,6 +7,7 @@ import {
   toBusId,
 } from "@/services/locationService";
 import { renderWithProviders, screen, waitFor } from "../helpers/render";
+import { ROUTE_IDS, getRoute } from "@/domain/transit/routes";
 import { makeUser, signInAs } from "../helpers/firebase";
 import { setMockRole } from "../helpers/userService";
 
@@ -87,7 +88,7 @@ describe("starting a shift", () => {
       latitude: 21.2514,
       longitude: 81.6296,
     });
-    expect(await screen.findByText("Sharing Live Location")).toBeInTheDocument();
+    expect(await screen.findByText(/Sharing Live Location/)).toBeInTheDocument();
   });
 
   it("says so when live tracking cannot be reached", async () => {
@@ -130,7 +131,7 @@ describe("ending a shift", () => {
     asDriver();
 
     await startSharing(user);
-    await screen.findByText("Sharing Live Location");
+    await screen.findByText(/Sharing Live Location/);
 
     await user.click(screen.getByRole("button", { name: "Stop Sharing" }));
 
@@ -149,5 +150,61 @@ describe("ending a shift", () => {
     unmount();
 
     expect(stop).toHaveBeenCalled();
+  });
+});
+
+describe("declaring which route is being run", () => {
+  const routeField = () => screen.getByLabelText(/route you are running/i);
+
+  it("offers every operational route", async () => {
+    renderWithProviders(<Driver />, { route: "/driver" });
+    asDriver();
+
+    await waitFor(() => expect(routeField()).toBeInTheDocument());
+
+    for (const id of ROUTE_IDS) {
+      expect(
+        screen.getByRole("option", { name: new RegExp(getRoute(id).name) })
+      ).toBeInTheDocument();
+    }
+  });
+
+  it("publishes the route the driver chose", async () => {
+    const { user } = renderWithProviders(<Driver />, { route: "/driver" });
+    asDriver();
+
+    await waitFor(() => expect(routeField()).toBeInTheDocument());
+    await user.selectOptions(routeField(), "102");
+
+    await startSharing(user);
+
+    await waitFor(() => expect(publish).toHaveBeenCalled());
+
+    expect(publish.mock.calls[0]![2]).toBe("102");
+  });
+
+  it("locks the choice while a shift is under way", async () => {
+    const { user } = renderWithProviders(<Driver />, { route: "/driver" });
+    asDriver();
+
+    await waitFor(() => expect(routeField()).toBeInTheDocument());
+    await startSharing(user);
+
+    await screen.findByText(/Sharing Live Location/);
+
+    expect(routeField()).toBeDisabled();
+  });
+
+  it("names the route it is broadcasting on", async () => {
+    const { user } = renderWithProviders(<Driver />, { route: "/driver" });
+    asDriver();
+
+    await waitFor(() => expect(routeField()).toBeInTheDocument());
+    await user.selectOptions(routeField(), "102");
+    await startSharing(user);
+
+    expect(
+      await screen.findByText(/Sharing Live Location on Route 102/)
+    ).toBeInTheDocument();
   });
 });

@@ -4,10 +4,12 @@ import {
   NETWORK_ROUTES,
   NETWORK_ROUTE_IDS,
   getNetworkRoute,
+  getRoute,
   isInterchange,
   isNetworkRouteId,
+  locateOnRoute,
 } from "@/domain/transit/routes";
-import { STOPS, isStopName } from "@/domain/transit/stops";
+import { STOPS, STOP_COORDS, isStopName } from "@/domain/transit/stops";
 
 const networkRoutes = NETWORK_ROUTE_IDS.map(getNetworkRoute);
 
@@ -98,5 +100,56 @@ describe("interchange points", () => {
     }
 
     expect(wrong).toEqual([]);
+  });
+});
+
+describe("placing a bus along the route it is running", () => {
+  const atStop = (stop: keyof typeof STOP_COORDS) => STOP_COORDS[stop]!;
+
+  it("names the stop the bus is closest to", () => {
+    const place = locateOnRoute("101", atStop("CBD"));
+
+    expect(place?.nearestStop).toBe("CBD");
+  });
+
+  it("names the stop it reaches next, in travel order", () => {
+    const stops = getRoute("101").servedStops;
+    const place = locateOnRoute("101", atStop("HNLU"));
+
+    expect(place?.nextStop).toBe(stops[1]);
+  });
+
+  it("names where the route ends", () => {
+    const place = locateOnRoute("101", atStop("HNLU"));
+
+    expect(place?.destination).toBe("Raipur Railway Station");
+  });
+
+  it("reports no next stop once the bus has reached the end", () => {
+    const place = locateOnRoute("101", atStop("Raipur Railway Station"));
+
+    expect(place?.nextStop).toBeNull();
+    expect(place?.stopsCovered).toBe(place?.totalStops);
+  });
+
+  it("counts progress from the start of the line", () => {
+    const place = locateOnRoute("101", atStop("HNLU"));
+
+    expect(place?.stopsCovered).toBe(1);
+    expect(place?.totalStops).toBe(getRoute("101").servedStops.length);
+  });
+
+  it("skips the stops the express route does not call at", () => {
+    const place = locateOnRoute("102", atStop("South Block"));
+
+    expect(place?.nextStop).toBe("North Block");
+    expect(getRoute("102").servedStops).not.toContain("Indravati Bhavan");
+  });
+
+  it("still places a bus that is nowhere near the corridor", () => {
+    const place = locateOnRoute("101", { lat: 0, lng: 0 });
+
+    expect(place).not.toBeNull();
+    expect(getRoute("101").servedStops).toContain(place!.nearestStop);
   });
 });

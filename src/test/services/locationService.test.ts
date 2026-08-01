@@ -199,6 +199,18 @@ describe("publishing to a database that is reachable", () => {
     refused.mockRestore();
   });
 
+  it("publishes the route the driver declared", async () => {
+    await publishLocation(driver, { latitude: 21.25, longitude: 81.62 }, "102");
+
+    expect(readRtdb(node)).toMatchObject({ routeId: "102" });
+  });
+
+  it("omits the route rather than guessing one", async () => {
+    await publishLocation(driver, { latitude: 21.25, longitude: 81.62 });
+
+    expect(readRtdb(node)).not.toHaveProperty("routeId");
+  });
+
   it("clears the position when the driver stops", async () => {
     await publishLocation(driver, { latitude: 21.25, longitude: 81.62 });
     await stopPublishing(driver);
@@ -263,6 +275,39 @@ describe("watching the fleet", () => {
         { lat: 21.25, lng: 81.62, updatedAt: NOW, busId: "BUS-ABCD" },
       ])
     );
+  });
+
+  it("carries the route through to the subscriber", async () => {
+    seedRtdb(`${REMOTE_PATHS.BUS_LOCATIONS}/driver-9`, {
+      lat: 21.25,
+      lng: 81.62,
+      updatedAt: NOW,
+      busId: "BUS-ROUTE",
+      routeId: "102",
+    });
+
+    const onBuses = vi.fn();
+    subscribeToBuses(onBuses);
+
+    await vi.waitFor(() =>
+      expect(onBuses).toHaveBeenCalledWith([
+        expect.objectContaining({ routeId: "102" }),
+      ])
+    );
+  });
+
+  it("drops an entry claiming a route that does not exist", async () => {
+    seedRtdb(`${REMOTE_PATHS.BUS_LOCATIONS}/driver-9`, {
+      lat: 21.25,
+      lng: 81.62,
+      updatedAt: NOW,
+      routeId: "999",
+    });
+
+    const onBuses = vi.fn();
+    subscribeToBuses(onBuses);
+
+    await vi.waitFor(() => expect(onBuses).toHaveBeenCalledWith([]));
   });
 
   it("labels a vehicle that never published one", async () => {
