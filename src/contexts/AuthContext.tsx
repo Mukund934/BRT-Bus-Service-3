@@ -26,6 +26,7 @@ import {
   browserLocalPersistence,
   createUserWithEmailAndPassword,
   onAuthStateChanged,
+  sendPasswordResetEmail,
   setPersistence,
   signInWithEmailAndPassword,
   signInWithPopup,
@@ -34,7 +35,7 @@ import {
   type User as FirebaseUser,
 } from "firebase/auth";
 import { auth, googleProvider } from "@/firebase";
-import { toAuthMessage } from "@/domain/auth/errors";
+import { toAuthMessage, toResetMessage } from "@/domain/auth/errors";
 import { signInSchema, signUpSchema } from "@/domain/validation/schemas";
 import {
   createUserRecord,
@@ -55,6 +56,7 @@ interface AuthContextValue {
   signUp: (name: string, email: string, password: string) => Promise<string | null>;
   signIn: (email: string, password: string) => Promise<string | null>;
   signInWithGoogle: () => Promise<string | null>;
+  resetPassword: (email: string) => Promise<string | null>;
   logout: () => Promise<void>;
   /**
    * Re-reads the signed-in user's record and republishes role and profile.
@@ -189,6 +191,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
+  const resetPassword = useCallback(
+    async (email: string): Promise<string | null> => {
+      try {
+        await sendPasswordResetEmail(auth, email);
+        return null;
+      } catch (error) {
+        return toResetMessage(error);
+      }
+    },
+    []
+  );
+
   /**
    * Ends the session.
    *
@@ -248,6 +262,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       signUp,
       signIn,
       signInWithGoogle,
+      resetPassword,
       logout,
       refreshUserRecord,
     }),
@@ -260,6 +275,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       signUp,
       signIn,
       signInWithGoogle,
+      resetPassword,
       logout,
       refreshUserRecord,
     ]

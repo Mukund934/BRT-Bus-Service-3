@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { useAuth } from "@/contexts/AuthContext";
 import { renderWithProviders, screen } from "../helpers/render";
+import { sendPasswordResetEmail } from "firebase/auth";
 import { makeUser, queueAuthError, signInAs } from "../helpers/firebase";
 import { setMockRole } from "../helpers/userService";
 
@@ -81,5 +83,57 @@ describe("signing out", () => {
     await user.click(screen.getByRole("button", { name: /sign out/i }));
 
     expect(await screen.findByText("signed out")).toBeInTheDocument();
+  });
+});
+
+const ResetProbe = () => {
+  const { resetPassword } = useAuth();
+  const [outcome, setOutcome] = useState("idle");
+
+  return (
+    <div>
+      <p>{outcome}</p>
+
+      <button
+        type="button"
+        onClick={() => void resetPassword("rider@example.com").then((message) =>
+          setOutcome(message ?? "accepted")
+        )}
+      >
+        Reset
+      </button>
+    </div>
+  );
+};
+
+describe("asking for a password reset link", () => {
+  it("sends the link for the address given", async () => {
+    const { user } = renderWithProviders(<ResetProbe />);
+
+    await user.click(screen.getByRole("button", { name: /reset/i }));
+
+    expect(await screen.findByText("accepted")).toBeInTheDocument();
+    expect(vi.mocked(sendPasswordResetEmail)).toHaveBeenCalledWith(
+      expect.anything(),
+      "rider@example.com"
+    );
+  });
+
+  it("says the same thing when no such account exists", async () => {
+    const { user } = renderWithProviders(<ResetProbe />);
+
+    queueAuthError("auth/user-not-found");
+    await user.click(screen.getByRole("button", { name: /reset/i }));
+
+    expect(await screen.findByText("accepted")).toBeInTheDocument();
+  });
+
+  it("reports a network failure so the passenger can retry", async () => {
+    const { user } = renderWithProviders(<ResetProbe />);
+
+    queueAuthError("auth/network-request-failed");
+    await user.click(screen.getByRole("button", { name: /reset/i }));
+
+    expect(await screen.findByText(/network/i)).toBeInTheDocument();
   });
 });

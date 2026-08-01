@@ -133,6 +133,10 @@ export const firebaseAuthMock = () => ({
     signOutMock();
   }),
 
+  sendPasswordResetEmail: vi.fn(async () => {
+    takeQueuedError();
+  }),
+
   updateProfile: vi.fn(async (_user: FirebaseUser, patch: { displayName?: string }) => {
     if (state.currentUser && patch.displayName) {
       state.currentUser = makeUser({ ...state.currentUser, ...patch });

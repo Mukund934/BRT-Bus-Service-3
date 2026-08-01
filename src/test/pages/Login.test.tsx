@@ -172,3 +172,89 @@ describe("revealing the password", () => {
     );
   });
 });
+
+describe("recovering a forgotten password", () => {
+  const openReset = async (user: ReturnType<typeof renderWithProviders>["user"]) => {
+    await user.click(screen.getByRole("button", { name: /forgot password/i }));
+  };
+
+  it("offers a way back in from the sign-in form", () => {
+    renderWithProviders(<Login />, { route: "/login" });
+
+    expect(
+      screen.getByRole("button", { name: /forgot password/i })
+    ).toBeInTheDocument();
+  });
+
+  it("sends a link to the address given", async () => {
+    const { user } = renderWithProviders(<Login />, { route: "/login" });
+
+    await openReset(user);
+    await user.type(screen.getByLabelText(/^Email/), "rider@example.com");
+    await user.click(screen.getByRole("button", { name: "Send reset link" }));
+
+    expect(await screen.findByText(/reset link is on its way/i)).toBeInTheDocument();
+  });
+
+  it("says the same thing when the address has no account", async () => {
+    const { user } = renderWithProviders(<Login />, { route: "/login" });
+
+    await openReset(user);
+    await user.type(screen.getByLabelText(/^Email/), "nobody@example.com");
+
+    queueAuthError("auth/user-not-found");
+    await user.click(screen.getByRole("button", { name: "Send reset link" }));
+
+    expect(await screen.findByText(/reset link is on its way/i)).toBeInTheDocument();
+  });
+
+  it("refuses an address that is not an address", async () => {
+    const { user } = renderWithProviders(<Login />, { route: "/login" });
+
+    await openReset(user);
+    await user.type(screen.getByLabelText(/^Email/), "not-an-address");
+    await user.click(screen.getByRole("button", { name: "Send reset link" }));
+
+    expect(
+      await screen.findByText("Please enter a valid email address")
+    ).toBeInTheDocument();
+  });
+
+  it("reports a failure the passenger can act on", async () => {
+    const { user } = renderWithProviders(<Login />, { route: "/login" });
+
+    await openReset(user);
+    await user.type(screen.getByLabelText(/^Email/), "rider@example.com");
+
+    queueAuthError("auth/network-request-failed");
+    await user.click(screen.getByRole("button", { name: "Send reset link" }));
+
+    expect(
+      await screen.findAllByText(/Network unavailable/i)
+    ).not.toHaveLength(0);
+  });
+
+  it("goes back to sign in without sending anything", async () => {
+    const { user } = renderWithProviders(<Login />, { route: "/login" });
+
+    await openReset(user);
+    await user.click(screen.getByRole("button", { name: "Back to sign in" }));
+
+    expect(screen.getByRole("button", { name: "Sign in" })).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Send reset link" })
+    ).not.toBeInTheDocument();
+  });
+
+  it("is reachable on a phone as well", async () => {
+    setViewportWidth(375);
+
+    const { user } = renderWithProviders(<Login />, { route: "/login" });
+
+    await openReset(user);
+    await user.type(screen.getByLabelText(/^Email/), "rider@example.com");
+    await user.click(screen.getByRole("button", { name: "Send reset link" }));
+
+    expect(await screen.findByText(/reset link is on its way/i)).toBeInTheDocument();
+  });
+});
