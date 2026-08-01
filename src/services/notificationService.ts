@@ -1,28 +1,15 @@
 /**
  * Decides when a passenger should be told their bus is close.
  *
- * Input is already schema-validated by `locationService`, so this module is
- * concerned only with freshness and distance.
+ * Input is already schema-validated and filtered for freshness by
+ * `locationService`, so this module is concerned only with distance and with
+ * when interrupting the passenger is warranted.
  */
 
 import { ARRIVAL_RULES, NOTIFICATION_RULES } from "@/constants/config";
 import { etaBetween } from "@/domain/geo";
 import type { Coordinate } from "@/domain/transit/stops";
-import type { LiveBus } from "./locationService";
-
-/**
- * Drops positions that have gone stale.
- *
- * A parked or crashed driver app keeps its last position in the database
- * forever; alerting on it would tell passengers a bus is arriving when
- * nothing is moving.
- */
-export const selectFreshBuses = (buses: LiveBus[], now = Date.now()): LiveBus[] =>
-  buses.filter(
-    (bus) =>
-      bus.updatedAt === undefined ||
-      now - bus.updatedAt <= ARRIVAL_RULES.STALE_LOCATION_MS
-  );
+import { selectFreshBuses, type LiveBus } from "./locationService";
 
 /** Minutes until the closest usable bus reaches a stop; null when none. */
 export const selectNearestEta = (

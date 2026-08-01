@@ -36,6 +36,8 @@ export const POLLING = {
   TICKET_STATUS_MS: 15_000,
   /** How often a sharing driver publishes their position. */
   DRIVER_LOCATION_MS: 3_000,
+  /** How often live bus positions are re-checked against the clock. */
+  BUS_FRESHNESS_MS: 15_000,
   /** How often the virtual ticket countdown re-renders. */
   TICKET_COUNTDOWN_MS: 1_000,
 } as const;

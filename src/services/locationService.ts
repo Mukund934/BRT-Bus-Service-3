@@ -18,7 +18,7 @@
 
 import type { DataSnapshot } from "firebase/database";
 import { getRtdb } from "@/firebase";
-import { REMOTE_PATHS } from "@/constants/config";
+import { ARRIVAL_RULES, REMOTE_PATHS } from "@/constants/config";
 import { AuthorizationError } from "@/domain/auth/errors";
 import { PERMISSIONS, can } from "@/domain/auth/permissions";
 import { busPositionSchema, type ValidatedBusPosition } from "@/domain/validation/schemas";
@@ -38,6 +38,21 @@ const database = async () => {
 /** Whether live tracking can be used at all in this environment. */
 export const isLiveTrackingAvailable = async (): Promise<boolean> =>
   (await getRtdb()) !== null;
+
+/**
+ * Drops positions that have gone stale.
+ *
+ * A parked or crashed driver app keeps its last position in the database
+ * forever; treating it as live would tell passengers a bus is running when
+ * nothing is moving. Every surface that reports what is running applies this,
+ * so the map and the arrival alerts cannot disagree.
+ */
+export const selectFreshBuses = (buses: LiveBus[], now = Date.now()): LiveBus[] =>
+  buses.filter(
+    (bus) =>
+      bus.updatedAt === undefined ||
+      now - bus.updatedAt <= ARRIVAL_RULES.STALE_LOCATION_MS
+  );
 
 /**
  * A short, stable, non-identifying label for a driver's vehicle.

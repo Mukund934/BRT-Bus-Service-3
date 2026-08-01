@@ -12,16 +12,29 @@ import { describe, expect, it, vi } from "vitest";
 import {
   isLiveTrackingAvailable,
   publishLocation,
+  selectFreshBuses,
   stopPublishing,
   subscribeToBuses,
   toBusId,
+  type LiveBus,
 } from "@/services/locationService";
+import { ARRIVAL_RULES } from "@/constants/config";
 import { AuthorizationError } from "@/domain/auth/errors";
 import type { Actor } from "@/types/user";
 
 const driver: Actor = { uid: "driver-1", role: "driver" };
 const passenger: Actor = { uid: "user-1", role: "user" };
 const admin: Actor = { uid: "admin-1", role: "admin" };
+
+const NOW = 1_770_000_000_000;
+
+const bus = (over: Partial<LiveBus> = {}): LiveBus => ({
+  busId: "BUS-0001",
+  lat: 21.2514,
+  lng: 81.6296,
+  updatedAt: NOW,
+  ...over,
+});
 
 describe("bus labels", () => {
   it("is stable for the same driver", () => {
@@ -98,5 +111,41 @@ describe("when live tracking is unavailable", () => {
 
   it("ignores a stop request from a signed-out caller", async () => {
     await expect(stopPublishing(null)).resolves.toBeUndefined();
+  });
+});
+
+describe("which positions still count as live", () => {
+  it("keeps a position that reported recently", () => {
+    expect(selectFreshBuses([bus()], NOW)).toHaveLength(1);
+  });
+
+  it("keeps a position reporting exactly on the threshold", () => {
+    const edge = bus({ updatedAt: NOW - ARRIVAL_RULES.STALE_LOCATION_MS });
+
+    expect(selectFreshBuses([edge], NOW)).toHaveLength(1);
+  });
+
+  it("drops a position older than the staleness window", () => {
+    const old = bus({ updatedAt: NOW - ARRIVAL_RULES.STALE_LOCATION_MS - 1 });
+
+    expect(selectFreshBuses([old], NOW)).toEqual([]);
+  });
+
+  it("keeps a position with no timestamp rather than discarding it", () => {
+    expect(selectFreshBuses([bus({ updatedAt: undefined })], NOW)).toHaveLength(1);
+  });
+
+  it("keeps only the fresh half of a mixed fleet", () => {
+    const fleet = [
+      bus({ busId: "BUS-FRESH" }),
+      bus({
+        busId: "BUS-STALE",
+        updatedAt: NOW - ARRIVAL_RULES.STALE_LOCATION_MS - 1,
+      }),
+    ];
+
+    expect(selectFreshBuses(fleet, NOW).map((entry) => entry.busId)).toEqual([
+      "BUS-FRESH",
+    ]);
   });
 });

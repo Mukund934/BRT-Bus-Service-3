@@ -14,7 +14,8 @@ vi.mock("@/services/userService", async () => {
   return helper.userServiceMock();
 });
 
-vi.mock("@/services/locationService", () => ({
+vi.mock("@/services/locationService", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/services/locationService")>()),
   subscribeToBuses: vi.fn(() => vi.fn()),
 }));
 

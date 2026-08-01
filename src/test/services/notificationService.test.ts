@@ -11,7 +11,6 @@ import { describe, expect, it } from "vitest";
 import { ARRIVAL_RULES, NOTIFICATION_RULES } from "@/constants/config";
 import {
   createAlertThrottle,
-  selectFreshBuses,
   selectNearestEta,
   shouldAlert,
 } from "@/services/notificationService";
@@ -27,24 +26,6 @@ const bus = (over: Partial<LiveBus> = {}): LiveBus => ({
   lng: stop.lng,
   updatedAt: NOW,
   ...over,
-});
-
-describe("stale positions", () => {
-  it("keeps a position that reported recently", () => {
-    expect(selectFreshBuses([bus()], NOW)).toHaveLength(1);
-  });
-
-  it("drops a position older than the staleness window", () => {
-    // A parked or crashed driver app leaves its last position forever;
-    // alerting on it would announce a bus that is not moving.
-    const old = bus({ updatedAt: NOW - ARRIVAL_RULES.STALE_LOCATION_MS - 1 });
-
-    expect(selectFreshBuses([old], NOW)).toEqual([]);
-  });
-
-  it("keeps a position with no timestamp rather than discarding it", () => {
-    expect(selectFreshBuses([bus({ updatedAt: undefined })], NOW)).toHaveLength(1);
-  });
 });
 
 describe("estimating arrival", () => {

@@ -9,6 +9,7 @@ import {
 } from "@/services/userService";
 import type { UserRecord } from "@/types/user";
 import {
+  act,
   fireEvent,
   renderWithProviders,
   screen,
@@ -75,9 +76,10 @@ const showPanel = async (onError?: (message: string) => void) => {
   asAdmin();
 
   await screen.findByRole("heading", { name: "Administrator Panel" });
-  await waitFor(() =>
-    expect(screen.queryByText("Loading users…")).not.toBeInTheDocument()
-  );
+  await waitFor(() => expect(roster).toHaveBeenCalled());
+  await act(async () => {
+    await roster.mock.results[0]!.value.catch(() => undefined);
+  });
 
   return rendered;
 };
