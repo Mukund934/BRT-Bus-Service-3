@@ -1,4 +1,3 @@
-import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -10,8 +9,7 @@ import AdminDashboard from "@/components/dashboards/AdminDashboard";
 import { AlertCircle, Loader } from "lucide-react";
 
 const Dashboard = () => {
-  const { user, actor, loading } = useAuth();
-  const navigate = useNavigate();
+  const { actor, loading } = useAuth();
   const [error, setError] = useState<string | null>(null);
 
   if (loading) {
@@ -25,36 +23,6 @@ const Dashboard = () => {
           <Loader className="w-8 h-8 text-[#874f9c] animate-spin" aria-hidden="true" />
           <p className="text-[#6b4fa3] font-medium">Loading your dashboard…</p>
         </div>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-[#f4f2ff]">
-        <Header />
-        <main id="main-content" tabIndex={-1} className="py-24 px-4">
-          <div className="max-w-md mx-auto">
-            <div className="bg-white rounded-2xl p-10 shadow-lg border-2 border-purple-100">
-              <div className="flex items-center gap-3 mb-4">
-                <AlertCircle className="w-6 h-6 text-orange-500" aria-hidden="true" />
-                <h1 className="text-xl font-semibold text-[#6b4fa3]">
-                  Sign in required
-                </h1>
-              </div>
-              <p className="text-gray-600 mb-6">
-                You need to log in to access the dashboard. Please authenticate to continue.
-              </p>
-              <button
-                onClick={() => navigate("/login")}
-                className="w-full px-6 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-purple-700 text-white font-semibold transition-all duration-300 hover:shadow-lg hover:-translate-y-1"
-              >
-                Go to Login
-              </button>
-            </div>
-          </div>
-        </main>
-        <Footer />
       </div>
     );
   }

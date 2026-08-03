@@ -38,6 +38,7 @@ describe("finding out how the service works", () => {
       "Your ticket",
       "Live tracking",
       "Arrival alerts",
+      "Your data",
     ]) {
       expect(screen.getByRole("heading", { level: 2, name: title })).toBeInTheDocument();
     }
@@ -143,8 +144,9 @@ describe("what it says about live tracking", () => {
   it("promises no driver is identified, which is what the map does", () => {
     renderHelp();
 
-    expect(screen.getByText(/No\s+driver name, email address or account is published/i))
-      .toBeInTheDocument();
+    expect(
+      screen.getAllByText(/driver name, email address or account is published/i).length
+    ).toBeGreaterThan(0);
   });
 
   it("does not claim an empty map means the service is suspended", () => {
@@ -165,5 +167,50 @@ describe("sending the reader somewhere useful", () => {
     for (const path of ["/routes", "/fares", "/map", "/login", "/contact"]) {
       expect(destinations).toContain(path);
     }
+  });
+});
+
+describe("what it says about data", () => {
+  it("is clear that passengers are never located", () => {
+    renderHelp();
+
+    expect(screen.getByText(/Passengers are never located/i)).toBeInTheDocument();
+  });
+
+  it("says positions come from the driver, only while they are sharing", () => {
+    renderHelp();
+
+    expect(
+      screen.getByText(/only while they have chosen to share it/i)
+    ).toBeInTheDocument();
+  });
+
+  it("admits that live positions are public, which the map makes them", () => {
+    renderHelp();
+
+    expect(screen.getByText(/Live bus positions are public/i)).toBeInTheDocument();
+  });
+
+  it("repeats that no driver is identified alongside a vehicle", () => {
+    renderHelp();
+
+    expect(
+      screen.getAllByText(/no\s+driver name, email address or account is published/i)
+        .length
+    ).toBeGreaterThan(0);
+  });
+
+  it("does not claim an account can be deleted in the app, because it cannot", () => {
+    renderHelp();
+
+    expect(screen.getByText(/Not from inside the app/i)).toBeInTheDocument();
+  });
+
+  it("says a ticket is held on the device as well as the server", () => {
+    renderHelp();
+
+    expect(
+      screen.getByText(/kept both on this device and on our servers/i)
+    ).toBeInTheDocument();
   });
 });

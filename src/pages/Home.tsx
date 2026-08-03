@@ -84,15 +84,19 @@ const Home = () => {
         {/*
           The largest-contentful-paint element. Intrinsic dimensions are
           declared so the browser reserves the space before the image arrives
-          (no layout shift), and fetchPriority marks it as the one image worth
-          competing for bandwidth.
+          (no layout shift), and the priority hint marks it as the one image
+          worth competing for bandwidth.
+
+          Spelled lowercase because React 18 does not recognise the camelCase
+          form: it drops the attribute before it reaches the DOM and warns on
+          every render, so the hint the comment describes never applied.
         */}
         <img
           src={heroBus}
           alt="A BRT bus on the Raipur to Naya Raipur corridor"
           width={1080}
           height={572}
-          fetchPriority="high"
+          {...{ fetchpriority: "high" }}
           decoding="async"
           className="w-full h-full object-cover scale-[1.03]"
         />

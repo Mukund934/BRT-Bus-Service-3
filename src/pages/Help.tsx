@@ -235,6 +235,50 @@ const Help = () => {
               </Answer>
             </Section>
 
+            <Section title="Your data">
+              <Answer question="What is stored about me?">
+                <p>
+                  Your name and email address, so your tickets can be shown to you
+                  and nobody else. Your tickets are stored with the journey, the
+                  fare and the time you booked.
+                </p>
+                <p>
+                  Tickets are kept both on this device and on our servers. The copy
+                  on your device is what lets a ticket open without a connection.
+                </p>
+              </Answer>
+
+              <Answer question="Is my location tracked?">
+                <p>
+                  No. Passengers are never located. A bus position comes from the
+                  driver's own device, and only while they have chosen to share it
+                  for their shift.
+                </p>
+              </Answer>
+
+              <Answer question="What can other people see?">
+                <p>
+                  Live bus positions are public, because the map is a public page.
+                  Each vehicle appears under a short label such as BUS-4K2P — no
+                  driver name, email address or account is published with it.
+                </p>
+                <p>
+                  Your own tickets and journey history are visible only to you when
+                  signed in.
+                </p>
+              </Answer>
+
+              <Answer question="Can I delete my account?">
+                <p>
+                  Not from inside the app. Accounts are removed on request — please{" "}
+                  <Link to="/contact" className="text-purple-600 font-medium underline">
+                    contact the team
+                  </Link>
+                  .
+                </p>
+              </Answer>
+            </Section>
+
             <Section title="Your account and support">
               <Answer question="I have forgotten my password.">
                 <p>
