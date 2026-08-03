@@ -16,7 +16,7 @@ import { PAYMENT_CONFIG } from "@/constants/config";
 import { loadTickets } from "@/services/ticketService";
 import { renderWithProviders, screen, waitFor, within } from "../helpers/render";
 import { makeUpcomingTicket, seedStoredTickets } from "../helpers/factories";
-import { makeUser, signInAs } from "../helpers/firebase";
+import { makeUser, readDoc, signInAs } from "../helpers/firebase";
 
 vi.mock("@/services/userService", async () => {
   const helper = await import("../helpers/userService");
@@ -124,6 +124,41 @@ describe("booking a ticket", () => {
       departureTime: "6:25 AM",
       paymentStatus: "SUCCESS",
     });
+  });
+
+  it("puts the ticket on the server, not just in this browser", async () => {
+    const { user } = renderWithProviders(<Timetable />, { route: "/timetable" });
+    signedIn();
+
+    const bookButtons = await screen.findAllByRole("button", {
+      name: /^book route 101 departing 6:25 AM/i,
+    });
+    await user.click(bookButtons[0]!);
+
+    const dialog = await screen.findByRole("dialog");
+    await user.selectOptions(within(dialog).getByLabelText(/to stop/i), "CBD");
+    await user.click(within(dialog).getByRole("button", { name: /proceed to pay/i }));
+
+    const payment = await screen.findByRole("dialog", { name: /payment/i });
+    await user.click(
+      within(payment).getByRole("button", { name: /simulate payment/i })
+    );
+
+    await vi.advanceTimersByTimeAsync(PAYMENT_CONFIG.SIMULATED_DELAY_MS + 100);
+    await screen.findByRole("heading", { name: /payment successful/i });
+
+    await waitFor(() => expect(loadTickets("user-1")).toHaveLength(1));
+
+    const [ticket] = loadTickets("user-1");
+
+    await waitFor(() =>
+      expect(readDoc("tickets", ticket!.ticketId)).toMatchObject({
+        userId: "user-1",
+        fromStop: "HNLU",
+        toStop: "CBD",
+        fare: 10,
+      })
+    );
   });
 
   it("issues a scannable QR payload tied to that ticket", async () => {

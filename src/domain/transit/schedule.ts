@@ -144,6 +144,13 @@ export const getCallTime = (trip: Trip, stop: StopName): string | null =>
 export const getTripStops = (trip: Trip): StopName[] =>
   trip.calls.map((call) => call.stop);
 
+export const SCHEDULED_STOPS: ReadonlySet<StopName> = new Set(
+  [...TRIPS.weekday, ...TRIPS.weekend].flatMap(getTripStops)
+);
+
+export const hasScheduledService = (stop: StopName): boolean =>
+  SCHEDULED_STOPS.has(stop);
+
 /**
  * Stops reachable from an origin on this trip.
  *

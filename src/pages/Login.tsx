@@ -2,7 +2,12 @@ import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { useAnnounce } from "@/components/a11y/LiveAnnouncer";
 import { useAuth } from "@/contexts/AuthContext";
-import { fieldErrors, signInSchema, signUpSchema } from "@/domain/validation/schemas";
+import {
+	emailSchema,
+	fieldErrors,
+	signInSchema,
+	signUpSchema,
+} from "@/domain/validation/schemas";
 import { prefetchFirestore } from "@/firebase";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -48,7 +53,7 @@ const inputClass = (hasError: boolean) =>
 
 const Login = () => {
 	// Redirecting an already-signed-in visitor is the route guard's job.
-	const { signIn, signUp, signInWithGoogle } = useAuth();
+	const { signIn, signUp, signInWithGoogle, resetPassword } = useAuth();
 	const announce = useAnnounce();
 
 	/**
@@ -68,6 +73,7 @@ const Login = () => {
 	useEffect(() => prefetchFirestore(), []);
 
 	const [isSignUpView, setIsSignUpView] = useState(false);
+	const [isResetView, setIsResetView] = useState(false);
 
 	const [signInEmail, setSignInEmail] = useState("");
 	const [signInPass, setSignInPass] = useState("");
@@ -83,6 +89,10 @@ const Login = () => {
 	const [signUpEmailError, setSignUpEmailError] = useState("");
 	const [signUpPassError, setSignUpPassError] = useState("");
 
+	const [resetEmail, setResetEmail] = useState("");
+	const [resetEmailError, setResetEmailError] = useState("");
+	const [resetSent, setResetSent] = useState(false);
+
 	const [error, setError] = useState("");
 	const [loadingAuth, setLoadingAuth] = useState(false);
 
@@ -92,12 +102,14 @@ const Login = () => {
 	const signUpNameId = `${ids}-signup-name`;
 	const signUpEmailId = `${ids}-signup-email`;
 	const signUpPassId = `${ids}-signup-password`;
+	const resetEmailId = `${ids}-reset-email`;
 
 	const signInEmailRef = useRef<HTMLInputElement>(null);
 	const signInPassRef = useRef<HTMLInputElement>(null);
 	const signUpNameRef = useRef<HTMLInputElement>(null);
 	const signUpEmailRef = useRef<HTMLInputElement>(null);
 	const signUpPassRef = useRef<HTMLInputElement>(null);
+	const resetEmailRef = useRef<HTMLInputElement>(null);
 
 	const handleSignIn = async (event: FormEvent) => {
 		event.preventDefault();
@@ -176,6 +188,37 @@ const Login = () => {
 		}
 	};
 
+	const handleReset = async (event: FormEvent) => {
+		event.preventDefault();
+
+		setResetEmailError("");
+		setError("");
+
+		const parsed = emailSchema.safeParse(resetEmail);
+
+		if (!parsed.success) {
+			setResetEmailError(parsed.error.issues[0]?.message ?? "Please check your email.");
+			resetEmailRef.current?.focus();
+			announce("There is a problem with the reset form.", "assertive");
+			return;
+		}
+
+		setLoadingAuth(true);
+
+		const message = await resetPassword(parsed.data);
+
+		setLoadingAuth(false);
+
+		if (message) {
+			setError(message);
+			announce(message, "assertive");
+			return;
+		}
+
+		setResetSent(true);
+		announce("If that email has an account, a reset link is on its way.");
+	};
+
 	const handleGoogleLogin = async () => {
 		setError("");
 		setLoadingAuth(true);
@@ -190,8 +233,19 @@ const Login = () => {
 		}
 	};
 
+	const showReset = (show: boolean) => {
+		setIsResetView(show);
+		setResetSent(false);
+		setResetEmail("");
+		setResetEmailError("");
+		setError("");
+	};
+
 	const switchView = (toSignUp: boolean) => {
 		setIsSignUpView(toSignUp);
+		setIsResetView(false);
+		setResetSent(false);
+		setResetEmailError("");
 		setError("");
 		setSignInEmailError("");
 		setSignInPassError("");
@@ -286,6 +340,80 @@ const Login = () => {
 				<span aria-hidden="true">🔵</span>
 				Continue with Google
 			</button>
+			<button
+				type="button"
+				onClick={() => showReset(true)}
+				className="mt-3 text-sm font-semibold text-primary underline underline-offset-2"
+			>
+				Forgot password?
+			</button>
+		</form>
+	);
+
+	const resetForm = (
+		<form onSubmit={handleReset} noValidate className="w-full flex flex-col items-center">
+			<h1 className="text-2xl font-bold mb-3">Reset password</h1>
+
+			{errorBanner}
+
+			{resetSent ? (
+				<>
+					<p className="w-full mb-4 text-sm text-muted-foreground text-center" role="status">
+						If an account exists for {resetEmail}, a password reset link is on its
+						way. Check your inbox and spam folder.
+					</p>
+
+					<button
+						type="button"
+						onClick={() => showReset(false)}
+						className="w-full bg-primary text-primary-foreground px-10 py-2.5 rounded-lg font-semibold hover:opacity-90 transition-opacity touch-target"
+					>
+						Back to sign in
+					</button>
+				</>
+			) : (
+				<>
+					<p className="w-full mb-3 text-sm text-muted-foreground text-center">
+						Enter your email and we will send you a link to set a new password.
+					</p>
+
+					<Field id={resetEmailId} label="Email" error={resetEmailError}>
+						<input
+							ref={resetEmailRef}
+							id={resetEmailId}
+							type="email"
+							inputMode="email"
+							autoComplete="email"
+							required
+							aria-invalid={resetEmailError ? true : undefined}
+							aria-describedby={resetEmailError ? `${resetEmailId}-error` : undefined}
+							value={resetEmail}
+							onChange={(e) => {
+								setResetEmail(e.target.value);
+								setResetEmailError("");
+							}}
+							className={inputClass(!!resetEmailError)}
+						/>
+					</Field>
+
+					<button
+						type="submit"
+						disabled={loadingAuth}
+						className="w-full bg-primary text-primary-foreground px-10 py-2.5 rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 transition-opacity touch-target inline-flex items-center justify-center gap-2"
+					>
+						{loadingAuth && <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />}
+						{loadingAuth ? "Sending…" : "Send reset link"}
+					</button>
+
+					<button
+						type="button"
+						onClick={() => showReset(false)}
+						className="mt-3 text-sm font-semibold text-primary underline underline-offset-2"
+					>
+						Back to sign in
+					</button>
+				</>
+			)}
 		</form>
 	);
 
@@ -394,18 +522,20 @@ const Login = () => {
 
 				{isMobile ? (
 					<div className="w-full max-w-md bg-card rounded-3xl p-6 sm:p-8 shadow-lg">
-						{isSignUpView ? signUpForm : signInForm}
+						{isSignUpView ? signUpForm : isResetView ? resetForm : signInForm}
 
-						<p className="text-center text-sm text-muted-foreground mt-6">
-							{isSignUpView ? "Already have an account?" : "Don't have an account?"}{" "}
-							<button
-								type="button"
-								onClick={() => switchView(!isSignUpView)}
-								className="font-semibold text-primary underline underline-offset-2"
-							>
-								{isSignUpView ? "Sign in" : "Sign up"}
-							</button>
-						</p>
+						{!isResetView && (
+							<p className="text-center text-sm text-muted-foreground mt-6">
+								{isSignUpView ? "Already have an account?" : "Don't have an account?"}{" "}
+								<button
+									type="button"
+									onClick={() => switchView(!isSignUpView)}
+									className="font-semibold text-primary underline underline-offset-2"
+								>
+									{isSignUpView ? "Sign in" : "Sign up"}
+								</button>
+							</p>
+						)}
 					</div>
 				) : (
 				<div className="relative bg-card rounded-[30px] overflow-hidden w-full max-w-[768px] min-h-[520px] shadow-lg">
@@ -426,7 +556,7 @@ const Login = () => {
 							isSignUpView ? "-translate-x-full opacity-0 pointer-events-none" : ""
 						}`}
 					>
-						{!isSignUpView && signInForm}
+						{!isSignUpView && (isResetView ? resetForm : signInForm)}
 					</div>
 
 					<div

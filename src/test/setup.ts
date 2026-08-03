@@ -42,6 +42,16 @@ vi.mock("firebase/firestore", async () => {
   return helper.firestoreMock();
 });
 
+/*
+  The Realtime Database is backed by a node tree with live listeners, so
+  `locationService` runs its real subscription and cleanup logic. It stays
+  switched off until a test calls `enableRtdb`.
+*/
+vi.mock("firebase/database", async () => {
+  const helper = await import("./helpers/firebase");
+  return helper.firebaseDatabaseMock();
+});
+
 /** jsdom implements neither of these, and several components call them. */
 beforeEach(() => {
   if (!window.matchMedia) {

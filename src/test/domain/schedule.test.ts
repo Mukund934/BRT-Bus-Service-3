@@ -15,7 +15,10 @@ import {
   getDestinationsFrom,
   getTripStops,
   getTrips,
+  hasScheduledService,
+  SCHEDULED_STOPS,
 } from "@/domain/transit/schedule";
+import { STOPS } from "@/domain/transit/stops";
 
 const allTrips = [...getTrips("weekday"), ...getTrips("weekend")];
 
@@ -81,6 +84,31 @@ describe("the express route skips the two Bhavan stops", () => {
       if (skipped.has(stop)) continue;
       expect(getCallTime(express[0]!, stop)).not.toBeNull();
     }
+  });
+});
+
+describe("which stops the timetable actually serves", () => {
+  it("counts a stop as served when any trip calls there", () => {
+    for (const trip of allTrips) {
+      for (const stop of getTripStops(trip)) {
+        expect(hasScheduledService(stop)).toBe(true);
+      }
+    }
+  });
+
+  it("covers the whole of the route the timetable is written against", () => {
+    expect([...SCHEDULED_STOPS].sort()).toEqual(
+      [...getRoute("101").servedStops].sort()
+    );
+  });
+
+  it("reports the network stops that have no departures yet", () => {
+    const unserved = STOPS.filter((stop) => !hasScheduledService(stop));
+
+    expect(unserved).toContain("Jungle Safari");
+    expect(unserved).toContain("IIM");
+    expect(unserved).not.toContain("HNLU");
+    expect(unserved).toHaveLength(STOPS.length - SCHEDULED_STOPS.size);
   });
 });
 

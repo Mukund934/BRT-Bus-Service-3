@@ -1,28 +1,15 @@
 /**
  * Decides when a passenger should be told their bus is close.
  *
- * Input is already schema-validated by `locationService`, so this module is
- * concerned only with freshness and distance.
+ * Input is already schema-validated and filtered for freshness by
+ * `locationService`, so this module is concerned only with distance and with
+ * when interrupting the passenger is warranted.
  */
 
 import { ARRIVAL_RULES, NOTIFICATION_RULES } from "@/constants/config";
 import { etaBetween } from "@/domain/geo";
 import type { Coordinate } from "@/domain/transit/stops";
-import type { LiveBus } from "./locationService";
-
-/**
- * Drops positions that have gone stale.
- *
- * A parked or crashed driver app keeps its last position in the database
- * forever; alerting on it would tell passengers a bus is arriving when
- * nothing is moving.
- */
-export const selectFreshBuses = (buses: LiveBus[], now = Date.now()): LiveBus[] =>
-  buses.filter(
-    (bus) =>
-      bus.updatedAt === undefined ||
-      now - bus.updatedAt <= ARRIVAL_RULES.STALE_LOCATION_MS
-  );
+import { selectFreshBuses, type LiveBus } from "./locationService";
 
 /** Minutes until the closest usable bus reaches a stop; null when none. */
 export const selectNearestEta = (
@@ -43,6 +30,23 @@ export const selectNearestEta = (
 /** Whether an ETA is close enough to be worth interrupting the passenger. */
 export const shouldAlert = (etaMinutes: number | null): etaMinutes is number =>
   etaMinutes !== null && etaMinutes <= ARRIVAL_RULES.ALERT_MINUTES;
+
+/**
+ * Asks the browser to allow arrival alerts.
+ *
+ * Called when a passenger switches alerts on, rather than on page load, so the
+ * prompt follows a deliberate choice instead of interrupting every visitor.
+ * A refusal is not an error: the in-app popup still works without it.
+ */
+export const requestAlertPermission = async (): Promise<void> => {
+  if (!("Notification" in window) || Notification.permission !== "default") return;
+
+  try {
+    await Notification.requestPermission();
+  } catch {
+    return;
+  }
+};
 
 /**
  * Tracks which alerts have already fired so a bus lingering near a stop does

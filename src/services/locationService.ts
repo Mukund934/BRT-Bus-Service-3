@@ -18,9 +18,10 @@
 
 import type { DataSnapshot } from "firebase/database";
 import { getRtdb } from "@/firebase";
-import { REMOTE_PATHS } from "@/constants/config";
+import { ARRIVAL_RULES, REMOTE_PATHS } from "@/constants/config";
 import { AuthorizationError } from "@/domain/auth/errors";
 import { PERMISSIONS, can } from "@/domain/auth/permissions";
+import type { RouteId } from "@/domain/transit/routes";
 import { busPositionSchema, type ValidatedBusPosition } from "@/domain/validation/schemas";
 import type { Actor } from "@/types/user";
 
@@ -38,6 +39,21 @@ const database = async () => {
 /** Whether live tracking can be used at all in this environment. */
 export const isLiveTrackingAvailable = async (): Promise<boolean> =>
   (await getRtdb()) !== null;
+
+/**
+ * Drops positions that have gone stale.
+ *
+ * A parked or crashed driver app keeps its last position in the database
+ * forever; treating it as live would tell passengers a bus is running when
+ * nothing is moving. Every surface that reports what is running applies this,
+ * so the map and the arrival alerts cannot disagree.
+ */
+export const selectFreshBuses = (buses: LiveBus[], now = Date.now()): LiveBus[] =>
+  buses.filter(
+    (bus) =>
+      bus.updatedAt === undefined ||
+      now - bus.updatedAt <= ARRIVAL_RULES.STALE_LOCATION_MS
+  );
 
 /**
  * A short, stable, non-identifying label for a driver's vehicle.
@@ -76,16 +92,23 @@ export interface Coords {
  *
  * Writes only to the caller's own node; the matching rule pins the path to
  * `auth.uid`, so a driver cannot post a position as another vehicle.
+ *
+ * The position is also armed for removal on disconnect. Stopping deliberately
+ * clears the node, but a crashed tab or a dead connection never gets that far,
+ * and the node lives in a world-readable database - so the server is asked to
+ * clear it too. The registration is renewed on every publish because the
+ * database discards it once it has fired or the socket has been replaced.
  */
 export const publishLocation = async (
   actor: Actor | null,
-  coords: Coords
+  coords: Coords,
+  routeId?: RouteId
 ): Promise<void> => {
   if (!can(actor, PERMISSIONS.PUBLISH_LOCATION)) {
     throw new AuthorizationError(PERMISSIONS.PUBLISH_LOCATION);
   }
 
-  const { ref, set, rtdb } = await database();
+  const { onDisconnect, ref, set, rtdb } = await database();
   if (!rtdb) return;
 
   const payload = {
@@ -93,6 +116,7 @@ export const publishLocation = async (
     lng: coords.longitude,
     updatedAt: Date.now(),
     busId: toBusId(actor!.uid),
+    ...(routeId ? { routeId } : {}),
   };
 
   // Validated before the write so an impossible coordinate is caught here
@@ -104,7 +128,15 @@ export const publishLocation = async (
     return;
   }
 
-  await set(ref(rtdb, `${REMOTE_PATHS.BUS_LOCATIONS}/${actor!.uid}`), payload);
+  const node = ref(rtdb, `${REMOTE_PATHS.BUS_LOCATIONS}/${actor!.uid}`);
+
+  await set(node, payload);
+
+  try {
+    await onDisconnect(node).remove();
+  } catch (error) {
+    console.error("Could not arm automatic cleanup for this vehicle:", error);
+  }
 };
 
 /** Removes the driver's position when they stop sharing. */

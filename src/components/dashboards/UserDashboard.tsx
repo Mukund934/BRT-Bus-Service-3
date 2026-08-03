@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { BookOpen, History, IndianRupee, Route, Ticket } from "lucide-react";
+import { Bell, BookOpen, History, IndianRupee, Route, Ticket } from "lucide-react";
 import VirtualTicket from "@/components/VirtualTicket";
 import { useAnnounce } from "@/components/a11y/LiveAnnouncer";
 import { useAuth } from "@/contexts/AuthContext";
@@ -9,6 +9,8 @@ import { useTickets } from "@/contexts/TicketContext";
 import { STATUS_LABELS } from "@/domain/ticket/status";
 import type { TicketStatus } from "@/domain/ticket/types";
 import { formatDate } from "@/domain/time";
+import { requestAlertPermission } from "@/services/notificationService";
+import { updateNotificationPreference } from "@/services/userService";
 
 type HistoryFilter = "ALL" | "COMPLETED" | "CANCELLED";
 
@@ -30,20 +32,50 @@ const getInitials = (name?: string | null): string => {
 };
 
 const UserDashboard = () => {
-  const { user } = useAuth();
+  const { user, profile, refreshUserRecord } = useAuth();
   const { activeTicket, ticketHistory, stats, cancelTicket } = useTickets();
   const navigate = useNavigate();
   const announce = useAnnounce();
 
   const [filter, setFilter] = useState<HistoryFilter>("ALL");
+  const [savingAlerts, setSavingAlerts] = useState(false);
+
+  const alertsEnabled = profile?.notifications_enabled !== false;
+
+  /**
+   * Permission is asked for here rather than on page load, so the browser
+   * prompt follows the passenger's own choice to switch alerts on.
+   */
+  const handleToggleAlerts = useCallback(async () => {
+    if (!user) return;
+
+    const next = !alertsEnabled;
+
+    setSavingAlerts(true);
+
+    try {
+      if (next) await requestAlertPermission();
+
+      await updateNotificationPreference(user.uid, next);
+      await refreshUserRecord();
+
+      announce(
+        next ? "Arrival alerts switched on." : "Arrival alerts switched off."
+      );
+    } catch {
+      toast.error("Could not change your alert setting.");
+    } finally {
+      setSavingAlerts(false);
+    }
+  }, [user, alertsEnabled, refreshUserRecord, announce]);
 
   /**
    * Cancelling removes the ticket from view, so without an explicit
    * confirmation the only feedback is that something vanished.
    */
   const handleCancel = useCallback(
-    (ticketId: string) => {
-      cancelTicket(ticketId);
+    async (ticketId: string) => {
+      await cancelTicket(ticketId);
       toast.success("Ticket cancelled.");
       announce("Your ticket has been cancelled.");
     },
@@ -133,6 +165,35 @@ const UserDashboard = () => {
               </button>
             </div>
           )}
+        </div>
+
+        <div className="border-t pt-8 mt-8">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <Bell className="w-6 h-6 text-purple-600" />
+                <h2 className="text-2xl font-bold text-gray-900">Arrival Alerts</h2>
+              </div>
+              <p className="text-sm text-gray-600">
+                Tells you when your bus is close to your boarding stop.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleToggleAlerts}
+              disabled={savingAlerts}
+              aria-pressed={alertsEnabled}
+              className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors disabled:opacity-60 ${
+                alertsEnabled
+                  ? "bg-purple-600 text-white hover:bg-purple-700"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              }`}
+            >
+              {alertsEnabled ? "On" : "Off"}
+              <span className="sr-only"> — arrival alerts</span>
+            </button>
+          </div>
         </div>
 
         <div className="border-t pt-8 mt-8">

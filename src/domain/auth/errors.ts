@@ -119,3 +119,21 @@ export const toAuthMessage = (error: unknown): string => {
       return "Sign-in failed. Please try again.";
   }
 };
+
+export const toResetMessage = (error: unknown): string | null => {
+  switch (authCodeOf(error)) {
+    case "auth/user-not-found":
+    case "auth/invalid-email":
+      return null;
+
+    case "auth/too-many-requests":
+      return "Too many attempts. Please wait a few minutes and try again.";
+
+    case "auth/network-request-failed":
+      return "Network unavailable. Please check your connection and try again.";
+
+    default:
+      console.error("Unhandled password reset error:", error);
+      return "Could not send the reset email. Please try again.";
+  }
+};

@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useId, useState } from "react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { POLLING } from "@/constants/config";
 import { useAuth } from "@/contexts/AuthContext";
 import { toSafeMessage } from "@/domain/auth/errors";
 import { PERMISSIONS, can } from "@/domain/auth/permissions";
+import { ROUTE_IDS, getRoute, type RouteId } from "@/domain/transit/routes";
 import {
   isLiveTrackingAvailable,
   publishLocation,
@@ -28,10 +29,12 @@ const Driver = () => {
   const { user, actor } = useAuth();
 
   const [isSharing, setIsSharing] = useState(false);
+  const [routeId, setRouteId] = useState<RouteId>(ROUTE_IDS[0]);
   const [coords, setCoords] = useState<DriverCoords | null>(null);
   const [error, setError] = useState("");
 
   const mayPublish = can(actor, PERMISSIONS.PUBLISH_LOCATION);
+  const routeFieldId = useId();
 
   useEffect(() => {
     if (!isSharing || !mayPublish) return;
@@ -46,7 +49,7 @@ const Driver = () => {
           const { latitude, longitude } = position.coords;
           setCoords({ latitude, longitude });
 
-          publishLocation(actor, { latitude, longitude }).catch((err) => {
+          publishLocation(actor, { latitude, longitude }, routeId).catch((err) => {
             if (cancelled) return;
             setError(toSafeMessage(err, "Could not share your location."));
             setIsSharing(false);
@@ -74,7 +77,7 @@ const Driver = () => {
       cancelled = true;
       clearInterval(interval);
     };
-  }, [isSharing, mayPublish, actor]);
+  }, [isSharing, mayPublish, actor, routeId]);
 
   /**
    * Clears the published position when the driver stops or leaves the page,
@@ -126,6 +129,35 @@ const Driver = () => {
               </p>
             )}
 
+            <div className="text-left">
+              <label
+                htmlFor={routeFieldId}
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                Route you are running
+              </label>
+
+              <select
+                id={routeFieldId}
+                value={routeId}
+                disabled={isSharing}
+                onChange={(event) => setRouteId(event.target.value as RouteId)}
+                className="w-full bg-gray-50 rounded-lg px-4 py-2.5 border-2 border-transparent focus:border-purple-400 transition-colors disabled:opacity-60"
+              >
+                {ROUTE_IDS.map((id) => (
+                  <option key={id} value={id}>
+                    {getRoute(id).name} — {getRoute(id).headline}
+                  </option>
+                ))}
+              </select>
+
+              {isSharing && (
+                <p className="text-xs text-gray-500 mt-1">
+                  Stop sharing to change route.
+                </p>
+              )}
+            </div>
+
             <div className="flex justify-center items-center gap-3">
               <div
                 className={`w-3 h-3 rounded-full ${
@@ -133,7 +165,9 @@ const Driver = () => {
                 }`}
               />
               <span className="text-sm font-medium">
-                {isSharing ? "Sharing Live Location" : "Not Sharing"}
+                {isSharing
+                  ? `Sharing Live Location on ${getRoute(routeId).name}`
+                  : "Not Sharing"}
               </span>
             </div>
 

@@ -6,7 +6,8 @@
  * them.
  */
 
-import { type StopName } from "./stops";
+import { haversineKm } from "../geo";
+import { STOP_COORDS, type Coordinate, type StopName } from "./stops";
 
 export const ROUTE_IDS = ["101", "102"] as const;
 
@@ -67,6 +68,55 @@ export const ROUTES: Record<RouteId, Route> = {
 };
 
 export const getRoute = (id: RouteId): Route => ROUTES[id];
+
+/** Where a vehicle has reached along the route it is running. */
+export interface RoutePosition {
+  nearestStop: StopName;
+  /** The stop after the nearest one; null at the end of the line. */
+  nextStop: StopName | null;
+  destination: StopName;
+  /** How many of the route's stops are at or behind the vehicle. */
+  stopsCovered: number;
+  totalStops: number;
+}
+
+/**
+ * Places a position against a route's stops.
+ *
+ * Both routes are declared in travel order and run the corridor in one
+ * direction only, so the stop after the nearest one is genuinely the next one
+ * a passenger will be picked up at. Nothing here is inferred from movement,
+ * which means a stationary bus still reports honestly.
+ */
+export const locateOnRoute = (id: RouteId, at: Coordinate): RoutePosition | null => {
+  const stops = ROUTES[id].servedStops;
+
+  let nearestIndex = -1;
+  let shortest = Infinity;
+
+  stops.forEach((stop, index) => {
+    const coord = STOP_COORDS[stop];
+
+    if (!coord) return;
+
+    const distance = haversineKm(at, coord);
+
+    if (distance < shortest) {
+      shortest = distance;
+      nearestIndex = index;
+    }
+  });
+
+  if (nearestIndex === -1) return null;
+
+  return {
+    nearestStop: stops[nearestIndex]!,
+    nextStop: stops[nearestIndex + 1] ?? null,
+    destination: stops[stops.length - 1]!,
+    stopsCovered: nearestIndex + 1,
+    totalStops: stops.length,
+  };
+};
 
 const ROUTE_ID_SET: ReadonlySet<string> = new Set(ROUTE_IDS);
 

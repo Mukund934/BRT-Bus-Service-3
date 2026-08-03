@@ -66,12 +66,6 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   );
 
   useEffect(() => {
-    if ("Notification" in window && Notification.permission === "default") {
-      void Notification.requestPermission();
-    }
-  }, []);
-
-  useEffect(() => {
     if (notifications.length === 0) return;
 
     const timer = setTimeout(

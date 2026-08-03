@@ -1,4 +1,4 @@
-import { MapPin, Facebook, Twitter, Instagram } from "lucide-react";
+import { MapPin } from "lucide-react";
 import { Link } from "react-router-dom";
 
 interface FooterProps {
@@ -7,23 +7,14 @@ interface FooterProps {
 
 const FOOTER_LINKS = [
 	{ to: "/", label: "Home" },
+	{ to: "/plan", label: "Plan Journey" },
+	{ to: "/routes", label: "Routes" },
+	{ to: "/nearby", label: "Nearby Places" },
 	{ to: "/map", label: "Live Map" },
-	{ to: "/timetable", label: "Time Table" },
-	{ to: "/fares", label: "Bus Fares" },
-	{ to: "/contact", label: "Contact Us" },
-];
-
-/**
- * Social destinations.
- *
- * These are placeholders: the project has no social accounts yet, so they
- * point at "#". They are labelled so assistive technology can still announce
- * them, but they should be given real URLs or removed before launch.
- */
-const SOCIAL_LINKS = [
-	{ label: "BRT Bus Service on Facebook", href: "#", Icon: Facebook },
-	{ label: "BRT Bus Service on Twitter", href: "#", Icon: Twitter },
-	{ label: "BRT Bus Service on Instagram", href: "#", Icon: Instagram },
+	{ to: "/timetable", label: "Timetable" },
+	{ to: "/fares", label: "Fares" },
+	{ to: "/contact", label: "Contact" },
+	{ to: "/help", label: "Help" },
 ];
 
 const Footer = ({
@@ -32,7 +23,7 @@ const Footer = ({
 	return (
 		<footer className="bg-gradient-to-br from-[#874f9c] to-[hsl(284,33%,28%)] text-primary-foreground mt-auto">
 			<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-				<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
+				<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-8">
 					{/* Brand Section */}
 					<div className="space-y-4">
 						<Link
@@ -86,28 +77,6 @@ const Footer = ({
 							))}
 						</ul>
 					</nav>
-
-					<div>
-						<h2 className="font-semibold text-lg mb-4">Follow Us</h2>
-						<ul className="flex gap-3 mb-4 list-none p-0">
-							{SOCIAL_LINKS.map(({ label, href, Icon }) => (
-								<li key={label}>
-									{/*
-										Icon-only links carry no text, so without an
-										explicit name a screen reader announces only
-										"link" (WCAG 2.4.4).
-									*/}
-									<a
-										href={href}
-										aria-label={label}
-										className="flex items-center justify-center bg-white/10 p-3 rounded-lg hover:bg-white/20 transition-all duration-300 hover:scale-110 touch-target"
-									>
-										<Icon className="w-5 h-5" aria-hidden="true" />
-									</a>
-								</li>
-							))}
-						</ul>
-					</div>
 
 					<div>
 						<h2 className="font-semibold text-lg mb-4">Location</h2>

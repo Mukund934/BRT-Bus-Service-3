@@ -13,6 +13,7 @@ import {
   AuthorizationError,
   isAuthorizationError,
   toAuthMessage,
+  toResetMessage,
   toSafeMessage,
 } from "@/domain/auth/errors";
 import { PERMISSIONS } from "@/domain/auth/permissions";
@@ -117,5 +118,34 @@ describe("turning any thrown value into something safe to show", () => {
     expect(toSafeMessage(new Error("x"), "Could not load users.")).toBe(
       "Could not load users."
     );
+  });
+});
+
+describe("a password reset cannot be used to enumerate accounts", () => {
+  it("reports nothing to show when the address has no account", () => {
+    expect(toResetMessage(firebaseError("auth/user-not-found"))).toBeNull();
+  });
+
+  it("treats an address the backend rejects the same way", () => {
+    expect(toResetMessage(firebaseError("auth/invalid-email"))).toBeNull();
+  });
+
+  it("still reports rate limiting, which reveals nothing about an account", () => {
+    expect(toResetMessage(firebaseError("auth/too-many-requests"))).toMatch(
+      /too many attempts/i
+    );
+  });
+
+  it("distinguishes a network problem so the user knows to retry", () => {
+    expect(toResetMessage(firebaseError("auth/network-request-failed"))).toMatch(
+      /network/i
+    );
+  });
+
+  it("collapses anything unrecognised rather than leaking backend detail", () => {
+    const message = toResetMessage(new Error("PROJECT brtbus-116fa rule /users/{id}"));
+
+    expect(message).toBe("Could not send the reset email. Please try again.");
+    expect(message).not.toMatch(/brtbus/);
   });
 });

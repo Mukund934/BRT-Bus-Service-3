@@ -95,17 +95,22 @@ service cloud.firestore {
 
     // ---- tickets -------------------------------------------------------
     //
-    // Tickets are currently held in the passenger's own browser storage and
-    // this collection is not yet written to (see `services/ticketService.ts`).
-    // The rule is stated now so that the ownership boundary is already in
-    // place the day tickets move server-side, rather than being retrofitted.
+    // Tickets are the source of truth here; the passenger's browser keeps a
+    // copy so an already-synced ticket can still be shown with no network
+    // (see `services/ticketService.ts`).
     //
     // `userId` is required on the document and pinned to the caller, so a
     // ticket cannot be created on someone else's behalf or reassigned.
+    //
+    // `list` is constrained to the caller's own tickets, not merely capped.
+    // Without the ownership term any signed-in account could page through
+    // everyone else's journeys, emails and validation tokens.
 
     match /tickets/{ticketId} {
       allow get: if isSignedIn() && resource.data.userId == request.auth.uid;
-      allow list: if isSignedIn() && request.query.limit <= 100;
+      allow list: if isSignedIn()
+        && request.query.limit <= 100
+        && resource.data.userId == request.auth.uid;
 
       allow create: if isSignedIn()
         && request.resource.data.userId == request.auth.uid;

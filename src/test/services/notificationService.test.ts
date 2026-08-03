@@ -7,11 +7,11 @@
  * not fire repeatedly.
  */
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { ARRIVAL_RULES, NOTIFICATION_RULES } from "@/constants/config";
 import {
   createAlertThrottle,
-  selectFreshBuses,
+  requestAlertPermission,
   selectNearestEta,
   shouldAlert,
 } from "@/services/notificationService";
@@ -27,24 +27,6 @@ const bus = (over: Partial<LiveBus> = {}): LiveBus => ({
   lng: stop.lng,
   updatedAt: NOW,
   ...over,
-});
-
-describe("stale positions", () => {
-  it("keeps a position that reported recently", () => {
-    expect(selectFreshBuses([bus()], NOW)).toHaveLength(1);
-  });
-
-  it("drops a position older than the staleness window", () => {
-    // A parked or crashed driver app leaves its last position forever;
-    // alerting on it would announce a bus that is not moving.
-    const old = bus({ updatedAt: NOW - ARRIVAL_RULES.STALE_LOCATION_MS - 1 });
-
-    expect(selectFreshBuses([old], NOW)).toEqual([]);
-  });
-
-  it("keeps a position with no timestamp rather than discarding it", () => {
-    expect(selectFreshBuses([bus({ updatedAt: undefined })], NOW)).toHaveLength(1);
-  });
 });
 
 describe("estimating arrival", () => {
@@ -123,5 +105,39 @@ describe("alert throttling", () => {
 
     expect(throttle.claim("102", "HNLU", NOW)).toBe(true);
     expect(throttle.claim("101", "CBD", NOW)).toBe(true);
+  });
+});
+
+describe("asking to raise browser alerts", () => {
+  const notification = () =>
+    window.Notification as unknown as {
+      permission: string;
+      requestPermission: ReturnType<typeof vi.fn>;
+    };
+
+  it("asks once the passenger has switched alerts on", async () => {
+    await requestAlertPermission();
+
+    expect(notification().requestPermission).toHaveBeenCalled();
+  });
+
+  it("does not ask again once the choice has been made", async () => {
+    notification().permission = "denied";
+
+    await requestAlertPermission();
+
+    expect(notification().requestPermission).not.toHaveBeenCalled();
+  });
+
+  it("does nothing on a browser without notifications", async () => {
+    Reflect.deleteProperty(window, "Notification");
+
+    await expect(requestAlertPermission()).resolves.toBeUndefined();
+  });
+
+  it("treats a refusal as an ordinary outcome", async () => {
+    notification().requestPermission.mockRejectedValueOnce(new Error("blocked"));
+
+    await expect(requestAlertPermission()).resolves.toBeUndefined();
   });
 });

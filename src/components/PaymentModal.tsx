@@ -76,7 +76,7 @@ const PaymentModal = ({ open, onClose, selection, onSuccess }: PaymentModalProps
         setTimeout(resolve, PAYMENT_CONFIG.SIMULATED_DELAY_MS)
       );
 
-      const result = bookTicket({
+      const result = await bookTicket({
         ...selection,
         userId: user.uid,
         userEmail: user.email ?? "",

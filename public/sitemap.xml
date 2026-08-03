@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://bus-service-lyart.vercel.app/</loc>
+  </url>
+  <url>
+    <loc>https://bus-service-lyart.vercel.app/plan</loc>
+  </url>
+  <url>
+    <loc>https://bus-service-lyart.vercel.app/routes</loc>
+  </url>
+  <url>
+    <loc>https://bus-service-lyart.vercel.app/nearby</loc>
+  </url>
+  <url>
+    <loc>https://bus-service-lyart.vercel.app/map</loc>
+  </url>
+  <url>
+    <loc>https://bus-service-lyart.vercel.app/timetable</loc>
+  </url>
+  <url>
+    <loc>https://bus-service-lyart.vercel.app/fares</loc>
+  </url>
+  <url>
+    <loc>https://bus-service-lyart.vercel.app/contact</loc>
+  </url>
+  <url>
+    <loc>https://bus-service-lyart.vercel.app/help</loc>
+  </url>
+</urlset>

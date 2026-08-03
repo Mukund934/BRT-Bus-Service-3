@@ -3,10 +3,18 @@
  *
  * The seam between the pure ticket domain and the browser. Everything read
  * back from storage is treated as untrusted: it is schema-validated, then
- * ownership-checked, before any of it reaches the UI.
+ * ownership-checked, before any of it reaches the UI. Firestore is read with
+ * exactly the same suspicion - a document is another party's output, and this
+ * app has no more reason to trust it than it trusts localStorage.
+ *
+ * Firestore holds the record; browser storage holds a copy so a ticket that
+ * has already been synced can still be shown with no network. Every remote
+ * call is therefore best-effort: losing the network costs synchronisation,
+ * never the passenger's ability to open a ticket they already hold.
  */
 
-import { STORAGE_KEYS } from "@/constants/config";
+import { getDb } from "@/firebase";
+import { REMOTE_PATHS, STORAGE_KEYS } from "@/constants/config";
 import { findConflictingTicket } from "@/domain/ticket/conflicts";
 import { createTicket } from "@/domain/ticket/factory";
 import { isLiveStatus } from "@/domain/ticket/status";
@@ -22,6 +30,20 @@ import {
 } from "./storageService";
 
 const ticketsKey = (userId: string): string => storageKey("tickets", userId);
+
+/**
+ * Client-side bound on a ticket read, matching the cap in `firestore.rules`.
+ *
+ * The rule refuses a wider query outright, so this is not merely a courtesy:
+ * asking for more would fail the read rather than truncate it.
+ */
+export const MAX_TICKETS_PER_READ = 100;
+
+/** Loads the Firestore SDK and database handle together. */
+const firestore = async () => {
+  const [sdk, db] = await Promise.all([import("firebase/firestore"), getDb()]);
+  return { ...sdk, db };
+};
 
 /**
  * Upgrades payloads written before storage was versioned.
@@ -96,6 +118,144 @@ export const purgeOtherUsersTickets = (currentUserId: string): number => {
   const keep = ticketsKey(currentUserId);
 
   return clearWhere((key) => key.startsWith(storageKey("tickets")) && key !== keep);
+};
+
+/**
+ * Every ticket the server holds for a user.
+ *
+ * Each document is validated and ownership-checked exactly as a stored one is,
+ * so a record written by an older build - or by anything other than this app -
+ * costs that one ticket instead of breaking the list.
+ */
+export const fetchRemoteTickets = async (userId: string): Promise<Ticket[]> => {
+  if (!userId) return [];
+
+  const { collection, getDocs, limit, query, where, db } = await firestore();
+
+  const snapshot = await getDocs(
+    query(
+      collection(db, REMOTE_PATHS.TICKETS),
+      where("userId", "==", userId),
+      limit(MAX_TICKETS_PER_READ)
+    )
+  );
+
+  const tickets: Ticket[] = [];
+
+  for (const entry of snapshot.docs) {
+    const parsed = ticketSchema.safeParse(entry.data());
+
+    if (parsed.success && parsed.data.userId === userId) tickets.push(parsed.data);
+  }
+
+  return tickets;
+};
+
+/**
+ * Writes a ticket to the server, keyed by its own id so a retry cannot create
+ * a second copy of the same journey.
+ */
+export const pushTicket = async (ticket: Ticket): Promise<boolean> => {
+  try {
+    const { doc, setDoc, db } = await firestore();
+
+    await setDoc(doc(db, REMOTE_PATHS.TICKETS, ticket.ticketId), ticket);
+
+    return true;
+  } catch (error) {
+    console.error("Could not save that ticket to the server:", error);
+    return false;
+  }
+};
+
+/**
+ * Publishes a cancellation.
+ *
+ * Only the two fields the rules allow to move after purchase are sent, so this
+ * cannot be used to rewrite a fare or a journey.
+ */
+export const pushTicketStatus = async (ticket: Ticket): Promise<boolean> => {
+  try {
+    const { doc, updateDoc, db } = await firestore();
+
+    await updateDoc(doc(db, REMOTE_PATHS.TICKETS, ticket.ticketId), {
+      status: ticket.status,
+      updatedAt: ticket.updatedAt,
+    });
+
+    return true;
+  } catch (error) {
+    console.error("Could not update that ticket on the server:", error);
+    return false;
+  }
+};
+
+/**
+ * Picks the version of a ticket that should survive.
+ *
+ * Status is otherwise derived from the clock rather than stored, so the only
+ * disagreement that carries intent is a cancellation - which is terminal, and
+ * wins from whichever side holds it however stale that side looks.
+ */
+const preferTicket = (a: Ticket, b: Ticket): Ticket => {
+  if (a.status === "CANCELLED") return a;
+  if (b.status === "CANCELLED") return b;
+
+  return Date.parse(b.updatedAt) >= Date.parse(a.updatedAt) ? b : a;
+};
+
+/** Combines what the server holds with what this browser holds, newest first. */
+export const mergeTickets = (local: Ticket[], remote: Ticket[]): Ticket[] => {
+  const byId = new Map<string, Ticket>();
+
+  for (const ticket of [...remote, ...local]) {
+    const existing = byId.get(ticket.ticketId);
+
+    byId.set(ticket.ticketId, existing ? preferTicket(existing, ticket) : ticket);
+  }
+
+  return [...byId.values()].sort(
+    (first, second) => Date.parse(second.bookingTime) - Date.parse(first.bookingTime)
+  );
+};
+
+/**
+ * Reconciles this browser with the server.
+ *
+ * Tickets booked while offline are pushed up, cancellations made while offline
+ * are published, and the two sides are merged. A failure anywhere returns what
+ * the browser already had: an unreachable server must never empty a passenger's
+ * wallet.
+ */
+export const syncTickets = async (
+  userId: string,
+  local: Ticket[]
+): Promise<Ticket[]> => {
+  if (!userId) return local;
+
+  try {
+    const remote = await fetchRemoteTickets(userId);
+
+    for (const ticket of local) {
+      const counterpart = remote.find(
+        (entry) => entry.ticketId === ticket.ticketId
+      );
+
+      if (!counterpart) {
+        await pushTicket(ticket);
+        continue;
+      }
+
+      if (ticket.status === "CANCELLED" && counterpart.status !== "CANCELLED") {
+        await pushTicketStatus(ticket);
+      }
+    }
+
+    return mergeTickets(local, remote);
+  } catch (error) {
+    console.error("Could not synchronise tickets:", error);
+    return local;
+  }
 };
 
 export type BookingFailure =
