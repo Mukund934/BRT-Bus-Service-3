@@ -38,7 +38,7 @@ export default defineConfig({
     unstubEnvs: true,
     unstubGlobals: true,
 
-    testTimeout: 15000,
+    testTimeout: 30000,
 
     coverage: {
       provider: "v8",

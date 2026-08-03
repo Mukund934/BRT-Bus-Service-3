@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useTickets } from "@/contexts/TicketContext";
 import { STOP_COORDS } from "@/domain/transit/stops";
 import { subscribeToBuses, type LiveBus } from "@/services/locationService";
-import { act, renderWithProviders, screen } from "../helpers/render";
+import { act, renderWithProviders, screen, waitFor } from "../helpers/render";
 import { makeUpcomingTicket, seedStoredTickets, TEST_NOW } from "../helpers/factories";
 import { makeUser, signInAs } from "../helpers/firebase";
 import { setMockNotifications } from "../helpers/userService";
@@ -58,6 +58,7 @@ const settle = async (state: "holding" | "empty") => {
 
 const arrive = async () => {
   await settle("holding");
+  await waitFor(() => expect(subscribe).toHaveBeenCalled());
 
   return subscribe.mock.calls[0]![0];
 };
