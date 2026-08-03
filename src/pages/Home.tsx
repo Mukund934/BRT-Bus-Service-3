@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import ServiceAlerts from "@/components/ServiceAlerts";
 import RouteCard from "@/components/RouteCard";
 import heroBus from "@/assets/hero-brts.webp";
 import { Clock, Compass, MapPin, Shield, Zap } from "lucide-react";
@@ -75,6 +76,8 @@ const Home = () => {
       <Header />
 
       <main id="main-content" tabIndex={-1}>
+
+      <ServiceAlerts />
 
       <section className="relative w-full h-[420px] md:h-[520px] lg:h-[620px] overflow-hidden">
 
