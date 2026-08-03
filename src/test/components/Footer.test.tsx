@@ -27,6 +27,7 @@ describe("finding your way from the footer", () => {
       "/timetable",
       "/fares",
       "/contact",
+      "/help",
     ]);
   });
 

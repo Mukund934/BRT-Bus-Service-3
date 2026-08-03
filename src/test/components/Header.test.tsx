@@ -55,6 +55,7 @@ describe("finding your way around", () => {
       "/timetable",
       "/fares",
       "/contact",
+      "/help",
     ]);
   });
 

@@ -5,6 +5,7 @@ import {
 	Clock,
 	Compass,
 	DollarSign,
+	HelpCircle,
 	Home,
 	LayoutDashboard,
 	LogOut,
@@ -25,6 +26,7 @@ const navLinks = [
 	{ to: "/timetable", label: "Timetable", icon: Clock },
 	{ to: "/fares", label: "Fares", icon: DollarSign },
 	{ to: "/contact", label: "Contact", icon: Phone },
+	{ to: "/help", label: "Help", icon: HelpCircle },
 ];
 
 const getInitials = (name: string): string => {

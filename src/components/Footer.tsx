@@ -14,6 +14,7 @@ const FOOTER_LINKS = [
 	{ to: "/timetable", label: "Timetable" },
 	{ to: "/fares", label: "Fares" },
 	{ to: "/contact", label: "Contact" },
+	{ to: "/help", label: "Help" },
 ];
 
 const Footer = ({
