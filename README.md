@@ -1,4 +1,3 @@
----
 
 # BRT Smart Bus Service
 
@@ -16,7 +15,6 @@ ticket, and follow buses that drivers are actively sharing.
 
 **Live:** https://bus-service-lyart.vercel.app/
 
----
 
 ## Why this exists
 
