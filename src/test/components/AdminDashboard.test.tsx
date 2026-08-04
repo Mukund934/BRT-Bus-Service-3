@@ -85,7 +85,7 @@ const showPanel = async (onError?: (message: string) => void) => {
 };
 
 const rowFor = (name: string): HTMLElement =>
-  within(screen.getByRole("table")).getByText(name).closest("tr")!;
+  within(screen.getByRole("table", { name: "Registered users and their roles" })).getByText(name).closest("tr")!;
 
 const searchBox = () => screen.getByLabelText("Search users by name or email");
 
@@ -135,7 +135,7 @@ describe("who may open the administrator panel", () => {
     await showPanel();
 
     expect(roster).toHaveBeenCalledTimes(1);
-    expect(within(screen.getByRole("table")).getByText("asha@brt.in")).toBeInTheDocument();
+    expect(within(screen.getByRole("table", { name: "Registered users and their roles" })).getByText("asha@brt.in")).toBeInTheDocument();
   });
 });
 
@@ -264,9 +264,9 @@ describe("searching the roster", () => {
 
     await user.type(searchBox(), "ravi");
 
-    expect(within(screen.getByRole("table")).getByText("Ravi Kumar")).toBeInTheDocument();
+    expect(within(screen.getByRole("table", { name: "Registered users and their roles" })).getByText("Ravi Kumar")).toBeInTheDocument();
     expect(
-      within(screen.getByRole("table")).queryByText("Meena Sahu")
+      within(screen.getByRole("table", { name: "Registered users and their roles" })).queryByText("Meena Sahu")
     ).not.toBeInTheDocument();
   });
 
@@ -275,9 +275,9 @@ describe("searching the roster", () => {
 
     await user.type(searchBox(), "MEENA@EXAMPLE");
 
-    expect(within(screen.getByRole("table")).getByText("Meena Sahu")).toBeInTheDocument();
+    expect(within(screen.getByRole("table", { name: "Registered users and their roles" })).getByText("Meena Sahu")).toBeInTheDocument();
     expect(
-      within(screen.getByRole("table")).queryByText("Ravi Kumar")
+      within(screen.getByRole("table", { name: "Registered users and their roles" })).queryByText("Ravi Kumar")
     ).not.toBeInTheDocument();
   });
 
@@ -295,7 +295,7 @@ describe("searching the roster", () => {
     await user.type(searchBox(), "zzz");
     await user.click(screen.getByRole("button", { name: "Clear search" }));
 
-    expect(within(screen.getByRole("table")).getByText("Ravi Kumar")).toBeInTheDocument();
+    expect(within(screen.getByRole("table", { name: "Registered users and their roles" })).getByText("Ravi Kumar")).toBeInTheDocument();
   });
 
   it("reports how much of the roster is showing", async () => {

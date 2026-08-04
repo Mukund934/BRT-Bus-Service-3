@@ -15,6 +15,9 @@ import {
   type UserRole,
 } from "@/types/user";
 
+import AnnouncementManager from "./AnnouncementManager";
+import FleetStatus from "./FleetStatus";
+
 interface AdminDashboardProps {
   onError?: (error: string) => void;
 }
@@ -209,6 +212,10 @@ const AdminDashboard = ({ onError }: AdminDashboardProps) => {
           Welcome, {user?.displayName || "Admin"}. Manage all users and their roles.
         </p>
       </div>
+
+      <FleetStatus users={allUsers} loading={loading} />
+
+      <AnnouncementManager />
 
       {/* Admin Info Card */}
       <div className="bg-white rounded-xl p-6 shadow-lg mb-8 border-l-4 border-blue-600">

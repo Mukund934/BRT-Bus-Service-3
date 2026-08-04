@@ -1,0 +1,92 @@
+import { describe, expect, it, vi } from "vitest";
+import ServiceAlerts from "@/components/ServiceAlerts";
+import { renderWithProviders, screen, waitFor, within } from "../helpers/render";
+import { seedDoc } from "../helpers/firebase";
+
+vi.mock("@/services/userService", async () => {
+  const helper = await import("../helpers/userService");
+  return helper.userServiceMock();
+});
+
+const alertsRegion = () =>
+  screen.queryByRole("region", { name: /service announcements/i });
+
+const seedAnnouncement = (id: string, over: Record<string, unknown> = {}) =>
+  seedDoc("announcements", id, {
+    title: "Sector 27 stop closed",
+    body: "Board at Sector 29 until further notice.",
+    severity: "WARNING",
+    active: true,
+    ...over,
+  });
+
+describe("what a visitor is told", () => {
+  it("shows a published notice", async () => {
+    seedAnnouncement("a1");
+
+    renderWithProviders(<ServiceAlerts />);
+
+    expect(await screen.findByText("Sector 27 stop closed")).toBeInTheDocument();
+    expect(
+      screen.getByText("Board at Sector 29 until further notice.")
+    ).toBeInTheDocument();
+  });
+
+  it("takes up no room when there is nothing to say", async () => {
+    renderWithProviders(<ServiceAlerts />);
+
+    await waitFor(() => expect(alertsRegion()).not.toBeInTheDocument());
+  });
+
+  it("says nothing about a retired notice", async () => {
+    seedAnnouncement("a1", { active: false });
+
+    renderWithProviders(<ServiceAlerts />);
+
+    await waitFor(() => expect(alertsRegion()).not.toBeInTheDocument());
+    expect(screen.queryByText("Sector 27 stop closed")).not.toBeInTheDocument();
+  });
+
+  it("interrupts a screen reader only for a major disruption", async () => {
+    seedAnnouncement("a1", { severity: "CRITICAL", title: "Services suspended" });
+
+    renderWithProviders(<ServiceAlerts />);
+
+    await screen.findByText("Services suspended");
+
+    const alert = within(alertsRegion()!).getByRole("alert");
+
+    expect(alert).toHaveTextContent("Services suspended");
+  });
+
+  it("reports an ordinary notice without interrupting", async () => {
+    seedAnnouncement("a1", { severity: "INFO", title: "New timetable published" });
+
+    renderWithProviders(<ServiceAlerts />);
+
+    await screen.findByText("New timetable published");
+
+    const region = within(alertsRegion()!);
+
+    expect(region.getByRole("status")).toHaveTextContent("New timetable published");
+    expect(region.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("names the severity for a reader who cannot see the colour", async () => {
+    seedAnnouncement("a1", { severity: "CRITICAL" });
+
+    renderWithProviders(<ServiceAlerts />);
+
+    expect(await screen.findByText(/Major disruption/)).toBeInTheDocument();
+  });
+
+  it("shows every current notice, not just the first", async () => {
+    seedAnnouncement("a1", { title: "First notice" });
+    seedAnnouncement("a2", { title: "Second notice" });
+
+    renderWithProviders(<ServiceAlerts />);
+
+    expect(await screen.findByText("First notice")).toBeInTheDocument();
+    expect(screen.getByText("Second notice")).toBeInTheDocument();
+  });
+});

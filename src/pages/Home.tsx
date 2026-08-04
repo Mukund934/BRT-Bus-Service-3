@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import ServiceAlerts from "@/components/ServiceAlerts";
 import RouteCard from "@/components/RouteCard";
 import heroBus from "@/assets/hero-brts.webp";
 import { Clock, Compass, MapPin, Shield, Zap } from "lucide-react";
@@ -76,20 +77,26 @@ const Home = () => {
 
       <main id="main-content" tabIndex={-1}>
 
+      <ServiceAlerts />
+
       <section className="relative w-full h-[420px] md:h-[520px] lg:h-[620px] overflow-hidden">
 
         {/*
           The largest-contentful-paint element. Intrinsic dimensions are
           declared so the browser reserves the space before the image arrives
-          (no layout shift), and fetchPriority marks it as the one image worth
-          competing for bandwidth.
+          (no layout shift), and the priority hint marks it as the one image
+          worth competing for bandwidth.
+
+          Spelled lowercase because React 18 does not recognise the camelCase
+          form: it drops the attribute before it reaches the DOM and warns on
+          every render, so the hint the comment describes never applied.
         */}
         <img
           src={heroBus}
           alt="A BRT bus on the Raipur to Naya Raipur corridor"
           width={1080}
           height={572}
-          fetchPriority="high"
+          {...{ fetchpriority: "high" }}
           decoding="async"
           className="w-full h-full object-cover scale-[1.03]"
         />

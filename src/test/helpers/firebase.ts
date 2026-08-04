@@ -327,6 +327,8 @@ export const rtdbListenerCount = (path: string): number =>
 
 const docs = new Map<string, Record<string, unknown>>();
 
+let generatedDocs = 0;
+
 interface DocRef {
   path: string;
   collection: string;
@@ -345,7 +347,10 @@ export const seedDoc = (
 export const readDoc = (collection: string, id: string) =>
   docs.get(`${collection}/${id}`);
 
-export const clearDocs = (): void => docs.clear();
+export const clearDocs = (): void => {
+  docs.clear();
+  generatedDocs = 0;
+};
 
 /** A stored Firestore Timestamp, structurally compatible with the real one. */
 export const timestamp = (date: Date) => ({ toDate: () => date });
@@ -378,6 +383,20 @@ export const firestoreMock = () => ({
   updateDoc: vi.fn(async (ref: DocRef, patch: Record<string, unknown>) => {
     docs.set(ref.path, { ...(docs.get(ref.path) ?? {}), ...patch });
   }),
+
+  deleteDoc: vi.fn(async (ref: DocRef) => {
+    docs.delete(ref.path);
+  }),
+
+  addDoc: vi.fn(
+    async (source: { collection: string }, data: Record<string, unknown>) => {
+      const id = `generated-${++generatedDocs}`;
+
+      docs.set(`${source.collection}/${id}`, data);
+
+      return { id };
+    }
+  ),
 
   collection: vi.fn((_db: unknown, name: string) => ({ collection: name })),
 

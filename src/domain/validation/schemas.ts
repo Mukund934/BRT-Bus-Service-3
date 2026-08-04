@@ -12,6 +12,7 @@ import { z } from "zod";
 import { ROUTE_IDS } from "@/domain/transit/routes";
 import { STOPS } from "@/domain/transit/stops";
 import { USER_ROLES } from "@/types/user";
+import { ANNOUNCEMENT_SEVERITIES } from "@/types/announcement";
 
 /** Stop names, validated against the canonical registry. */
 export const stopNameSchema = z.enum(STOPS);
@@ -99,6 +100,25 @@ export const busPositionSchema = z.object({
 });
 
 export type ValidatedBusPosition = z.infer<typeof busPositionSchema>;
+
+export const announcementSeveritySchema = z.enum(ANNOUNCEMENT_SEVERITIES);
+
+/**
+ * An operator announcement, as stored and as typed into the admin form.
+ *
+ * Bounded because the body is rendered on a public page: an unbounded string
+ * from a compromised admin session would otherwise be a denial-of-service on
+ * every passenger who loads the home page.
+ */
+export const announcementDraftSchema = z.object({
+  title: z.string().trim().min(1, "A title is required").max(120, "Title is too long"),
+  body: z.string().trim().min(1, "A message is required").max(1000, "Message is too long"),
+  severity: announcementSeveritySchema,
+});
+
+export const announcementSchema = announcementDraftSchema.extend({
+  active: z.boolean(),
+});
 
 // ---- form input ------------------------------------------------------
 

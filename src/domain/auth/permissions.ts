@@ -25,6 +25,8 @@ export const PERMISSIONS = {
   PUBLISH_LOCATION: "location:publish",
   /** Purchase a ticket. */
   BOOK_TICKET: "ticket:book",
+  /** Publish and retire passenger announcements. */
+  MANAGE_ANNOUNCEMENTS: "announcements:manage",
 } as const;
 
 export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
@@ -45,6 +47,7 @@ const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     PERMISSIONS.VIEW_ADMIN_PANEL,
     PERMISSIONS.READ_ALL_USERS,
     PERMISSIONS.ASSIGN_ROLES,
+    PERMISSIONS.MANAGE_ANNOUNCEMENTS,
   ],
 };
 
