@@ -18,9 +18,13 @@
 
 import type { DataSnapshot } from "firebase/database";
 import { getRtdb } from "@/firebase";
-import { ARRIVAL_RULES, REMOTE_PATHS } from "@/constants/config";
+import { REMOTE_PATHS } from "@/constants/config";
 import { AuthorizationError } from "@/domain/auth/errors";
 import { PERMISSIONS, can } from "@/domain/auth/permissions";
+import { fromDriverRecord } from "@/domain/fleet/adapters";
+import { classifyAll, isPassengerVisible, type ClassifiedVehicle } from "@/domain/fleet/state";
+import { acceptTelemetry, createTelemetryGate } from "@/domain/fleet/validation";
+import type { VehicleTelemetry } from "@/domain/fleet/telemetry";
 import type { RouteId } from "@/domain/transit/routes";
 import { busPositionSchema, type ValidatedBusPosition } from "@/domain/validation/schemas";
 import type { Actor } from "@/types/user";
@@ -28,6 +32,23 @@ import type { Actor } from "@/types/user";
 /** A bus position as consumed by the UI. */
 export interface LiveBus extends ValidatedBusPosition {
   busId: string;
+}
+
+/**
+ * Narrowing options for a subscription.
+ *
+ * Widened now and filtered client-side, which is honest about what it does
+ * today while fixing the signature at every call site. When the volume
+ * justifies it the transport moves to a `/busLocationsByRoute/$routeId` path
+ * shard and nothing above this line changes.
+ *
+ * Deliberately NOT `orderByChild('routeId')`: unindexed it downloads
+ * everything anyway, and indexed it is documented as several times slower
+ * than a key lookup while producing a per-query listen instead of one shared
+ * broadcast.
+ */
+export interface SubscribeOptions {
+  routeId?: RouteId;
 }
 
 /** Loads the Realtime Database SDK and handle together. */
@@ -40,19 +61,43 @@ const database = async () => {
 export const isLiveTrackingAvailable = async (): Promise<boolean> =>
   (await getRtdb()) !== null;
 
+/** Every bus the feed knows about, with its freshness resolved. */
+export const classifyBuses = (
+  buses: LiveBus[],
+  now = Date.now()
+): ClassifiedVehicle[] => classifyAll(toTelemetry(buses, now), now);
+
 /**
- * Drops positions that have gone stale.
+ * Buses a passenger-facing surface should draw.
  *
- * A parked or crashed driver app keeps its last position in the database
- * forever; treating it as live would tell passengers a bus is running when
- * nothing is moving. Every surface that reports what is running applies this,
- * so the map and the arrival alerts cannot disagree.
+ * This used to be a filter that DELETED anything older than two minutes,
+ * which threw away the only evidence that a bus had stopped reporting - so
+ * nothing downstream could tell "not running" from "not reporting", and those
+ * are different facts to somebody standing at a stop.
+ *
+ * It is now a classification the caller narrows. The record survives either
+ * way, carrying the state and the age, so a screen can say how old a position
+ * is instead of silently dropping it.
+ *
+ * A record with NO timestamp is no longer treated as fresh forever. That was
+ * an immortal phantom bus on a public map, and a test was protecting it.
  */
-export const selectFreshBuses = (buses: LiveBus[], now = Date.now()): LiveBus[] =>
-  buses.filter(
-    (bus) =>
-      bus.updatedAt === undefined ||
-      now - bus.updatedAt <= ARRIVAL_RULES.STALE_LOCATION_MS
+export const selectFreshBuses = (
+  buses: LiveBus[],
+  now = Date.now()
+): ClassifiedVehicle[] => classifyBuses(buses, now).filter(isPassengerVisible);
+
+/** Maps the shipped driver-phone records onto the normalized contract. */
+export const toTelemetry = (
+  buses: readonly LiveBus[],
+  receivedAt = Date.now()
+): VehicleTelemetry[] =>
+  buses.map((bus) =>
+    fromDriverRecord(
+      bus.busId,
+      { busId: bus.busId, lat: bus.lat, lng: bus.lng, updatedAt: bus.updatedAt, routeId: bus.routeId },
+      receivedAt
+    )
   );
 
 /**
@@ -164,10 +209,12 @@ export const stopPublishing = async (actor: Actor | null): Promise<void> => {
  */
 export const subscribeToBuses = (
   onBuses: (buses: LiveBus[]) => void,
-  onError?: (error: Error) => void
+  onError?: (error: Error) => void,
+  options: SubscribeOptions = {}
 ): (() => void) => {
   let cancelled = false;
   let detach: () => void = () => {};
+  const gate = createTelemetryGate();
 
   void (async () => {
     const { ref, onValue, off, rtdb } = await database();
@@ -201,11 +248,29 @@ export const subscribeToBuses = (
         const parsed = busPositionSchema.safeParse(value);
 
         if (!parsed.success) continue;
+        if (options.routeId && parsed.data.routeId !== options.routeId) continue;
 
         buses.push({ ...parsed.data, busId: parsed.data.busId ?? toBusId(uid) });
       }
 
-      onBuses(buses);
+      /*
+        Everything is gated before the caller sees it.
+
+        The node is world-readable and, until the rules are deployed, writable
+        by any signed-in account - so a timestamp from next week, a position at
+        (0, 0) or a vehicle that teleports across the state are all things the
+        UI could otherwise be driven with. The gate lives in this closure so it
+        keeps its per-vehicle history for the life of the subscription, which
+        is what makes the ordering and jump checks possible at all.
+      */
+      const now = Date.now();
+      const believable = new Set(
+        acceptTelemetry(gate, toTelemetry(buses, now), now).map(
+          (telemetry) => telemetry.vehicleId
+        )
+      );
+
+      onBuses(buses.filter((bus) => believable.has(bus.busId)));
     };
 
     onValue(node, handleValue, (error) => {

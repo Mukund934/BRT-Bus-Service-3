@@ -26,6 +26,8 @@ import { syncTicketStatuses } from "@/domain/ticket/status";
 import type { Ticket, TicketDraft } from "@/domain/ticket/types";
 import {
   bookTicket as bookTicketInStorage,
+  issueValidatedTicket,
+  validateBooking as validateBookingRules,
   cancelTicket as cancelTicketInStorage,
   loadTickets,
   migrateLegacyTicket,
@@ -35,6 +37,7 @@ import {
   saveTickets,
   syncTickets,
   type BookingResult,
+  type BookingValidation,
 } from "@/services/ticketService";
 import { useAuth } from "./AuthContext";
 
@@ -46,6 +49,10 @@ interface TicketContextValue {
   ticketHistory: Ticket[];
   stats: PassengerStats;
   bookTicket: (draft: TicketDraft) => Promise<BookingResult>;
+  /** Applies the booking rules without writing. Call this before payment. */
+  validateBooking: (draft: TicketDraft) => BookingValidation;
+  /** Persists a validated, paid-for ticket. Never refuses. */
+  issueTicket: (ticket: Ticket) => Promise<{ ticket: Ticket; persisted: boolean }>;
   cancelTicket: (ticketId: string) => Promise<void>;
   refreshTickets: () => void;
 }
@@ -159,6 +166,30 @@ export const TicketProvider = ({ children }: { children: ReactNode }) => {
     [userId, tickets]
   );
 
+  const validateBooking = useCallback(
+    (draft: TicketDraft): BookingValidation => {
+      if (!userId) return { ok: false, reason: "NOT_AUTHENTICATED" };
+
+      return validateBookingRules(userId, tickets, draft);
+    },
+    [userId, tickets]
+  );
+
+  const issueTicket = useCallback(
+    async (ticket: Ticket): Promise<{ ticket: Ticket; persisted: boolean }> => {
+      if (!userId) return { ticket, persisted: false };
+
+      const issued = issueValidatedTicket(userId, tickets, ticket);
+
+      setTickets(issued.tickets);
+
+      await pushTicket(issued.ticket);
+
+      return { ticket: issued.ticket, persisted: issued.persisted };
+    },
+    [userId, tickets]
+  );
+
   const cancelTicket = useCallback(
     async (ticketId: string): Promise<void> => {
       if (!userId) return;
@@ -187,6 +218,8 @@ export const TicketProvider = ({ children }: { children: ReactNode }) => {
       ticketHistory,
       stats,
       bookTicket,
+      validateBooking,
+      issueTicket,
       cancelTicket,
       refreshTickets,
     }),
@@ -196,6 +229,8 @@ export const TicketProvider = ({ children }: { children: ReactNode }) => {
       ticketHistory,
       stats,
       bookTicket,
+      validateBooking,
+      issueTicket,
       cancelTicket,
       refreshTickets,
     ]

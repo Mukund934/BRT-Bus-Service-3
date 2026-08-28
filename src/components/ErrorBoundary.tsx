@@ -30,7 +30,7 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
       <main
         id="main-content"
         tabIndex={-1}
-        className="min-h-screen bg-[#f4f2ff] flex items-center justify-center px-4"
+        className="min-h-screen bg-background flex items-center justify-center px-4"
       >
         <div
           role="alert"

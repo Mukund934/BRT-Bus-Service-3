@@ -20,22 +20,40 @@ export const TICKET_RULES = {
   MIDNIGHT_ROLLOVER_HOURS: 12,
 } as const;
 
-/** Live-tracking and arrival-estimation tuning. */
+/** Live-tracking and proximity-alert tuning. */
 export const ARRIVAL_RULES = {
-  /** Alert the passenger when the nearest bus is within this many minutes. */
-  ALERT_MINUTES: 5,
-  /** Assumed average bus speed used to turn distance into an ETA. */
-  AVERAGE_SPEED_KMPH: 30,
-  /** Bus pings older than this are ignored as stale. */
-  STALE_LOCATION_MS: 120_000,
+  /**
+   * Alert the passenger when a reporting bus is within this straight-line
+   * distance of their boarding stop.
+   *
+   * A distance, not a duration: the app knows where a bus is, not how long
+   * the road between them takes. Anything time-shaped needs route geometry
+   * and a schedule, which is the ETA engine, not this rule.
+   */
+  ALERT_RADIUS_KM: 2.5,
 } as const;
 
 /** Recurring timer intervals. */
 export const POLLING = {
   /** How often ticket statuses are re-evaluated against the clock. */
   TICKET_STATUS_MS: 15_000,
-  /** How often a sharing driver publishes their position. */
-  DRIVER_LOCATION_MS: 3_000,
+  /**
+   * How often a sharing driver publishes their position.
+   *
+   * 15 s, not 3. Faster is not better here: position error is roughly fixed
+   * while the measurement baseline grows with the interval, so a 3 s gap
+   * yields a speed estimate with about 34% noise against 6.8% at 15 s.
+   * Sampling ten times more often buys a few seconds of accuracy at a
+   * five-minute horizon and costs ten times the writes, the egress, the
+   * driver's battery and the driver's mobile data.
+   *
+   * It is also what the ecosystem does. No certified AIS-140 device will ever
+   * emit at 3 s - the standard permits 5 s to ten minutes and real state
+   * defaults run to two minutes - and GTFS-Realtime's own guidance is "at
+   * least once every 30 seconds". Arrival logic has to be correct at those
+   * cadences, not merely tolerant of ours.
+   */
+  DRIVER_LOCATION_MS: 15_000,
   /** How often live bus positions are re-checked against the clock. */
   BUS_FRESHNESS_MS: 15_000,
   /** How often the virtual ticket countdown re-renders. */
@@ -51,19 +69,22 @@ export const NOTIFICATION_RULES = {
   ICON_URL: "https://cdn-icons-png.freepik.com/512/1719/1719609.png",
 } as const;
 
-/** Simulated payment gateway configuration. */
+/**
+ * Payment behaviour.
+ *
+ * There is deliberately no payee, VPA or account here. A demonstration must
+ * not carry a payment target a passenger could act on; the provider in
+ * `services/payment` decides what happens, and says whether money moves.
+ */
 export const PAYMENT_CONFIG = {
   /** Artificial latency so the processing state is visible. */
   SIMULATED_DELAY_MS: 2_000,
-  UPI_VPA: "brtbus@upi",
-  UPI_PAYEE: "BRT Bus",
   CURRENCY: "INR",
 } as const;
 
 /** QR rendering sizes. */
 export const QR_CONFIG = {
   TICKET_SIZE: 120,
-  PAYMENT_SIZE: 140,
   ERROR_CORRECTION: "M",
 } as const;
 

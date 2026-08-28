@@ -211,7 +211,7 @@ const BookingModal = ({
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 py-2.5 rounded-xl border border-border text-foreground font-medium transition-all duration-300 hover:bg-secondary touch-target"
+            className="flex-1 py-2.5 rounded-xl border border-border text-foreground font-medium transition-colors duration-150 hover:bg-secondary touch-target"
           >
             Cancel
           </button>

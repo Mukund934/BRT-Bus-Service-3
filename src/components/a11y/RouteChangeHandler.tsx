@@ -11,6 +11,7 @@
 
 import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
+import { setPageDescription } from "@/lib/page-meta";
 import { useAnnounce } from "./LiveAnnouncer";
 
 /** Human-readable page names, keyed by route. */
@@ -45,26 +46,20 @@ const ROUTE_DESCRIPTIONS: Record<string, string> = {
   "/driver": "Share your bus position with passengers while you are on shift.",
 };
 
+/**
+ * Routes whose metadata belongs to the page rather than to this table.
+ *
+ * A place detail page's title is the place's name, which lives in a dataset
+ * this eagerly-loaded component must not import. Those routes are skipped
+ * here entirely, so exactly one thing writes the title and there is no race
+ * between a parent effect and a child one.
+ */
+const PAGE_OWNED = [/^\/nearby\/[a-z0-9-]+$/];
+
+const ownsItsMetadata = (pathname: string): boolean =>
+  PAGE_OWNED.some((route) => route.test(pathname));
+
 const titleFor = (pathname: string): string => ROUTE_TITLES[pathname] ?? "Page";
-
-const setDescription = (content: string | undefined) => {
-  const existing = document.head.querySelector('meta[name="description"]');
-
-  if (!content) {
-    existing?.remove();
-    return;
-  }
-
-  if (existing) {
-    existing.setAttribute("content", content);
-    return;
-  }
-
-  const tag = document.createElement("meta");
-  tag.setAttribute("name", "description");
-  tag.setAttribute("content", content);
-  document.head.appendChild(tag);
-};
 
 /**
  * Points every search-parameter variant of a page at one address.
@@ -94,11 +89,6 @@ export const RouteChangeHandler = () => {
   const announce = useAnnounce();
 
   useEffect(() => {
-    const title = titleFor(pathname);
-
-    document.title = `${title} · BRT Bus Service`;
-
-    setDescription(ROUTE_DESCRIPTIONS[pathname]);
     setCanonical(pathname);
 
     // "auto" rather than "smooth": a page change should be instant, and
@@ -106,6 +96,14 @@ export const RouteChangeHandler = () => {
     // are asking to avoid.
     window.scrollTo({ top: 0, behavior: "auto" });
 
+    // Scroll and canonical apply everywhere; the naming does not, because a
+    // page-owned route would only have it overwritten a moment later.
+    if (ownsItsMetadata(pathname)) return;
+
+    const title = titleFor(pathname);
+
+    document.title = `${title} · BRT Bus Service`;
+    setPageDescription(ROUTE_DESCRIPTIONS[pathname]);
     announce(`${title} page loaded`);
   }, [pathname, announce]);
 

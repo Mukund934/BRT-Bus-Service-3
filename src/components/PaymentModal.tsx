@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { QRCodeSVG } from "qrcode.react";
-import { Loader2 } from "lucide-react";
+import { Loader2, ShieldAlert } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -8,11 +7,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { PAYMENT_CONFIG, QR_CONFIG } from "@/constants/config";
 import { useAnnounce } from "@/components/a11y/LiveAnnouncer";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTickets } from "@/contexts/TicketContext";
+import { PAYMENT_FAILURE_MESSAGES } from "@/domain/payment/types";
 import type { JourneySelection, PaymentStatus } from "@/domain/ticket/types";
+import { activePaymentProvider } from "@/services/payment/demoProvider";
 import { BOOKING_FAILURE_MESSAGES } from "@/services/ticketService";
 
 interface PaymentModalProps {
@@ -23,18 +23,29 @@ interface PaymentModalProps {
   onSuccess: () => void;
 }
 
-/** UPI deep link for the simulated payment QR. */
-const buildUpiLink = (amount: number): string =>
-  `upi://pay?pa=${PAYMENT_CONFIG.UPI_VPA}&pn=${PAYMENT_CONFIG.UPI_PAYEE}` +
-  `&am=${amount}&cu=${PAYMENT_CONFIG.CURRENCY}`;
+/*
+  Identifies the booking attempt rather than the click, so a double-tapped
+  button and a retry after a failure both resolve to the same payment.
+*/
+const idempotencyKeyFor = (userId: string, selection: JourneySelection): string =>
+  [
+    userId,
+    selection.route,
+    selection.fromStop,
+    selection.toStop,
+    selection.departureTime,
+  ].join("|");
 
 const PaymentModal = ({ open, onClose, selection, onSuccess }: PaymentModalProps) => {
   const { user } = useAuth();
-  const { bookTicket } = useTickets();
+  const { validateBooking, issueTicket } = useTickets();
   const announce = useAnnounce();
+
+  const provider = activePaymentProvider();
 
   const [status, setStatus] = useState<PaymentStatus>("PENDING");
   const [error, setError] = useState("");
+  const [warning, setWarning] = useState("");
 
   const successRef = useRef<HTMLButtonElement>(null);
 
@@ -47,6 +58,7 @@ const PaymentModal = ({ open, onClose, selection, onSuccess }: PaymentModalProps
     if (open) {
       setStatus("PENDING");
       setError("");
+      setWarning("");
     }
   }, [open]);
 
@@ -68,37 +80,60 @@ const PaymentModal = ({ open, onClose, selection, onSuccess }: PaymentModalProps
       return;
     }
 
+    /*
+      Every booking rule is applied before the provider is called. Running
+      them afterwards is what allowed a passenger to be charged and then
+      refused a ticket.
+    */
+    const validation = validateBooking({
+      ...selection,
+      userId: user.uid,
+      userEmail: user.email ?? "",
+    });
+
+    if (!validation.ok) {
+      const message = BOOKING_FAILURE_MESSAGES[validation.reason];
+      setError(message);
+      setStatus("FAILED");
+      announce(`Booking failed. ${message}`, "assertive");
+      return;
+    }
+
     setStatus("PROCESSING");
     announce("Processing your payment, please wait.");
 
     try {
-      await new Promise((resolve) =>
-        setTimeout(resolve, PAYMENT_CONFIG.SIMULATED_DELAY_MS)
+      const outcome = await provider.pay(
+        fare,
+        idempotencyKeyFor(user.uid, selection)
       );
 
-      const result = await bookTicket({
-        ...selection,
-        userId: user.uid,
-        userEmail: user.email ?? "",
-      });
-
-      if (!result.ok) {
-        const message = BOOKING_FAILURE_MESSAGES[result.reason];
+      if (!outcome.ok) {
+        const message = PAYMENT_FAILURE_MESSAGES[outcome.reason];
         setError(message);
         setStatus("FAILED");
         announce(`Payment failed. ${message}`, "assertive");
         return;
       }
 
+      // Past this point the passenger owns the ticket, so issuing cannot
+      // refuse. A storage failure is reported without destroying it.
+      const issued = await issueTicket(validation.ticket);
+
       setStatus("SUCCESS");
+      setWarning(
+        issued.persisted
+          ? ""
+          : "Your ticket could not be saved to this device, so it may not be here later."
+      );
       announce(
         `Payment successful. Your ticket from ${fromStop} to ${toStop} is confirmed.`
       );
     } catch (err) {
       console.error("Payment failed:", err);
-      setError("Could not save your ticket. Please try again.");
+      setError("Could not complete your payment. Please try again.");
       setStatus("FAILED");
-      announce("Payment failed. Could not save your ticket.", "assertive");
+      announce("Payment failed. Please try again.", "assertive");
     }
   };
 
@@ -140,18 +175,27 @@ const PaymentModal = ({ open, onClose, selection, onSuccess }: PaymentModalProps
               <p className="text-2xl font-bold text-primary mt-2">₹{fare}/-</p>
             </div>
 
-            <div className="flex justify-center">
-              <div
-                role="img"
-                aria-label={`UPI payment QR code for ${fare} rupees`}
-                className="bg-white p-2 rounded-lg"
-              >
-                <QRCodeSVG value={buildUpiLink(fare)} size={QR_CONFIG.PAYMENT_SIZE} />
+            {!provider.settlesRealMoney && (
+              <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-900">
+                <ShieldAlert
+                  className="w-5 h-5 flex-shrink-0 mt-0.5"
+                  aria-hidden="true"
+                />
+                <div className="min-w-0">
+                  <p className="font-semibold">No payment will be taken</p>
+                  <p className="text-sm mt-0.5">
+                    This service is not connected to a payment provider. Confirming
+                    issues a demonstration ticket and moves no money. Pay the
+                    conductor on board as usual.
+                  </p>
+                </div>
               </div>
-            </div>
+            )}
 
             <button type="button" onClick={handlePay} className="w-full brt-button touch-target">
-              Simulate payment of ₹{fare}
+              {provider.settlesRealMoney
+                ? `Pay ₹${fare}`
+                : `Issue a demonstration ticket for ₹${fare}`}
             </button>
 
             <button
@@ -192,6 +236,18 @@ const PaymentModal = ({ open, onClose, selection, onSuccess }: PaymentModalProps
               </DialogDescription>
             </DialogHeader>
 
+            {!provider.settlesRealMoney && (
+              <p className="text-sm text-muted-foreground text-center">
+                Demonstration ticket. No payment was taken.
+              </p>
+            )}
+
+            {warning && (
+              <p role="status" className="text-sm text-amber-900 text-center">
+                {warning}
+              </p>
+            )}
+
             <div className="flex flex-col items-center py-6">
               <span className="text-4xl mb-3" aria-hidden="true">
                 🎉
@@ -227,7 +283,7 @@ const PaymentModal = ({ open, onClose, selection, onSuccess }: PaymentModalProps
               <button
                 type="button"
                 onClick={onClose}
-                className="px-5 py-2.5 rounded-xl border border-border text-foreground font-medium transition-all duration-300 hover:bg-secondary touch-target"
+                className="px-5 py-2.5 rounded-xl border border-border text-foreground font-medium transition-colors duration-150 hover:bg-secondary touch-target"
               >
                 Close
               </button>

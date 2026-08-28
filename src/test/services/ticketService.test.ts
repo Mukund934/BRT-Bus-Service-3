@@ -13,6 +13,7 @@ import {
   bookTicket,
   cancelTicket,
   fetchRemoteTickets,
+  issueValidatedTicket,
   loadTickets,
   mergeTickets,
   migrateLegacyTicket,
@@ -21,6 +22,7 @@ import {
   pushTicketStatus,
   saveTickets,
   syncTickets,
+  validateBooking,
 } from "@/services/ticketService";
 import {
   at,
@@ -284,6 +286,69 @@ describe("when the device refuses to store anything", () => {
     const result = bookTicket(USER, [], makeDraft(), at(9, 0));
 
     expect(result).toEqual({ ok: false, reason: "STORAGE_FAILED" });
+
+    setItem.mockRestore();
+  });
+});
+
+/*
+  Regression for the ordering defect: every one of these refusals used to fire
+  AFTER the payment had been taken, which is how a passenger ends up debited
+  and then told they already hold an overlapping ticket.
+*/
+describe("the order money and rules run in", () => {
+  it("refuses a departed service without writing anything", () => {
+    const setItem = vi.spyOn(Storage.prototype, "setItem");
+
+    const result = validateBooking(USER, [], makeDraft(), at(10, 30));
+
+    expect(result).toEqual({ ok: false, reason: "ALREADY_DEPARTED" });
+    expect(setItem).not.toHaveBeenCalled();
+
+    setItem.mockRestore();
+  });
+
+  it("refuses an overlapping journey without writing anything", () => {
+    const setItem = vi.spyOn(Storage.prototype, "setItem");
+    const existing = makeTicket();
+
+    const result = validateBooking(USER, [existing], makeDraft(), at(9, 0));
+
+    expect(result).toEqual({ ok: false, reason: "OVERLAPPING_TICKET" });
+    expect(setItem).not.toHaveBeenCalled();
+
+    setItem.mockRestore();
+  });
+
+  it("hands back a ticket to pay for without storing it yet", () => {
+    const setItem = vi.spyOn(Storage.prototype, "setItem");
+
+    const result = validateBooking(USER, [], makeDraft(), at(9, 0));
+
+    expect(result.ok).toBe(true);
+    expect(setItem).not.toHaveBeenCalled();
+
+    setItem.mockRestore();
+  });
+
+  it("never withholds a paid-for ticket, even when storage refuses it", () => {
+    const validated = validateBooking(USER, [], makeDraft(), at(9, 0));
+
+    if (!validated.ok) throw new Error("expected the journey to validate");
+
+    const setItem = vi
+      .spyOn(Storage.prototype, "setItem")
+      .mockImplementation(() => {
+        throw new DOMException("full", "QuotaExceededError");
+      });
+
+    const issued = issueValidatedTicket(USER, [], validated.ticket);
+
+    // The money has moved by this point, so a full disk may report a problem
+    // but must never destroy the ticket.
+    expect(issued.persisted).toBe(false);
+    expect(issued.ticket).toEqual(validated.ticket);
+    expect(issued.tickets).toContainEqual(validated.ticket);
 
     setItem.mockRestore();
   });

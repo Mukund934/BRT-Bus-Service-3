@@ -161,11 +161,11 @@ const AdminDashboard = ({ onError }: AdminDashboardProps) => {
   const getRoleColor = (role: UserRole) => {
     switch (role) {
       case "admin":
-        return "bg-red-100 text-red-800 border-red-300";
+        return "bg-destructive/10 text-destructive border-destructive/30";
       case "driver":
         return "bg-blue-100 text-blue-800 border-blue-300";
       default:
-        return "bg-purple-100 text-purple-800 border-purple-300";
+        return "bg-accent text-primary-deep border-primary/40";
     }
   };
 
@@ -191,17 +191,17 @@ const AdminDashboard = ({ onError }: AdminDashboardProps) => {
   if (!mayViewPanel) {
     return (
       <div className="max-w-5xl mx-auto">
-        <div className="bg-red-50 border-2 border-red-200 rounded-2xl p-8 text-center">
-          <Shield className="w-12 h-12 text-red-600 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-red-800 mb-2">Access Denied</h2>
-          <p className="text-red-700">Only administrators can access this page.</p>
+        <div className="bg-destructive/10 border-2 border-destructive/30 rounded-2xl p-8 text-center">
+          <Shield className="w-12 h-12 text-destructive mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-destructive mb-2">Access Denied</h2>
+          <p className="text-destructive">Only administrators can access this page.</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-background to-secondary p-6">
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-2">
@@ -230,20 +230,20 @@ const AdminDashboard = ({ onError }: AdminDashboardProps) => {
           </div>
           <div>
             <p className="text-sm text-gray-600 mb-1">Role</p>
-            <p className="text-lg font-semibold text-red-600">Administrator</p>
+            <p className="text-lg font-semibold text-destructive">Administrator</p>
           </div>
         </div>
       </div>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <div className="bg-white rounded-xl p-6 shadow-lg border-t-4 border-purple-500">
+        <div className="bg-white rounded-xl p-6 shadow-lg border-t-4 border-primary">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">Total Users</p>
               <p className="text-3xl font-bold text-gray-900">{stats.total}</p>
             </div>
-            <Users className="w-12 h-12 text-purple-500 opacity-20" />
+            <Users className="w-12 h-12 text-primary opacity-20" />
           </div>
         </div>
 
@@ -257,13 +257,13 @@ const AdminDashboard = ({ onError }: AdminDashboardProps) => {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl p-6 shadow-lg border-t-4 border-red-500">
+        <div className="bg-white rounded-xl p-6 shadow-lg border-t-4 border-destructive">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">Admins</p>
               <p className="text-3xl font-bold text-gray-900">{stats.admins}</p>
             </div>
-            <Shield className="w-12 h-12 text-red-500 opacity-20" />
+            <Shield className="w-12 h-12 text-destructive opacity-20" />
           </div>
         </div>
 
@@ -282,13 +282,13 @@ const AdminDashboard = ({ onError }: AdminDashboardProps) => {
       {error && (
         <div
           role="alert"
-          className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center justify-between"
+          className="mb-6 p-4 bg-destructive/10 border border-destructive/30 rounded-lg flex items-center justify-between"
         >
-          <span className="text-red-600">{error}</span>
+          <span className="text-destructive">{error}</span>
           <button
             type="button"
             onClick={() => setError("")}
-            className="text-red-600 hover:text-red-700"
+            className="text-destructive hover:text-destructive"
           >
             <X className="w-5 h-5" aria-hidden="true" />
             <span className="sr-only">Dismiss error message</span>
@@ -334,7 +334,7 @@ const AdminDashboard = ({ onError }: AdminDashboardProps) => {
               placeholder="Search by name or email…"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full pl-10 pr-4 py-2.5 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
             />
           </div>
 
@@ -414,7 +414,7 @@ const AdminDashboard = ({ onError }: AdminDashboardProps) => {
                             );
                             if (next) setEditingRole(next);
                           }}
-                          className="px-3 py-1 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="px-3 py-1 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
                         >
                           {USER_ROLES.map((option) => (
                             <option key={option} value={option}>

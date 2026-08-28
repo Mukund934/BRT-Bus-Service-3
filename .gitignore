@@ -44,3 +44,6 @@ pubsub-debug.log
 # Private planning docs - roadmaps, audits, competitive research.
 # Never published: the public repo shows the product, not the plan.
 docs/private/
+
+# Local editor and tooling state.
+.claude/

@@ -82,6 +82,14 @@ describe("recovering from a failed render", () => {
     silenceReactErrorLog();
 
     const reload = vi.fn();
+
+    /*
+      Restored below. Left in place it leaks into every file that runs after
+      this one in the same worker: the replacement has no origin or href, so
+      any later test that pushes history fails with an unrelated URL error.
+    */
+    const realLocation = Object.getOwnPropertyDescriptor(window, "location");
+
     Object.defineProperty(window, "location", {
       configurable: true,
       value: { reload },
@@ -96,6 +104,8 @@ describe("recovering from a failed render", () => {
     await user.click(screen.getByRole("button", { name: "Reload the page" }));
 
     expect(reload).toHaveBeenCalled();
+
+    if (realLocation) Object.defineProperty(window, "location", realLocation);
   });
 
   it("offers a fresh load of the home page rather than a router link", () => {

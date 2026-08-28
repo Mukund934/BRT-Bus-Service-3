@@ -114,13 +114,13 @@ const Driver = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#f4f2ff]">
+    <div className="min-h-screen bg-background">
       <Header />
 
       <main id="main-content" tabIndex={-1} className="py-20 px-4">
         <div className="max-w-xl mx-auto">
           <div className="bg-white rounded-2xl shadow-lg p-8 text-center space-y-6">
-            <h1 className="text-2xl font-bold text-[#6b4fa3]">Driver Live Tracking</h1>
+            <h1 className="text-2xl font-bold text-primary-deep">Driver Live Tracking</h1>
 
             {user && (
               <p className="text-sm text-gray-500">
@@ -142,7 +142,7 @@ const Driver = () => {
                 value={routeId}
                 disabled={isSharing}
                 onChange={(event) => setRouteId(event.target.value as RouteId)}
-                className="w-full bg-gray-50 rounded-lg px-4 py-2.5 border-2 border-transparent focus:border-purple-400 transition-colors disabled:opacity-60"
+                className="w-full bg-gray-50 rounded-lg px-4 py-2.5 border-2 border-input focus:border-primary transition-colors disabled:opacity-60"
               >
                 {ROUTE_IDS.map((id) => (
                   <option key={id} value={id}>
@@ -172,8 +172,8 @@ const Driver = () => {
             </div>
 
             {error && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                <p className="text-sm text-red-600">{error}</p>
+              <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-3">
+                <p className="text-sm text-destructive">{error}</p>
               </div>
             )}
 
@@ -196,7 +196,7 @@ const Driver = () => {
               ) : (
                 <button
                   onClick={() => void stop()}
-                  className="px-6 py-3 rounded-xl bg-red-500 text-white font-medium shadow hover:bg-red-600 transition"
+                  className="px-6 py-3 rounded-xl bg-destructive text-white font-medium shadow hover:bg-destructive transition"
                 >
                   Stop Sharing
                 </button>

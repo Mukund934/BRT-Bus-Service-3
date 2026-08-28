@@ -9,6 +9,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { TicketProvider } from "@/contexts/TicketContext";
 import { NotificationProvider } from "@/components/NotificationPopup";
 import ArrivalMonitor from "@/components/ArrivalMonitor";
+import ServiceAlerts from "@/components/ServiceAlerts";
 import { LiveAnnouncer } from "@/components/a11y/LiveAnnouncer";
 import { RouteChangeHandler } from "@/components/a11y/RouteChangeHandler";
 import {
@@ -31,6 +32,7 @@ const Home = lazy(() => import("./pages/Home"));
 const Plan = lazy(() => import("./pages/Plan"));
 const RouteExplorer = lazy(() => import("./pages/RouteExplorer"));
 const NearbyPlaces = lazy(() => import("./pages/NearbyPlaces"));
+const PlaceDetail = lazy(() => import("./pages/PlaceDetail"));
 const Fares = lazy(() => import("./pages/Fares"));
 const Timetable = lazy(() => import("./pages/Timetable"));
 const Contact = lazy(() => import("./pages/Contact"));
@@ -49,11 +51,11 @@ const NotFound = lazy(() => import("./pages/NotFound"));
  */
 const RouteFallback = () => (
   <div
-    className="min-h-screen flex items-center justify-center bg-[#f4f2ff]"
+    className="min-h-screen flex items-center justify-center bg-background"
     role="status"
     aria-live="polite"
   >
-    <Loader2 className="w-8 h-8 text-[#874f9c] animate-spin" aria-hidden="true" />
+    <Loader2 className="w-8 h-8 text-primary animate-spin" aria-hidden="true" />
     <span className="sr-only">Loading page…</span>
   </div>
 );
@@ -80,6 +82,8 @@ const App = () => (
 
               <ArrivalMonitor />
 
+              <ServiceAlerts />
+
               <Suspense fallback={<RouteFallback />}>
                 <Routes>
                   {/* Public */}
@@ -87,6 +91,7 @@ const App = () => (
                   <Route path="/plan" element={<Plan />} />
                   <Route path="/routes" element={<RouteExplorer />} />
                   <Route path="/nearby" element={<NearbyPlaces />} />
+                  <Route path="/nearby/:placeId" element={<PlaceDetail />} />
                   <Route path="/fares" element={<Fares />} />
                   <Route path="/timetable" element={<Timetable />} />
                   <Route path="/contact" element={<Contact />} />

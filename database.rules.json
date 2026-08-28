@@ -3,11 +3,19 @@
     ".read": false,
     ".write": false,
 
+    "driverAllowlist": {
+      ".read": false,
+
+      "$uid": {
+        ".write": false
+      }
+    },
+
     "busLocations": {
       ".read": true,
 
       "$driverUid": {
-        ".write": "auth != null && auth.uid === $driverUid",
+        ".write": "auth != null && auth.uid === $driverUid && root.child('driverAllowlist').child(auth.uid).val() === true",
 
         ".validate": "newData.hasChildren(['lat', 'lng', 'updatedAt']) || !newData.exists()",
 

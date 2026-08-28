@@ -2,11 +2,11 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import ServiceAlerts from "@/components/ServiceAlerts";
 import RouteCard from "@/components/RouteCard";
 import heroBus from "@/assets/hero-brts.webp";
 import { Clock, Compass, MapPin, Shield, Zap } from "lucide-react";
 import { getTripStops, getTrips, type Trip } from "@/domain/transit/schedule";
+import { useReducedMotion } from "@/hooks/use-reduced-motion";
 
 const rotatingTexts = [
   "Experience the Best BRT Service",
@@ -60,24 +60,32 @@ const features = [
 const Home = () => {
   const [textIndex, setTextIndex] = useState(0);
   const [animKey, setAnimKey] = useState(0);
+  const reducedMotion = useReducedMotion();
 
+  /*
+    The headline cycles for as long as the page is open, which is exactly the
+    auto-starting motion WCAG 2.2.2 is about. Under a reduced-motion
+    preference it settles on the first line and stops rather than animating
+    indefinitely - the stylesheet cannot help here, because the movement is a
+    timer swapping content, not a CSS animation.
+  */
   useEffect(() => {
+    if (reducedMotion) return;
+
     const interval = setInterval(() => {
       setTextIndex((prev) => (prev + 1) % rotatingTexts.length);
       setAnimKey((prev) => prev + 1);
     }, 3000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [reducedMotion]);
 
   return (
-    <div className="min-h-screen bg-[#f4f2ff]">
+    <div className="min-h-screen bg-background">
 
       <Header />
 
       <main id="main-content" tabIndex={-1}>
-
-      <ServiceAlerts />
 
       <section className="relative w-full h-[420px] md:h-[520px] lg:h-[620px] overflow-hidden">
 
@@ -101,7 +109,16 @@ const Home = () => {
           className="w-full h-full object-cover scale-[1.03]"
         />
 
-        <div className="absolute inset-0 bg-gradient-to-br from-[#874f9c]/80 via-[#874f9c]/70 to-[#5a3fa0]/85 flex items-center justify-center">
+        {/*
+          The scrim is set by contrast, not by taste.
+
+          A photo hero has no fixed background colour, so the overlay has to
+          hold the worst case: a white frame behind it. At the previous
+          `primary/70` centre, the subtitle measured 2.92:1 against that - a
+          fail whatever the photograph happens to be. The deep tone at /75
+          reaches 4.59:1 and still leaves a quarter of the image showing.
+        */}
+        <div className="absolute inset-0 bg-gradient-to-br from-primary-deep/80 via-primary-deep/75 to-primary-deep/90 flex items-center justify-center">
 
           <div className="text-center px-4 max-w-4xl">
 
@@ -112,7 +129,7 @@ const Home = () => {
             */}
             <h1
               key={animKey}
-              className="text-white text-3xl md:text-5xl lg:text-6xl font-semibold tracking-tight drop-shadow-lg transition-all duration-700"
+              className="text-white text-3xl md:text-5xl lg:text-6xl font-semibold tracking-tight drop-shadow-lg animate-fade-in-up"
             >
               {rotatingTexts[textIndex]}
             </h1>
@@ -125,7 +142,7 @@ const Home = () => {
 
         </div>
 
-        <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-[#f4f2ff] to-transparent"></div>
+        <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-background to-transparent"></div>
 
       </section>
 
@@ -137,28 +154,28 @@ const Home = () => {
 
         <div className="max-w-7xl mx-auto">
 
-          <div className="relative rounded-[32px] bg-[#faf9ff] px-6 md:px-12 py-14 shadow-[0_30px_90px_rgba(0,0,0,0.06)]">
+          <div className="relative rounded-[32px] bg-surface-raised px-6 md:px-12 py-14 shadow-[0_30px_90px_rgba(0,0,0,0.06)]">
 
-            <div className="absolute inset-0 rounded-[32px] bg-gradient-to-br from-purple-200/30 via-purple-100/20 to-transparent blur-3xl opacity-70"></div>
+            <div className="absolute inset-0 rounded-[32px] bg-gradient-to-br from-primary/20 via-primary/10 to-transparent blur-3xl opacity-70"></div>
 
             <div className="relative grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
 
               {features.map((feature, idx) => (
                 <div
                   key={idx}
-                  className="group rounded-[22px] p-[1px] bg-gradient-to-br from-purple-200/40 via-purple-100/30 to-transparent transition-all duration-300 hover:-translate-y-[6px]"
+                  className="group rounded-[22px] p-[1px] bg-gradient-to-br from-primary/25 via-primary/15 to-transparent transition-transform duration-150 hover:-translate-y-[6px]"
                 >
-                  <div className="rounded-[22px] bg-white/95 backdrop-blur-xl p-6 border border-purple-100 shadow-[0_10px_30px_rgba(0,0,0,0.05)] transition-all duration-300 group-hover:shadow-[0_25px_70px_rgba(0,0,0,0.08)]">
+                  <div className="rounded-[22px] bg-white/95 backdrop-blur-xl p-6 border border-border shadow-[0_10px_30px_rgba(0,0,0,0.05)] transition-shadow duration-150 group-hover:shadow-[0_25px_70px_rgba(0,0,0,0.08)]">
 
-                    <div className="w-12 h-12 rounded-xl bg-purple-100 flex items-center justify-center mb-4">
-                      <feature.icon className="w-6 h-6 text-[#874f9c]" />
+                    <div className="w-12 h-12 rounded-xl bg-accent flex items-center justify-center mb-4">
+                      <feature.icon className="w-6 h-6 text-primary" />
                     </div>
 
-                    <h3 className="text-[17px] font-semibold text-[#874f9c] mb-2">
+                    <h3 className="text-[17px] font-semibold text-primary mb-2">
                       {feature.title}
                     </h3>
 
-                    <p className="text-sm text-[#7a6aa8] leading-relaxed">
+                    <p className="text-sm text-muted-foreground leading-relaxed">
                       {feature.description}
                     </p>
 
@@ -178,14 +195,14 @@ const Home = () => {
 
         <div className="max-w-7xl mx-auto">
 
-          <div className="relative rounded-[30px] bg-[#faf9ff] px-6 md:px-12 py-10 shadow-[0_25px_80px_rgba(0,0,0,0.06)] flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+          <div className="relative rounded-[30px] bg-surface-raised px-6 md:px-12 py-10 shadow-[0_25px_80px_rgba(0,0,0,0.06)] flex flex-col md:flex-row md:items-center md:justify-between gap-6">
 
             <div>
-              <h2 id="explore-heading" className="text-[26px] md:text-[32px] font-semibold text-[#874f9c] tracking-tight">
+              <h2 id="explore-heading" className="text-[26px] md:text-[32px] font-semibold text-primary tracking-tight">
                 Places to explore
               </h2>
 
-              <p className="text-[#7a6aa8] text-[15px] md:text-[16px] mt-3 max-w-2xl">
+              <p className="text-muted-foreground text-[15px] md:text-[16px] mt-3 max-w-2xl">
                 Campuses, hospitals, government offices and attractions across
                 Nava Raipur, each with its nearest BRT stop.
               </p>
@@ -193,7 +210,7 @@ const Home = () => {
 
             <Link
               to="/nearby"
-              className="inline-flex items-center gap-2 px-7 py-3 rounded-xl bg-[#874f9c] text-white font-semibold whitespace-nowrap transition-all duration-300 hover:-translate-y-[2px] hover:shadow-[0_15px_35px_rgba(135,79,156,0.35)]"
+              className="inline-flex items-center gap-2 px-7 py-3 rounded-xl bg-primary text-white font-semibold whitespace-nowrap transition-[transform,box-shadow] duration-150 hover:-translate-y-[2px] hover:shadow-[0_15px_35px_hsl(var(--primary)/0.35)]"
             >
               <Compass className="w-5 h-5" aria-hidden="true" />
               Explore nearby places
@@ -210,25 +227,25 @@ const Home = () => {
         <div className="max-w-7xl mx-auto">
 
           <div className="text-center mb-12">
-            <h2 className="text-[34px] md:text-[40px] font-semibold text-[#874f9c] tracking-tight">
+            <h2 className="text-[34px] md:text-[40px] font-semibold text-primary tracking-tight">
               Available buses
             </h2>
 
-            <p className="text-[#7a6aa8] text-[15px] md:text-[16px] mt-3">
+            <p className="text-muted-foreground text-[15px] md:text-[16px] mt-3">
               Choose from our scheduled bus services
             </p>
           </div>
 
-          <div className="relative rounded-[30px] bg-[#faf9ff] px-6 md:px-12 py-12 shadow-[0_25px_80px_rgba(0,0,0,0.06)]">
+          <div className="relative rounded-[30px] bg-surface-raised px-6 md:px-12 py-12 shadow-[0_25px_80px_rgba(0,0,0,0.06)]">
 
-            <div className="absolute inset-0 rounded-[30px] bg-gradient-to-br from-purple-200/30 via-purple-100/20 to-transparent blur-3xl opacity-70"></div>
+            <div className="absolute inset-0 rounded-[30px] bg-gradient-to-br from-primary/20 via-primary/10 to-transparent blur-3xl opacity-70"></div>
 
             <div className="relative grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 
               {FEATURED_TRIPS.map((trip, index) => (
                 <div
                   key={trip.id}
-                  className="group transition-all duration-300 hover:-translate-y-[5px]"
+                  className="group transition-transform duration-150 hover:-translate-y-[5px]"
                 >
                   <RouteCard
                     title={`BUS ${index + 1} - ${trip.calls[0]?.time} Departure`}

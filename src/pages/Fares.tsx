@@ -216,7 +216,7 @@ const Fares = () => {
                 <a
                   href={FARE_CHART_URL}
                   download
-                  className="px-6 py-3 rounded-xl border border-border text-foreground font-medium transition-all duration-300 hover:bg-secondary inline-flex items-center gap-2 touch-target"
+                  className="px-6 py-3 rounded-xl border border-border text-foreground font-medium transition-colors duration-150 hover:bg-secondary inline-flex items-center gap-2 touch-target"
                 >
                   <Download className="w-4 h-4" aria-hidden="true" />
                   Download

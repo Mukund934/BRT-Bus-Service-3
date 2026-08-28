@@ -47,6 +47,13 @@ describe("what a visitor is told", () => {
     expect(screen.queryByText("Sector 27 stop closed")).not.toBeInTheDocument();
   });
 
+  /*
+    The announcement has to be spoken by a region that was ALREADY in the
+    document. These cards do not exist until the fetch resolves, so a role on
+    them is a live region arriving with its message already inside it, which
+    most screen readers do not announce at all. The app's shared assertive
+    region is mounted from the first paint, so it is the one that works.
+  */
   it("interrupts a screen reader only for a major disruption", async () => {
     seedAnnouncement("a1", { severity: "CRITICAL", title: "Services suspended" });
 
@@ -54,9 +61,21 @@ describe("what a visitor is told", () => {
 
     await screen.findByText("Services suspended");
 
-    const alert = within(alertsRegion()!).getByRole("alert");
+    await waitFor(() =>
+      expect(screen.getByRole("alert")).toHaveTextContent("Services suspended")
+    );
+  });
 
-    expect(alert).toHaveTextContent("Services suspended");
+  it("speaks it from a region that predates the notice", async () => {
+    seedAnnouncement("a1", { severity: "CRITICAL", title: "Services suspended" });
+
+    renderWithProviders(<ServiceAlerts />);
+
+    await screen.findByText("Services suspended");
+
+    // The card carries no live-region role of its own to compete with it.
+    expect(within(alertsRegion()!).queryByRole("alert")).not.toBeInTheDocument();
+    expect(within(alertsRegion()!).queryByRole("status")).not.toBeInTheDocument();
   });
 
   it("reports an ordinary notice without interrupting", async () => {
@@ -66,10 +85,13 @@ describe("what a visitor is told", () => {
 
     await screen.findByText("New timetable published");
 
-    const region = within(alertsRegion()!);
+    await waitFor(() =>
+      expect(screen.getByRole("status")).toHaveTextContent(
+        "New timetable published"
+      )
+    );
 
-    expect(region.getByRole("status")).toHaveTextContent("New timetable published");
-    expect(region.queryByRole("alert")).not.toBeInTheDocument();
+    expect(screen.getByRole("alert")).toHaveTextContent("");
   });
 
   it("names the severity for a reader who cannot see the colour", async () => {

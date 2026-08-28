@@ -94,7 +94,7 @@ const UserDashboard = () => {
     <div className="max-w-5xl mx-auto">
       <div className="bg-white rounded-2xl p-8 shadow-lg mb-8">
         <div className="flex items-center gap-6 mb-8">
-          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-purple-400 to-purple-600 text-white flex items-center justify-center text-2xl font-bold">
+          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary to-primary-deep text-white flex items-center justify-center text-2xl font-bold">
             {user?.photoURL ? (
               <img
                 src={user.photoURL}
@@ -110,30 +110,30 @@ const UserDashboard = () => {
               {user?.displayName || "Passenger"}
             </h1>
             <p className="text-gray-600">{user?.email}</p>
-            <p className="text-sm text-purple-600 font-semibold mt-1">👤 Passenger</p>
+            <p className="text-sm text-primary font-semibold mt-1">👤 Passenger</p>
           </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          <div className="bg-purple-50 rounded-xl p-4 border border-purple-100">
+          <div className="bg-secondary rounded-xl p-4 border border-border">
             <div className="flex items-center gap-2 mb-1">
-              <History className="w-4 h-4 text-purple-600" />
+              <History className="w-4 h-4 text-primary" />
               <p className="text-xs text-gray-600">Trips Completed</p>
             </div>
             <p className="text-2xl font-bold text-gray-900">{stats.tripsCompleted}</p>
           </div>
 
-          <div className="bg-purple-50 rounded-xl p-4 border border-purple-100">
+          <div className="bg-secondary rounded-xl p-4 border border-border">
             <div className="flex items-center gap-2 mb-1">
-              <IndianRupee className="w-4 h-4 text-purple-600" />
+              <IndianRupee className="w-4 h-4 text-primary" />
               <p className="text-xs text-gray-600">Total Spent</p>
             </div>
             <p className="text-2xl font-bold text-gray-900">₹{stats.totalSpent}/-</p>
           </div>
 
-          <div className="bg-purple-50 rounded-xl p-4 border border-purple-100">
+          <div className="bg-secondary rounded-xl p-4 border border-border">
             <div className="flex items-center gap-2 mb-1">
-              <Route className="w-4 h-4 text-purple-600" />
+              <Route className="w-4 h-4 text-primary" />
               <p className="text-xs text-gray-600">Favourite Route</p>
             </div>
             <p className="text-2xl font-bold text-gray-900">
@@ -144,7 +144,7 @@ const UserDashboard = () => {
 
         <div className="border-t pt-8">
           <div className="flex items-center gap-2 mb-6">
-            <Ticket className="w-6 h-6 text-purple-600" />
+            <Ticket className="w-6 h-6 text-primary" />
             <h2 className="text-2xl font-bold text-gray-900">Your Ticket</h2>
           </div>
 
@@ -159,7 +159,7 @@ const UserDashboard = () => {
               </p>
               <button
                 onClick={() => navigate("/timetable")}
-                className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-semibold"
+                className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary-strong transition-colors font-semibold"
               >
                 Book a Ticket
               </button>
@@ -171,7 +171,7 @@ const UserDashboard = () => {
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
               <div className="flex items-center gap-2 mb-1">
-                <Bell className="w-6 h-6 text-purple-600" />
+                <Bell className="w-6 h-6 text-primary" />
                 <h2 className="text-2xl font-bold text-gray-900">Arrival Alerts</h2>
               </div>
               <p className="text-sm text-gray-600">
@@ -186,7 +186,7 @@ const UserDashboard = () => {
               aria-pressed={alertsEnabled}
               className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors disabled:opacity-60 ${
                 alertsEnabled
-                  ? "bg-purple-600 text-white hover:bg-purple-700"
+                  ? "bg-primary text-white hover:bg-primary-strong"
                   : "bg-gray-100 text-gray-600 hover:bg-gray-200"
               }`}
             >
@@ -199,7 +199,7 @@ const UserDashboard = () => {
         <div className="border-t pt-8 mt-8">
           <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
             <div className="flex items-center gap-2">
-              <History className="w-6 h-6 text-purple-600" />
+              <History className="w-6 h-6 text-primary" />
               <h2 className="text-2xl font-bold text-gray-900">Ticket History</h2>
             </div>
 
@@ -216,7 +216,7 @@ const UserDashboard = () => {
                   aria-pressed={filter === option}
                   className={`px-3 py-2 rounded-lg text-xs font-semibold transition-colors ${
                     filter === option
-                      ? "bg-purple-600 text-white"
+                      ? "bg-primary text-white"
                       : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                   }`}
                 >

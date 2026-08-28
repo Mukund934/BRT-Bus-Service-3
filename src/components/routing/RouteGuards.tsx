@@ -19,10 +19,10 @@ import { can, type Permission } from "@/domain/auth/permissions";
 
 /** Shown while the session resolves, so no protected UI renders early. */
 const ResolvingSession = () => (
-  <div className="min-h-screen bg-[#f4f2ff] flex items-center justify-center">
+  <div className="min-h-screen bg-background flex items-center justify-center">
     <div className="flex flex-col items-center gap-4">
-      <Loader className="w-8 h-8 text-[#874f9c] animate-spin" />
-      <p className="text-[#6b4fa3] font-medium">Checking your access…</p>
+      <Loader className="w-8 h-8 text-primary animate-spin" />
+      <p className="text-primary-deep font-medium">Checking your access…</p>
     </div>
   </div>
 );
@@ -34,9 +34,9 @@ const ResolvingSession = () => (
  * grant access - a refusal should not double as a map of the app.
  */
 const AccessDenied = () => (
-  <div className="min-h-screen bg-[#f4f2ff] flex items-center justify-center px-4">
+  <div className="min-h-screen bg-background flex items-center justify-center px-4">
     <div className="bg-white rounded-2xl shadow-lg p-10 max-w-md text-center">
-      <ShieldAlert className="w-12 h-12 text-red-500 mx-auto mb-4" />
+      <ShieldAlert className="w-12 h-12 text-destructive mx-auto mb-4" />
       <h1 className="text-xl font-semibold text-gray-900 mb-2">Access denied</h1>
       <p className="text-gray-600">
         You do not have permission to view this page.

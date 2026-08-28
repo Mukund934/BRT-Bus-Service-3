@@ -3,7 +3,8 @@ import { Bus, RadioTower } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { PERMISSIONS, can } from "@/domain/auth/permissions";
 import { POLLING } from "@/constants/config";
-import { getRoute, locateOnRoute } from "@/domain/transit/routes";
+import { destinationOf, getRoute } from "@/domain/transit/routes";
+import type { VehicleTelemetry } from "@/domain/fleet/telemetry";
 import {
   selectFreshBuses,
   subscribeToBuses,
@@ -21,8 +22,10 @@ const FILTER_LABELS: Record<Filter, string> = {
   ON_SHIFT: "On shift",
 };
 
-const lastSeen = (bus: LiveBus): string =>
-  bus.updatedAt ? new Date(bus.updatedAt).toLocaleTimeString() : "—";
+const lastSeen = (telemetry: VehicleTelemetry): string =>
+  telemetry.observedAt
+    ? new Date(telemetry.observedAt).toLocaleTimeString()
+    : "—";
 
 interface FleetStatusProps {
   users: UserRecord[];
@@ -70,7 +73,7 @@ const FleetStatus = ({ users, loading }: FleetStatusProps) => {
   const live = useMemo(() => selectFreshBuses(buses, checkedAt), [buses, checkedAt]);
 
   const byBusId = useMemo(
-    () => new Map(live.map((bus) => [bus.busId, bus])),
+    () => new Map(live.map((vehicle) => [vehicle.telemetry.vehicleId, vehicle])),
     [live]
   );
 
@@ -97,7 +100,7 @@ const FleetStatus = ({ users, loading }: FleetStatusProps) => {
     <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8 mb-8">
       <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
         <div className="flex items-center gap-2">
-          <RadioTower className="w-6 h-6 text-purple-600" aria-hidden="true" />
+          <RadioTower className="w-6 h-6 text-primary" aria-hidden="true" />
           <h2 className="text-2xl font-bold text-gray-900">Fleet Status</h2>
         </div>
 
@@ -110,7 +113,7 @@ const FleetStatus = ({ users, loading }: FleetStatusProps) => {
               aria-pressed={filter === option}
               className={`px-3 py-2 rounded-lg text-xs font-semibold transition-colors ${
                 filter === option
-                  ? "bg-purple-600 text-white"
+                  ? "bg-primary text-white"
                   : "bg-gray-100 text-gray-600 hover:bg-gray-200"
               }`}
             >
@@ -121,17 +124,17 @@ const FleetStatus = ({ users, loading }: FleetStatusProps) => {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-        <div className="bg-purple-50 rounded-xl p-4 border border-purple-100">
+        <div className="bg-secondary rounded-xl p-4 border border-border">
           <p className="text-xs text-gray-600 mb-1">Driver accounts</p>
           <p className="text-2xl font-bold text-gray-900">{drivers.length}</p>
         </div>
 
-        <div className="bg-purple-50 rounded-xl p-4 border border-purple-100">
+        <div className="bg-secondary rounded-xl p-4 border border-border">
           <p className="text-xs text-gray-600 mb-1">On shift</p>
           <p className="text-2xl font-bold text-gray-900">{onShift}</p>
         </div>
 
-        <div className="bg-purple-50 rounded-xl p-4 border border-purple-100">
+        <div className="bg-secondary rounded-xl p-4 border border-border">
           <p className="text-xs text-gray-600 mb-1">Buses reporting</p>
           <p className="text-2xl font-bold text-gray-900">{live.length}</p>
         </div>
@@ -171,17 +174,12 @@ const FleetStatus = ({ users, loading }: FleetStatusProps) => {
                 <th className="text-left">Bus</th>
                 <th className="text-left">Status</th>
                 <th className="text-left">Route</th>
-                <th className="text-left">Next stop</th>
+                <th className="text-left">Towards</th>
                 <th className="text-left">Last report</th>
               </tr>
             </thead>
             <tbody>
               {visible.map(({ driver, busId, bus }) => {
-                const place =
-                  bus && bus.routeId
-                    ? locateOnRoute(bus.routeId, { lat: bus.lat, lng: bus.lng })
-                    : null;
-
                 return (
                   <tr key={driver.uid} className="border-b">
                     <td className="py-2">
@@ -208,11 +206,20 @@ const FleetStatus = ({ users, loading }: FleetStatusProps) => {
                       </span>
                     </td>
 
-                    <td>{bus?.routeId ? getRoute(bus.routeId).name : "—"}</td>
+                    <td>
+                      {bus?.telemetry.routeId
+                        ? getRoute(bus.telemetry.routeId).name
+                        : "—"}
+                    </td>
 
-                    <td>{place?.nextStop ?? "—"}</td>
+                    {/* The route's published terminus, not a coordinate match. */}
+                    <td>
+                      {bus?.telemetry.routeId
+                        ? destinationOf(bus.telemetry.routeId)
+                        : "—"}
+                    </td>
 
-                    <td>{bus ? lastSeen(bus) : "—"}</td>
+                    <td>{bus ? lastSeen(bus.telemetry) : "—"}</td>
                   </tr>
                 );
               })}

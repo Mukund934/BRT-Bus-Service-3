@@ -7,12 +7,13 @@
  * not fire repeatedly.
  */
 
+import { DEFAULT_FRESHNESS } from "@/domain/fleet/state";
 import { describe, expect, it, vi } from "vitest";
 import { ARRIVAL_RULES, NOTIFICATION_RULES } from "@/constants/config";
 import {
   createAlertThrottle,
   requestAlertPermission,
-  selectNearestEta,
+  selectNearestDistanceKm,
   shouldAlert,
 } from "@/services/notificationService";
 import type { LiveBus } from "@/services/locationService";
@@ -29,50 +30,63 @@ const bus = (over: Partial<LiveBus> = {}): LiveBus => ({
   ...over,
 });
 
-describe("estimating arrival", () => {
-  it("reports no estimate when nothing is reporting", () => {
-    expect(selectNearestEta([], stop, NOW)).toBeNull();
+describe("measuring how close the nearest bus is", () => {
+  it("reports no distance when nothing is reporting", () => {
+    expect(selectNearestDistanceKm([], stop, NOW)).toBeNull();
   });
 
-  it("reports no estimate when every bus is stale", () => {
-    const old = bus({ updatedAt: NOW - ARRIVAL_RULES.STALE_LOCATION_MS - 1 });
+  it("reports no distance when every bus is stale", () => {
+    const old = bus({ updatedAt: NOW - DEFAULT_FRESHNESS.staleMs - 1 });
 
-    expect(selectNearestEta([old], stop, NOW)).toBeNull();
+    expect(selectNearestDistanceKm([old], stop, NOW)).toBeNull();
   });
 
-  it("is zero minutes for a bus already at the stop", () => {
-    expect(selectNearestEta([bus()], stop, NOW)).toBe(0);
+  it("is zero for a bus already at the stop", () => {
+    expect(selectNearestDistanceKm([bus()], stop, NOW)).toBe(0);
   });
 
   it("picks the nearest bus, not the first", () => {
     const far = bus({ busId: "FAR", lat: stop.lat + 0.5, lng: stop.lng + 0.5 });
     const near = bus({ busId: "NEAR", lat: stop.lat + 0.01 });
 
-    const withFarFirst = selectNearestEta([far, near], stop, NOW);
-    const withNearFirst = selectNearestEta([near, far], stop, NOW);
+    const withFarFirst = selectNearestDistanceKm([far, near], stop, NOW);
+    const withNearFirst = selectNearestDistanceKm([near, far], stop, NOW);
 
     expect(withFarFirst).toBe(withNearFirst);
-    expect(withFarFirst!).toBeLessThan(selectNearestEta([far], stop, NOW)!);
+    expect(withFarFirst!).toBeLessThan(selectNearestDistanceKm([far], stop, NOW)!);
   });
 
   it("grows with distance", () => {
-    const near = selectNearestEta([bus({ lat: stop.lat + 0.02 })], stop, NOW)!;
-    const far = selectNearestEta([bus({ lat: stop.lat + 0.2 })], stop, NOW)!;
+    const near = selectNearestDistanceKm([bus({ lat: stop.lat + 0.02 })], stop, NOW)!;
+    const far = selectNearestDistanceKm([bus({ lat: stop.lat + 0.2 })], stop, NOW)!;
 
     expect(far).toBeGreaterThan(near);
+  });
+
+  /*
+    The defect this replaced: distance was divided by an assumed 30 km/h and
+    published as minutes. A kilometre reading must stay a kilometre reading.
+  */
+  it("returns kilometres, not minutes", () => {
+    const oneStopNorth = bus({ lat: stop.lat + 0.01 });
+
+    const km = selectNearestDistanceKm([oneStopNorth], stop, NOW)!;
+
+    expect(km).toBeGreaterThan(1);
+    expect(km).toBeLessThan(1.3);
   });
 });
 
 describe("deciding whether to interrupt the passenger", () => {
   it("alerts inside the threshold", () => {
-    expect(shouldAlert(ARRIVAL_RULES.ALERT_MINUTES)).toBe(true);
+    expect(shouldAlert(ARRIVAL_RULES.ALERT_RADIUS_KM)).toBe(true);
   });
 
   it("stays quiet outside it", () => {
-    expect(shouldAlert(ARRIVAL_RULES.ALERT_MINUTES + 1)).toBe(false);
+    expect(shouldAlert(ARRIVAL_RULES.ALERT_RADIUS_KM + 0.1)).toBe(false);
   });
 
-  it("stays quiet when there is no estimate at all", () => {
+  it("stays quiet when nothing is reporting at all", () => {
     expect(shouldAlert(null)).toBe(false);
   });
 });

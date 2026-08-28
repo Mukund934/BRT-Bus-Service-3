@@ -10,17 +10,19 @@
  * `enableRtdb` to drive the real subscription and cleanup logic instead.
  */
 
+import { DEFAULT_FRESHNESS } from "@/domain/fleet/state";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   isLiveTrackingAvailable,
   publishLocation,
+  classifyBuses,
   selectFreshBuses,
   stopPublishing,
   subscribeToBuses,
   toBusId,
   type LiveBus,
 } from "@/services/locationService";
-import { ARRIVAL_RULES, REMOTE_PATHS } from "@/constants/config";
+import { REMOTE_PATHS } from "@/constants/config";
 import { AuthorizationError } from "@/domain/auth/errors";
 import type { Actor } from "@/types/user";
 import {
@@ -131,19 +133,31 @@ describe("which positions still count as live", () => {
   });
 
   it("keeps a position reporting exactly on the threshold", () => {
-    const edge = bus({ updatedAt: NOW - ARRIVAL_RULES.STALE_LOCATION_MS });
+    const edge = bus({ updatedAt: NOW - DEFAULT_FRESHNESS.staleMs });
 
     expect(selectFreshBuses([edge], NOW)).toHaveLength(1);
   });
 
   it("drops a position older than the staleness window", () => {
-    const old = bus({ updatedAt: NOW - ARRIVAL_RULES.STALE_LOCATION_MS - 1 });
+    const old = bus({ updatedAt: NOW - 10 * 60 * 1000 });
 
     expect(selectFreshBuses([old], NOW)).toEqual([]);
   });
 
-  it("keeps a position with no timestamp rather than discarding it", () => {
-    expect(selectFreshBuses([bus({ updatedAt: undefined })], NOW)).toHaveLength(1);
+  /*
+    THIS TEST USED TO ASSERT THE OPPOSITE, and in doing so protected a live
+    bug: a record with no timestamp was kept forever, so a single write with no
+    `updatedAt` produced a permanently active bus on a public map that nothing
+    could retire. The honest answer is UNKNOWN - we do not know when it was
+    there - and UNKNOWN is not shown as running.
+  */
+  it("does not keep a position with no timestamp as a live bus", () => {
+    expect(selectFreshBuses([bus({ updatedAt: undefined })], NOW)).toEqual([]);
+
+    const classified = classifyBuses([bus({ updatedAt: undefined })], NOW);
+
+    expect(classified).toHaveLength(1);
+    expect(classified[0]!.state).toBe("UNKNOWN");
   });
 
   it("keeps only the fresh half of a mixed fleet", () => {
@@ -151,13 +165,30 @@ describe("which positions still count as live", () => {
       bus({ busId: "BUS-FRESH" }),
       bus({
         busId: "BUS-STALE",
-        updatedAt: NOW - ARRIVAL_RULES.STALE_LOCATION_MS - 1,
+        updatedAt: NOW - 10 * 60 * 1000,
       }),
     ];
 
-    expect(selectFreshBuses(fleet, NOW).map((entry) => entry.busId)).toEqual([
-      "BUS-FRESH",
-    ]);
+    expect(
+      selectFreshBuses(fleet, NOW).map((entry) => entry.telemetry.vehicleId)
+    ).toEqual(["BUS-FRESH"]);
+  });
+
+  /*
+    The point of the five-state model: a bus that stops reporting is not
+    deleted, it is classified. "Not running" and "not reporting" are different
+    facts to somebody standing at a stop, and the old filter destroyed the
+    difference.
+  */
+  it("keeps an offline bus in the fleet, carrying why", () => {
+    const fleet = classifyBuses(
+      [bus({ busId: "BUS-GONE", updatedAt: NOW - 10 * 60 * 1000 })],
+      NOW
+    );
+
+    expect(fleet).toHaveLength(1);
+    expect(fleet[0]!.state).toBe("OFFLINE");
+    expect(fleet[0]!.ageMs).toBe(10 * 60 * 1000);
   });
 });
 
@@ -255,7 +286,15 @@ describe("a driver who drops off the network", () => {
 });
 
 describe("watching the fleet", () => {
+  /*
+    The clock is pinned to the fixtures' own `NOW`. It did not need to be while
+    the subscription passed records straight through, but the telemetry gate
+    rejects an observation more than a day old - so a fixture dated months ago
+    against a real wall clock is now, correctly, not believed.
+  */
   beforeEach(() => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.setSystemTime(NOW);
     enableRtdb();
   });
 
@@ -402,5 +441,56 @@ describe("watching the fleet", () => {
     expect(onBuses).toHaveBeenCalledWith([]);
 
     refused.mockRestore();
+  });
+});
+
+/**
+ * The gate, from the subscription's side.
+ *
+ * `busLocations` is world-readable, and until the rules are deployed it is
+ * writable by any signed-in account. Anything the UI can be driven with from
+ * that node has to be stopped here, before a component ever sees it.
+ */
+describe("what a hostile record cannot do", () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.setSystemTime(NOW);
+    enableRtdb();
+  });
+
+  const received = async (records: Record<string, unknown>) => {
+    const onBuses = vi.fn();
+
+    subscribeToBuses(onBuses);
+    await Promise.resolve();
+    await Promise.resolve();
+
+    seedRtdb(REMOTE_PATHS.BUS_LOCATIONS, records);
+
+    await vi.waitFor(() => expect(onBuses).toHaveBeenCalled());
+
+    return onBuses.mock.calls[onBuses.mock.calls.length - 1]![0] as LiveBus[];
+  };
+
+  it("does not reach the map with a timestamp from the future", async () => {
+    const buses = await received({
+      "uid-good": { busId: "BUS-OK", lat: 21.1, lng: 81.8, updatedAt: Date.now() },
+      "uid-bad": {
+        busId: "BUS-FUTURE",
+        lat: 21.1,
+        lng: 81.8,
+        updatedAt: Date.now() + 10 * 60 * 1000,
+      },
+    });
+
+    expect(buses.map((bus) => bus.busId)).toEqual(["BUS-OK"]);
+  });
+
+  it("does not reach the map from the null island sentinel", async () => {
+    const buses = await received({
+      "uid-bad": { busId: "BUS-ZERO", lat: 0, lng: 0, updatedAt: Date.now() },
+    });
+
+    expect(buses).toEqual([]);
   });
 });

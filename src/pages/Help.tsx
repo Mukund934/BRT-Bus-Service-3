@@ -7,8 +7,15 @@ import { STOPS } from "@/domain/transit/stops";
 import { SCHEDULED_STOPS } from "@/domain/transit/schedule";
 import { STATUS_LABELS } from "@/domain/ticket/status";
 import { BOOKING_FAILURE_MESSAGES } from "@/services/ticketService";
+import { DEFAULT_FRESHNESS } from "@/domain/fleet/state";
 
-const staleMinutes = Math.round(ARRIVAL_RULES.STALE_LOCATION_MS / 60_000);
+/*
+  Read from the freshness ladder rather than typed as prose, so the page
+  cannot claim a window the map no longer applies. It was a single 120-second
+  cut-off; a bus is now classified across five states, and the number a
+  passenger cares about is the one past which we stop showing it at all.
+*/
+const staleMinutes = Math.round(DEFAULT_FRESHNESS.staleMs / 60_000);
 
 const Answer = ({
   question,
@@ -17,7 +24,7 @@ const Answer = ({
   question: string;
   children: React.ReactNode;
 }) => (
-  <div className="border-t border-purple-100 pt-5">
+  <div className="border-t border-border pt-5">
     <h3 className="font-semibold text-gray-900 mb-2">{question}</h3>
     <div className="text-gray-600 text-sm leading-relaxed space-y-2">{children}</div>
   </div>
@@ -31,20 +38,20 @@ const Section = ({
   children: React.ReactNode;
 }) => (
   <section className="bg-white rounded-2xl p-6 md:p-8 shadow-lg">
-    <h2 className="text-2xl font-bold text-[#6b4fa3] mb-6">{title}</h2>
+    <h2 className="text-2xl font-bold text-primary-deep mb-6">{title}</h2>
     <div className="space-y-5">{children}</div>
   </section>
 );
 
 const Help = () => {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#f4f2ff] to-white">
+    <div className="min-h-screen bg-gradient-to-b from-background to-white">
       <Header />
 
       <main id="main-content" tabIndex={-1} className="py-16 px-4">
         <div className="max-w-3xl mx-auto">
           <div className="text-center mb-12">
-            <h1 className="text-4xl font-bold text-[#6b4fa3] mb-3">
+            <h1 className="text-4xl font-bold text-primary-deep mb-3">
               Passenger Help
             </h1>
             <p className="text-gray-600">
@@ -63,7 +70,7 @@ const Help = () => {
                   stops that {getRoute("101").name} calls at.
                 </p>
                 <p>
-                  <Link to="/routes" className="text-purple-600 font-medium underline">
+                  <Link to="/routes" className="text-primary font-medium underline">
                     Browse every route and the stops it serves
                   </Link>
                   .
@@ -96,7 +103,7 @@ const Help = () => {
                   between any two stops.
                 </p>
                 <p>
-                  <Link to="/fares" className="text-purple-600 font-medium underline">
+                  <Link to="/fares" className="text-primary font-medium underline">
                     Check the fare between any two stops
                   </Link>
                   .
@@ -194,7 +201,7 @@ const Help = () => {
                   old no longer tells you where it is.
                 </p>
                 <p>
-                  <Link to="/map" className="text-purple-600 font-medium underline">
+                  <Link to="/map" className="text-primary font-medium underline">
                     Open the live map
                   </Link>
                   .
@@ -220,9 +227,15 @@ const Help = () => {
             <Section title="Arrival alerts">
               <Answer question="When am I told my bus is close?">
                 <p>
-                  When a bus that is reporting its position is within{" "}
-                  {ARRIVAL_RULES.ALERT_MINUTES} minutes of your boarding stop, and you
-                  are holding a live ticket for that journey.
+                  When a bus that is reporting its position comes within{" "}
+                  {ARRIVAL_RULES.ALERT_RADIUS_KM} km of your boarding stop in a straight
+                  line, and you are holding a live ticket for that journey.
+                </p>
+                <p>
+                  This is a proximity alert, not an arrival time. It does not know which
+                  route that bus is running, which direction it is travelling, or how
+                  long the road between you takes, so it never tells you how many minutes
+                  away it is. For a time, use the scheduled departure on the timetable.
                 </p>
               </Answer>
 
@@ -271,7 +284,7 @@ const Help = () => {
               <Answer question="Can I delete my account?">
                 <p>
                   Not from inside the app. Accounts are removed on request — please{" "}
-                  <Link to="/contact" className="text-purple-600 font-medium underline">
+                  <Link to="/contact" className="text-primary font-medium underline">
                     contact the team
                   </Link>
                   .
@@ -283,7 +296,7 @@ const Help = () => {
               <Answer question="I have forgotten my password.">
                 <p>
                   Use{" "}
-                  <Link to="/login" className="text-purple-600 font-medium underline">
+                  <Link to="/login" className="text-primary font-medium underline">
                     Forgot password
                   </Link>{" "}
                   on the sign-in page. A reset link is sent to your email address. For
@@ -296,7 +309,7 @@ const Help = () => {
                 <p>
                   Timetable, route and fare data follow the official published sources.
                   If something does not match what you saw at the stop, please{" "}
-                  <Link to="/contact" className="text-purple-600 font-medium underline">
+                  <Link to="/contact" className="text-primary font-medium underline">
                     tell the team
                   </Link>{" "}
                   so it can be checked.

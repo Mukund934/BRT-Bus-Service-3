@@ -3,7 +3,9 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { MAP_CONFIG, POLLING } from "@/constants/config";
 import { DEFAULT_MAP_CENTER } from "@/domain/transit/stops";
-import { getRoute, locateOnRoute } from "@/domain/transit/routes";
+import { destinationOf, getRoute } from "@/domain/transit/routes";
+import { STATE_DESCRIPTIONS, STATE_LABELS } from "@/domain/fleet/state";
+import { hasPosition } from "@/domain/fleet/telemetry";
 import {
   selectFreshBuses,
   subscribeToBuses,
@@ -64,16 +66,27 @@ const MapPage = () => {
     [buses, checkedAt]
   );
 
-  /** Centre on the fleet, falling back to the first stop before any report. */
-  const { lat, lng } = useMemo(() => {
-    if (active.length === 0) return DEFAULT_MAP_CENTER;
+  /*
+    Centre on the fleet, falling back to the first stop before any report.
 
-    const total = active.reduce(
-      (acc, bus) => ({ lat: acc.lat + bus.lat, lng: acc.lng + bus.lng }),
+    Only vehicles that actually carry a position count: the contract permits a
+    null one, and real feeds publish them, so averaging over the whole fleet
+    would drag the centre towards zero.
+  */
+  const { lat, lng } = useMemo(() => {
+    const located = active.filter((vehicle) => hasPosition(vehicle.telemetry));
+
+    if (located.length === 0) return DEFAULT_MAP_CENTER;
+
+    const total = located.reduce(
+      (acc, vehicle) => ({
+        lat: acc.lat + vehicle.telemetry.lat!,
+        lng: acc.lng + vehicle.telemetry.lng!,
+      }),
       { lat: 0, lng: 0 }
     );
 
-    return { lat: total.lat / active.length, lng: total.lng / active.length };
+    return { lat: total.lat / located.length, lng: total.lng / located.length };
   }, [active]);
 
   const bbox = [
@@ -84,12 +97,12 @@ const MapPage = () => {
   ].join(",");
 
   return (
-    <div className="min-h-screen bg-[#f4f2ff]">
+    <div className="min-h-screen bg-background">
       <Header />
 
       <main id="main-content" tabIndex={-1} className="py-20 px-4">
         <div className="max-w-6xl mx-auto">
-          <h1 className="text-2xl font-bold text-center mb-6 text-[#6b4fa3]">
+          <h1 className="text-2xl font-bold text-center mb-6 text-primary-deep">
             Live Bus Tracking
           </h1>
 
@@ -108,7 +121,7 @@ const MapPage = () => {
           </div>
 
           <div className="bg-white rounded-xl shadow p-6">
-            <h2 className="text-lg font-semibold mb-4 text-[#6b4fa3]">Active Buses</h2>
+            <h2 className="text-lg font-semibold mb-4 text-primary-deep">Active Buses</h2>
 
             {loading && <p>Loading buses...</p>}
 
@@ -126,33 +139,59 @@ const MapPage = () => {
                   <tr className="border-b">
                     <th className="text-left py-2">Bus</th>
                     <th className="text-left">Route</th>
-                    <th className="text-left">Next stop</th>
                     <th className="text-left">Towards</th>
+                    <th className="text-left">Status</th>
                     <th>Last update</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {active.map((bus) => {
-                    const place = bus.routeId
-                      ? locateOnRoute(bus.routeId, { lat: bus.lat, lng: bus.lng })
-                      : null;
-
-                    return (
-                      <tr key={bus.busId} className="border-b">
-                        <td className="py-2">{bus.busId}</td>
-                        <td>{bus.routeId ? getRoute(bus.routeId).name : "—"}</td>
-                        <td>{place?.nextStop ?? "—"}</td>
-                        <td>{place?.destination ?? "—"}</td>
+                  {active.map(({ telemetry, state }) => (
+                      <tr key={telemetry.vehicleId} className="border-b">
+                        <td className="py-2">
+                          {telemetry.vehicleId}
+                          {/*
+                            A synthetic vehicle says so, every time it is
+                            drawn. Unlabelled, it sits beside the operator's
+                            real fares and real timetable as though it were a
+                            bus.
+                          */}
+                          {telemetry.simulated && (
+                            <span className="ml-2 rounded-full bg-secondary px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-secondary-foreground">
+                              Simulated
+                            </span>
+                          )}
+                        </td>
+                        <td>{telemetry.routeId ? getRoute(telemetry.routeId).name : "—"}</td>
+                        <td>{telemetry.routeId ? destinationOf(telemetry.routeId) : "—"}</td>
+                        <td>
+                          {STATE_LABELS[state]}
+                          <span className="sr-only"> — {STATE_DESCRIPTIONS[state]}</span>
+                        </td>
                         <td className="text-center">
-                          {bus.updatedAt
-                            ? new Date(bus.updatedAt).toLocaleTimeString()
+                          {telemetry.observedAt
+                            ? new Date(telemetry.observedAt).toLocaleTimeString()
                             : "—"}
                         </td>
                       </tr>
-                    );
-                  })}
+                  ))}
                 </tbody>
               </table>
+            )}
+
+            {/*
+              The honest limit, said out loud rather than left to be assumed.
+
+              A bus reports a coordinate, and matching that to a stop needs
+              surveyed stop positions. Ours are a generated lattice, so any
+              "next stop" here would be arbitrary - and it is exactly the kind
+              of claim a passenger stands in the road acting on.
+            */}
+            {!loading && !failed && active.length > 0 && (
+              <p className="mt-4 text-xs text-muted-foreground">
+                Route and destination come from what the bus reports. We do not
+                show which stop it reaches next: that needs surveyed stop
+                positions, which the corridor does not have yet.
+              </p>
             )}
           </div>
         </div>

@@ -7,29 +7,52 @@
  */
 
 import { ARRIVAL_RULES, NOTIFICATION_RULES } from "@/constants/config";
-import { etaBetween } from "@/domain/geo";
+import { haversineKm } from "@/domain/geo";
+import { hasPosition } from "@/domain/fleet/telemetry";
 import type { Coordinate } from "@/domain/transit/stops";
-import { selectFreshBuses, type LiveBus } from "./locationService";
+import { classifyBuses, type LiveBus } from "./locationService";
 
-/** Minutes until the closest usable bus reaches a stop; null when none. */
-export const selectNearestEta = (
+/**
+ * Straight-line distance to the closest usable bus, in kilometres; null when
+ * nothing is reporting.
+ *
+ * Deliberately not an arrival time. The distance is honest about what the app
+ * observed - a position, and how far it is from the stop in a straight line.
+ * It says nothing about the road, the route the bus is on, or the direction it
+ * is travelling, so it must never be presented to a passenger as minutes.
+ */
+export const selectNearestDistanceKm = (
   buses: LiveBus[],
   stop: Coordinate,
   now = Date.now()
 ): number | null => {
   let best: number | null = null;
 
-  for (const bus of selectFreshBuses(buses, now)) {
-    const eta = etaBetween({ lat: bus.lat, lng: bus.lng }, stop);
-    if (best === null || eta < best) best = eta;
+  /*
+    LIVE and RECENT only, not the full passenger-visible set.
+
+    A map may draw a STALE vehicle, because the dot sits next to the age and a
+    reader can weigh it. A push notification carries no age at all - it says
+    "your bus is near" - so alerting on a position that may be five minutes
+    old would tell somebody to run for a bus that has already gone.
+  */
+  for (const { telemetry } of classifyBuses(buses, now).filter(
+    (vehicle) => vehicle.state === "LIVE" || vehicle.state === "RECENT"
+  )) {
+    // The contract allows a vehicle with no position, and real feeds publish
+    // them. One cannot be near anything.
+    if (!hasPosition(telemetry)) continue;
+
+    const distance = haversineKm({ lat: telemetry.lat, lng: telemetry.lng }, stop);
+    if (best === null || distance < best) best = distance;
   }
 
   return best;
 };
 
-/** Whether an ETA is close enough to be worth interrupting the passenger. */
-export const shouldAlert = (etaMinutes: number | null): etaMinutes is number =>
-  etaMinutes !== null && etaMinutes <= ARRIVAL_RULES.ALERT_MINUTES;
+/** Whether a bus is close enough to be worth interrupting the passenger. */
+export const shouldAlert = (distanceKm: number | null): distanceKm is number =>
+  distanceKm !== null && distanceKm <= ARRIVAL_RULES.ALERT_RADIUS_KM;
 
 /**
  * Asks the browser to allow arrival alerts.

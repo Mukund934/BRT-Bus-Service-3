@@ -9,6 +9,7 @@
 
 import { describe, expect, it } from "vitest";
 import Help from "@/pages/Help";
+import { DEFAULT_FRESHNESS } from "@/domain/fleet/state";
 import { ARRIVAL_RULES, TICKET_RULES } from "@/constants/config";
 import { ROUTE_IDS, getRoute } from "@/domain/transit/routes";
 import { STOPS } from "@/domain/transit/stops";
@@ -126,7 +127,7 @@ describe("what it says about live tracking", () => {
   it("quotes the staleness window the map applies", () => {
     renderHelp();
 
-    const minutes = Math.round(ARRIVAL_RULES.STALE_LOCATION_MS / 60_000);
+    const minutes = Math.round(DEFAULT_FRESHNESS.staleMs / 60_000);
 
     expect(
       screen.getByText(new RegExp(`not reported for\\s+${minutes} minutes`))
@@ -137,7 +138,15 @@ describe("what it says about live tracking", () => {
     renderHelp();
 
     expect(
-      screen.getByText(new RegExp(`within\\s+${ARRIVAL_RULES.ALERT_MINUTES} minutes`))
+      screen.getByText(new RegExp(`within\\s+${ARRIVAL_RULES.ALERT_RADIUS_KM} km`))
+    ).toBeInTheDocument();
+  });
+
+  it("tells the passenger the alert is proximity, not an arrival time", () => {
+    renderHelp();
+
+    expect(
+      screen.getByText(/proximity alert, not an arrival time/i)
     ).toBeInTheDocument();
   });
 

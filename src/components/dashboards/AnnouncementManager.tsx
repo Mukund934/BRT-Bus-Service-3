@@ -19,7 +19,7 @@ import {
 const SEVERITY_STYLES: Record<AnnouncementSeverity, string> = {
   INFO: "bg-blue-100 text-blue-800",
   WARNING: "bg-amber-100 text-amber-800",
-  CRITICAL: "bg-red-100 text-red-800",
+  CRITICAL: "bg-destructive/10 text-destructive",
 };
 
 const AnnouncementManager = () => {
@@ -124,7 +124,7 @@ const AnnouncementManager = () => {
   return (
     <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8 mb-8">
       <div className="flex items-center gap-2 mb-6">
-        <Megaphone className="w-6 h-6 text-purple-600" aria-hidden="true" />
+        <Megaphone className="w-6 h-6 text-primary" aria-hidden="true" />
         <h2 className="text-2xl font-bold text-gray-900">Passenger Announcements</h2>
       </div>
 
@@ -134,8 +134,8 @@ const AnnouncementManager = () => {
       </p>
 
       {error && (
-        <div role="alert" className="mb-4 bg-red-50 border border-red-200 rounded-lg p-3">
-          <p className="text-sm text-red-700">{error}</p>
+        <div role="alert" className="mb-4 bg-destructive/10 border border-destructive/30 rounded-lg p-3">
+          <p className="text-sm text-destructive">{error}</p>
         </div>
       )}
 
@@ -155,7 +155,7 @@ const AnnouncementManager = () => {
             type="text"
             value={title}
             onChange={(event) => setTitle(event.target.value)}
-            className="w-full bg-gray-50 rounded-lg px-4 py-2.5 border-2 border-transparent focus:border-purple-400 transition-colors"
+            className="w-full bg-gray-50 rounded-lg px-4 py-2.5 border-2 border-input focus:border-primary transition-colors"
           />
         </div>
 
@@ -168,7 +168,7 @@ const AnnouncementManager = () => {
             rows={3}
             value={body}
             onChange={(event) => setBody(event.target.value)}
-            className="w-full bg-gray-50 rounded-lg px-4 py-2.5 border-2 border-transparent focus:border-purple-400 transition-colors"
+            className="w-full bg-gray-50 rounded-lg px-4 py-2.5 border-2 border-input focus:border-primary transition-colors"
           />
         </div>
 
@@ -183,7 +183,7 @@ const AnnouncementManager = () => {
             id={severityId}
             value={severity}
             onChange={(event) => setSeverity(event.target.value as AnnouncementSeverity)}
-            className="w-full bg-gray-50 rounded-lg px-4 py-2.5 border-2 border-transparent focus:border-purple-400 transition-colors"
+            className="w-full bg-gray-50 rounded-lg px-4 py-2.5 border-2 border-input focus:border-primary transition-colors"
           >
             {ANNOUNCEMENT_SEVERITIES.map((option) => (
               <option key={option} value={option}>
@@ -196,7 +196,7 @@ const AnnouncementManager = () => {
         <button
           type="submit"
           disabled={saving}
-          className="px-6 py-2.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-semibold disabled:opacity-50"
+          className="px-6 py-2.5 bg-primary text-white rounded-lg hover:bg-primary-strong transition-colors font-semibold disabled:opacity-50"
         >
           {saving ? "Publishing…" : "Publish announcement"}
         </button>
@@ -253,7 +253,7 @@ const AnnouncementManager = () => {
                   <button
                     type="button"
                     onClick={() => void remove(announcement.id)}
-                    className="p-2 rounded-lg text-red-600 hover:bg-red-50 transition-colors"
+                    className="p-2 rounded-lg text-destructive hover:bg-destructive/10 transition-colors"
                   >
                     <Trash2 className="w-4 h-4" aria-hidden="true" />
                     <span className="sr-only">Delete {announcement.title}</span>

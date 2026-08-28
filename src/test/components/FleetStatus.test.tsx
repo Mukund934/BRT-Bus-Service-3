@@ -8,8 +8,9 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { DEFAULT_FRESHNESS } from "@/domain/fleet/state";
 import FleetStatus from "@/components/dashboards/FleetStatus";
-import { ARRIVAL_RULES, POLLING, REMOTE_PATHS } from "@/constants/config";
+import { POLLING, REMOTE_PATHS } from "@/constants/config";
 import { STOP_COORDS } from "@/domain/transit/stops";
 import { toBusId } from "@/services/locationService";
 import { act, renderWithProviders, screen, waitFor, within } from "../helpers/render";
@@ -255,7 +256,7 @@ describe("a driver who stops reporting", () => {
     );
 
     act(() => {
-      vi.setSystemTime(start + ARRIVAL_RULES.STALE_LOCATION_MS + 1);
+      vi.setSystemTime(start + DEFAULT_FRESHNESS.staleMs + 1);
       vi.advanceTimersByTime(POLLING.BUS_FRESHNESS_MS);
     });
 

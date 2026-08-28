@@ -36,8 +36,8 @@ describe("pricing a journey", () => {
 
     const main = screen.getByRole("main");
     expect(main).toHaveTextContent("9:25 PM");
-    expect(main).toHaveTextContent("9:52 PM");
-    expect(main).toHaveTextContent("27 min · Route 101");
+    expect(main).toHaveTextContent("9:46 PM");
+    expect(main).toHaveTextContent("21 min · Route 101");
     expect(main).toHaveTextContent("₹10/-");
   });
 
@@ -71,11 +71,11 @@ describe("pricing a journey", () => {
 
   it("names the stop that has no departures rather than blaming the direction", async () => {
     renderWithProviders(<Plan />, {
-      route: "/plan?from=HNLU&to=Jungle%20Safari&date=2026-07-20&time=00:00",
+      route: "/plan?from=HNLU&to=Tribal%20Museum&date=2026-07-20&time=00:00",
     });
 
     expect(
-      await screen.findByText(/Jungle Safari is on the published network/)
+      await screen.findByText(/Tribal Museum is on the published network/)
     ).toBeInTheDocument();
     expect(screen.getByRole("main")).not.toHaveTextContent(
       "The timetable currently runs from HNLU"

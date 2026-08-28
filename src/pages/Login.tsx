@@ -29,7 +29,7 @@ const Field = ({ id, label, error, children }: FieldProps) => (
 	<div className="w-full mb-3">
 		<label htmlFor={id} className="block text-sm font-medium text-foreground mb-1">
 			{label}
-			<span className="text-red-500" aria-hidden="true">
+			<span className="text-destructive" aria-hidden="true">
 				{" "}
 				*
 			</span>
@@ -39,7 +39,7 @@ const Field = ({ id, label, error, children }: FieldProps) => (
 		{children}
 
 		{error && (
-			<p id={`${id}-error`} className="text-xs text-red-600 mt-1">
+			<p id={`${id}-error`} className="text-xs text-destructive mt-1">
 				{error}
 			</p>
 		)}
@@ -48,7 +48,7 @@ const Field = ({ id, label, error, children }: FieldProps) => (
 
 const inputClass = (hasError: boolean) =>
 	`w-full bg-secondary rounded-lg px-4 py-2.5 border-2 transition-colors ${
-		hasError ? "border-red-500" : "border-transparent focus:border-purple-400"
+		hasError ? "border-destructive" : "border-transparent focus:border-primary"
 	}`;
 
 const Login = () => {
@@ -255,8 +255,8 @@ const Login = () => {
 	};
 
 	const errorBanner = error ? (
-		<div className="w-full mb-3 p-3 bg-red-50 border border-red-200 rounded-lg" role="alert">
-			<p className="text-xs text-red-700 text-center">{error}</p>
+		<div className="w-full mb-3 p-3 bg-destructive/10 border border-destructive/30 rounded-lg" role="alert">
+			<p className="text-xs text-destructive text-center">{error}</p>
 		</div>
 	) : null;
 
@@ -504,7 +504,7 @@ const Login = () => {
 		<div
 			className="login-font min-h-screen"
 			style={{
-				background: "linear-gradient(to right, hsl(284, 33%, 92%), hsl(284, 33%, 98%))",
+				background: "linear-gradient(to right, hsl(var(--secondary)), hsl(var(--surface-raised)))",
 			}}
 		>
 			<main
@@ -544,7 +544,7 @@ const Login = () => {
 						`pointer-events-none` alone would still leave them tabbable.
 					*/}
 					<div
-						className={`absolute top-0 left-0 w-1/2 h-full flex flex-col items-center justify-center px-10 transition-all duration-[600ms] ${
+						className={`absolute top-0 left-0 w-1/2 h-full flex flex-col items-center justify-center px-10 transition-[transform,opacity] duration-[400ms] ${
 							isSignUpView ? "translate-x-full opacity-100 z-[5]" : "opacity-0 z-[1] pointer-events-none"
 						}`}
 					>
@@ -552,7 +552,7 @@ const Login = () => {
 					</div>
 
 					<div
-						className={`absolute top-0 left-0 w-1/2 h-full flex flex-col items-center justify-center px-10 transition-all duration-[600ms] z-[2] ${
+						className={`absolute top-0 left-0 w-1/2 h-full flex flex-col items-center justify-center px-10 transition-[transform,opacity] duration-[400ms] z-[2] ${
 							isSignUpView ? "-translate-x-full opacity-0 pointer-events-none" : ""
 						}`}
 					>
@@ -560,7 +560,7 @@ const Login = () => {
 					</div>
 
 					<div
-						className={`absolute top-0 left-1/2 w-1/2 h-full overflow-hidden rounded-l-[150px] transition-all duration-[600ms] z-[100] ${
+						className={`absolute top-0 left-1/2 w-1/2 h-full overflow-hidden rounded-l-[150px] transition-[transform,border-radius] duration-[400ms] z-[100] ${
 							isSignUpView ? "-translate-x-full rounded-l-none rounded-r-[150px]" : ""
 						}`}
 					>

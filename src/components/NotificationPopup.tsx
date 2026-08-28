@@ -17,13 +17,11 @@ interface ArrivalNotification {
   id: string;
   routeId: string;
   stop: string;
-  /** Minutes until the bus reaches the stop. */
-  eta: number;
   timestamp: number;
 }
 
 interface NotificationContextValue {
-  notify: (routeId: string, stop: string, eta: number) => void;
+  notify: (routeId: string, stop: string) => void;
 }
 
 const NotificationContext = createContext<NotificationContextValue>({
@@ -42,22 +40,22 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   throttleRef.current ??= createAlertThrottle();
 
   const notify = useCallback(
-    (routeId: string, stop: string, eta: number) => {
+    (routeId: string, stop: string) => {
       const now = Date.now();
 
       if (!throttleRef.current!.claim(routeId, stop, now)) return;
 
       setNotifications((previous) => [
         ...previous,
-        { id: `notif-${now}`, routeId, stop, eta, timestamp: now },
+        { id: `notif-${now}`, routeId, stop, timestamp: now },
       ]);
 
       // Spoken to screen-reader users, who cannot see the popup appear.
-      announce(`Bus ${routeId} arriving at ${stop} in about ${eta} minutes.`);
+      announce(`Bus ${routeId} is reporting its position near ${stop}.`);
 
       if ("Notification" in window && Notification.permission === "granted") {
-        new Notification("Bus Arrival Alert", {
-          body: `Bus ${routeId} arriving at ${stop} in ~${eta} minutes`,
+        new Notification("Bus nearby", {
+          body: `Bus ${routeId} is reporting its position near ${stop}`,
           icon: NOTIFICATION_RULES.ICON_URL,
         });
       }
@@ -109,13 +107,13 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
                   Bus {notification.routeId}
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  Arriving at{" "}
+                  Reporting near{" "}
                   <span className="font-medium text-foreground">
                     {notification.stop}
                   </span>
                 </p>
-                <p className="text-xs text-primary font-semibold mt-0.5">
-                  In approx {notification.eta} minutes
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Position only &mdash; not an arrival time
                 </p>
               </div>
 

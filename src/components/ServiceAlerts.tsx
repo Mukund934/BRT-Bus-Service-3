@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { AlertTriangle, Info, OctagonAlert } from "lucide-react";
 import { fetchActiveAnnouncements } from "@/services/announcementService";
+import { useAnnounce } from "@/components/a11y/LiveAnnouncer";
 import {
   SEVERITY_LABELS,
   type Announcement,
@@ -10,7 +11,7 @@ import {
 const SEVERITY_STYLES: Record<AnnouncementSeverity, string> = {
   INFO: "bg-blue-50 border-blue-200 text-blue-900",
   WARNING: "bg-amber-50 border-amber-200 text-amber-900",
-  CRITICAL: "bg-red-50 border-red-200 text-red-900",
+  CRITICAL: "bg-destructive/10 border-destructive/30 text-destructive",
 };
 
 const SEVERITY_ICONS: Record<AnnouncementSeverity, typeof Info> = {
@@ -27,6 +28,7 @@ const SEVERITY_ICONS: Record<AnnouncementSeverity, typeof Info> = {
  */
 const ServiceAlerts = () => {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const announce = useAnnounce();
 
   useEffect(() => {
     let stale = false;
@@ -39,6 +41,37 @@ const ServiceAlerts = () => {
       stale = true;
     };
   }, []);
+
+  /*
+    The announcement is routed through the shared live region rather than
+    carried by a role on the cards below.
+
+    A live region has to be in the document BEFORE its content changes. These
+    cards do not exist until the fetch resolves, so a `role="alert"` on them
+    was a region arriving with its message already inside it - which most
+    screen readers do not announce at all. The product's most safety-critical
+    message was the one being spoken least reliably.
+
+    A critical notice interrupts; anything else waits for a pause.
+  */
+  useEffect(() => {
+    if (announcements.length === 0) return;
+
+    const critical = announcements.filter(
+      (announcement) => announcement.severity === "CRITICAL"
+    );
+
+    const spoken = (critical.length > 0 ? critical : announcements)
+      .map(
+        (announcement) =>
+          `${SEVERITY_LABELS[announcement.severity]}: ${announcement.title}. ${
+            announcement.body
+          }`
+      )
+      .join(" ");
+
+    announce(spoken, critical.length > 0 ? "assertive" : "polite");
+  }, [announcements, announce]);
 
   if (announcements.length === 0) return null;
 
@@ -55,7 +88,6 @@ const ServiceAlerts = () => {
           return (
             <div
               key={announcement.id}
-              role={announcement.severity === "CRITICAL" ? "alert" : "status"}
               className={`flex items-start gap-3 rounded-xl border p-4 ${
                 SEVERITY_STYLES[announcement.severity]
               }`}
