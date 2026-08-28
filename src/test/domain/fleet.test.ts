@@ -36,6 +36,12 @@ import {
   type GtfsRealtimeFeed,
 } from "@/domain/fleet/adapters";
 import {
+  INTERRUPTION_TOLERANCE,
+  SHARING_MESSAGES,
+  interruptionReason,
+  sharingHealth,
+} from "@/domain/fleet/sharing";
+import {
   SIMULATED_FEED_SOURCE,
   advance,
   createFleet,
@@ -573,5 +579,75 @@ describe("the noise floor, once the window is short enough to need it", () => {
     expect(gate.accept(fix(NOW - 3_000, 21.15), NOW).rejections).toContain(
       "impossible-jump"
     );
+  });
+});
+
+/**
+ * Whether the driver's position is actually reaching anyone.
+ *
+ * The driver screen used to answer this from the Start button - a claim about
+ * intent. A browser clamps timers in a background tab and suspends its
+ * geolocation, so a driver who switched apps saw a green "sharing" light while
+ * nothing was being published, and passengers watched the bus go stale with no
+ * explanation.
+ */
+describe("whether sharing is actually happening", () => {
+  const INTERVAL = 15_000;
+
+  it("says nothing is happening when nothing was asked for", () => {
+    expect(sharingHealth(false, NOW, NOW, INTERVAL)).toBe("idle");
+  });
+
+  /*
+    A cold geolocation fix can take several seconds. Calling that an
+    interruption would light a warning on every single shift start.
+  */
+  it("does not call the first fix an interruption", () => {
+    expect(sharingHealth(true, null, NOW, INTERVAL)).toBe("sharing");
+  });
+
+  it("believes a publish that landed within tolerance", () => {
+    expect(sharingHealth(true, NOW - INTERVAL, NOW, INTERVAL)).toBe("sharing");
+    expect(sharingHealth(true, NOW - INTERVAL * 2, NOW, INTERVAL)).toBe("sharing");
+  });
+
+  /*
+    THE DEFECT. A throttled background tab stretches a 15 s timer to a minute
+    or more, so the first missed publish is what has to be caught.
+  */
+  it("reports an interruption once a publish is overdue", () => {
+    expect(sharingHealth(true, NOW - INTERVAL * 3, NOW, INTERVAL)).toBe("interrupted");
+    expect(sharingHealth(true, NOW - 60_000, NOW, INTERVAL)).toBe("interrupted");
+  });
+
+  it("tolerates one slow fix without crying wolf", () => {
+    const justInside = NOW - INTERVAL * INTERRUPTION_TOLERANCE;
+
+    expect(sharingHealth(true, justInside, NOW, INTERVAL)).toBe("sharing");
+    expect(sharingHealth(true, justInside - 1, NOW, INTERVAL)).toBe("interrupted");
+  });
+
+  it("scales with the reporting interval rather than a fixed number", () => {
+    // The same gap is fine for a two-minute device and an interruption at 15 s.
+    expect(sharingHealth(true, NOW - 100_000, NOW, 120_000)).toBe("sharing");
+    expect(sharingHealth(true, NOW - 100_000, NOW, INTERVAL)).toBe("interrupted");
+  });
+
+  /*
+    Only the cause we can actually observe is named. `visibilityState` tells us
+    the tab was hidden; nothing tells us the signal dropped, so that case gets
+    the honest general form instead of a guess.
+  */
+  it("names the background tab only when that is what happened", () => {
+    expect(interruptionReason(true)).toMatch(/background/i);
+    expect(interruptionReason(true)).toMatch(/keep this screen open/i);
+    expect(interruptionReason(false)).not.toMatch(/background/i);
+    expect(interruptionReason(false)).toMatch(/signal/i);
+  });
+
+  it("gives every state something to say", () => {
+    for (const health of ["idle", "sharing", "interrupted"] as const) {
+      expect(SHARING_MESSAGES[health].length).toBeGreaterThan(5);
+    }
   });
 });

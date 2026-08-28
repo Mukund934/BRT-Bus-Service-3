@@ -7,6 +7,13 @@ import { toSafeMessage } from "@/domain/auth/errors";
 import { PERMISSIONS, can } from "@/domain/auth/permissions";
 import { ROUTE_IDS, getRoute, type RouteId } from "@/domain/transit/routes";
 import {
+  SHARING_MESSAGES,
+  interruptionReason,
+  sharingHealth,
+} from "@/domain/fleet/sharing";
+import { useNow } from "@/hooks/use-now";
+import { useAnnounce } from "@/components/a11y/LiveAnnouncer";
+import {
   isLiveTrackingAvailable,
   publishLocation,
   stopPublishing,
@@ -33,7 +40,21 @@ const Driver = () => {
   const [coords, setCoords] = useState<DriverCoords | null>(null);
   const [error, setError] = useState("");
 
+  /*
+    Evidence, not intent. The indicator below is driven by when a publish last
+    actually succeeded rather than by the Start button, because a background
+    tab has its timers clamped and its geolocation suspended - so the old
+    boolean showed a green "sharing" light while nothing was being sent.
+  */
+  const [lastPublishedAt, setLastPublishedAt] = useState<number | null>(null);
+  const [wasHidden, setWasHidden] = useState(false);
+
+  // A short tick so an interruption is noticed while the driver is looking at
+  // the screen, rather than only when something else happens to re-render.
+  const now = useNow(2_000);
+
   const mayPublish = can(actor, PERMISSIONS.PUBLISH_LOCATION);
+  const announce = useAnnounce();
   const routeFieldId = useId();
 
   useEffect(() => {
@@ -49,11 +70,17 @@ const Driver = () => {
           const { latitude, longitude } = position.coords;
           setCoords({ latitude, longitude });
 
-          publishLocation(actor, { latitude, longitude }, routeId).catch((err) => {
-            if (cancelled) return;
-            setError(toSafeMessage(err, "Could not share your location."));
-            setIsSharing(false);
-          });
+          publishLocation(actor, { latitude, longitude }, routeId)
+            .then(() => {
+              if (cancelled) return;
+              setLastPublishedAt(Date.now());
+              setWasHidden(false);
+            })
+            .catch((err) => {
+              if (cancelled) return;
+              setError(toSafeMessage(err, "Could not share your location."));
+              setIsSharing(false);
+            });
         },
         (geoError) => {
           if (cancelled) return;
@@ -73,9 +100,29 @@ const Driver = () => {
     publish();
     const interval = setInterval(publish, POLLING.DRIVER_LOCATION_MS);
 
+    /*
+      Publish again the moment the tab comes back.
+
+      A throttled interval may not fire for another minute, so without this the
+      bus stays missing from the map long after the driver has returned to the
+      screen. The hidden flag is recorded on the way out so the driver can be
+      told what actually happened rather than a generic failure.
+    */
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "hidden") {
+        setWasHidden(true);
+        return;
+      }
+
+      publish();
+    };
+
+    document.addEventListener("visibilitychange", onVisibilityChange);
+
     return () => {
       cancelled = true;
       clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
     };
   }, [isSharing, mayPublish, actor, routeId]);
 
@@ -86,6 +133,8 @@ const Driver = () => {
   const stop = useCallback(async () => {
     setIsSharing(false);
     setCoords(null);
+    setLastPublishedAt(null);
+    setWasHidden(false);
 
     try {
       await stopPublishing(actor);
@@ -99,6 +148,27 @@ const Driver = () => {
       void stopPublishing(actor);
     };
   }, [actor]);
+
+  const health = sharingHealth(
+    isSharing,
+    lastPublishedAt,
+    now.getTime(),
+    POLLING.DRIVER_LOCATION_MS
+  );
+
+  /*
+    Announced once per interruption, not on every re-render: the health check
+    re-evaluates every two seconds, and re-announcing would talk over the
+    driver continuously.
+  */
+  useEffect(() => {
+    if (health !== "interrupted") return;
+
+    announce(
+      `Your position is not reaching passengers. ${interruptionReason(wasHidden)}`,
+      "assertive"
+    );
+  }, [health, wasHidden, announce]);
 
   const startSharing = async () => {
     setError("");
@@ -161,15 +231,35 @@ const Driver = () => {
             <div className="flex justify-center items-center gap-3">
               <div
                 className={`w-3 h-3 rounded-full ${
-                  isSharing ? "bg-green-500 animate-pulse" : "bg-gray-400"
+                  health === "sharing"
+                    ? "bg-green-500 animate-pulse"
+                    : health === "interrupted"
+                      ? "bg-destructive"
+                      : "bg-gray-400"
                 }`}
               />
               <span className="text-sm font-medium">
-                {isSharing
-                  ? `Sharing Live Location on ${getRoute(routeId).name}`
-                  : "Not Sharing"}
+                {SHARING_MESSAGES[health]}
+                {health === "sharing" && ` on ${getRoute(routeId).name}`}
               </span>
             </div>
+
+            {/*
+              Spoken through the shared assertive region rather than by a role
+              on this box - it does not exist until the interruption does, and
+              a live region that appears with its message already inside it is
+              not reliably announced. Colour alone certainly cannot carry it.
+            */}
+            {health === "interrupted" && (
+              <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-3 text-left">
+                <p className="text-sm font-semibold text-destructive">
+                  Your position is not reaching passengers.
+                </p>
+                <p className="text-sm text-destructive mt-1">
+                  {interruptionReason(wasHidden)}
+                </p>
+              </div>
+            )}
 
             {error && (
               <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-3">

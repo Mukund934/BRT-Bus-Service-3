@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import Driver from "@/pages/Driver";
 import {
   isLiveTrackingAvailable,
@@ -6,7 +6,7 @@ import {
   stopPublishing,
   toBusId,
 } from "@/services/locationService";
-import { renderWithProviders, screen, waitFor } from "../helpers/render";
+import { act, renderWithProviders, screen, waitFor } from "../helpers/render";
 import { ROUTE_IDS, getRoute } from "@/domain/transit/routes";
 import { makeUser, signInAs } from "../helpers/firebase";
 import { setMockRole } from "../helpers/userService";
@@ -69,7 +69,7 @@ describe("who may broadcast", () => {
     renderWithProviders(<Driver />, { route: "/driver" });
     signInAs(makeUser({ uid: "user-1" }));
 
-    await screen.findByText("Not Sharing");
+    await screen.findByText("Not sharing");
 
     expect(screen.getByRole("button", { name: "Start Sharing" })).toBeDisabled();
   });
@@ -88,7 +88,7 @@ describe("starting a shift", () => {
       latitude: 21.2514,
       longitude: 81.6296,
     });
-    expect(await screen.findByText(/Sharing Live Location/)).toBeInTheDocument();
+    expect(await screen.findByText(/Sharing your live location/)).toBeInTheDocument();
   });
 
   it("says so when live tracking cannot be reached", async () => {
@@ -121,7 +121,7 @@ describe("starting a shift", () => {
         "Location permission is required to broadcast your position."
       )
     ).toBeInTheDocument();
-    expect(await screen.findByText("Not Sharing")).toBeInTheDocument();
+    expect(await screen.findByText("Not sharing")).toBeInTheDocument();
   });
 });
 
@@ -131,20 +131,20 @@ describe("ending a shift", () => {
     asDriver();
 
     await startSharing(user);
-    await screen.findByText(/Sharing Live Location/);
+    await screen.findByText(/Sharing your live location/);
 
     await user.click(screen.getByRole("button", { name: "Stop Sharing" }));
 
     await waitFor(() => expect(stop).toHaveBeenCalled());
 
-    expect(await screen.findByText("Not Sharing")).toBeInTheDocument();
+    expect(await screen.findByText("Not sharing")).toBeInTheDocument();
   });
 
   it("clears the published position when the page is left", async () => {
     const { unmount } = renderWithProviders(<Driver />, { route: "/driver" });
     asDriver();
 
-    await screen.findByText("Not Sharing");
+    await screen.findByText("Not sharing");
 
     stop.mockClear();
     unmount();
@@ -190,7 +190,7 @@ describe("declaring which route is being run", () => {
     await waitFor(() => expect(routeField()).toBeInTheDocument());
     await startSharing(user);
 
-    await screen.findByText(/Sharing Live Location/);
+    await screen.findByText(/Sharing your live location/);
 
     expect(routeField()).toBeDisabled();
   });
@@ -204,7 +204,136 @@ describe("declaring which route is being run", () => {
     await startSharing(user);
 
     expect(
-      await screen.findByText(/Sharing Live Location on Route 102/)
+      await screen.findByText(/Sharing your live location on Route 102/)
     ).toBeInTheDocument();
+  });
+});
+
+/**
+ * A backgrounded tab.
+ *
+ * The browser clamps a hidden tab's timers and suspends its geolocation, so
+ * the publish loop simply stops. Nothing threw, nothing logged, and the screen
+ * kept showing a green "sharing" light - the driver believed passengers could
+ * see the bus, and passengers watched it go stale with no explanation.
+ */
+describe("when the driver's tab goes into the background", () => {
+  const setVisibility = (state: DocumentVisibilityState) => {
+    Object.defineProperty(document, "visibilityState", {
+      configurable: true,
+      get: () => state,
+    });
+
+    document.dispatchEvent(new Event("visibilitychange"));
+  };
+
+  /** Geolocation stops answering in a hidden tab, so publishes stop landing. */
+  const suspendGeolocation = () => locate.mockImplementation(() => undefined);
+
+  beforeEach(() => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+  });
+
+  afterEach(() => {
+    setVisibility("visible");
+    vi.useRealTimers();
+  });
+
+  it("stops claiming to share once a publish is overdue", async () => {
+    const { user } = renderWithProviders(<Driver />, { route: "/driver" });
+    asDriver();
+
+    await startSharing(user);
+    await screen.findByText(/Sharing your live location/);
+
+    suspendGeolocation();
+    act(() => setVisibility("hidden"));
+    act(() => {
+      vi.advanceTimersByTime(60_000);
+    });
+
+    expect(
+      await screen.findByText("Your position is not reaching passengers.")
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/Sharing your live location/)
+    ).not.toBeInTheDocument();
+  });
+
+  /*
+    Announced rather than merely coloured: the driver has just looked away -
+    that is how it happened - so it has to reach them when they look back.
+  */
+  it("announces the interruption and names the cause", async () => {
+    const { user } = renderWithProviders(<Driver />, { route: "/driver" });
+    asDriver();
+
+    await startSharing(user);
+    await screen.findByText(/Sharing your live location/);
+
+    suspendGeolocation();
+    act(() => setVisibility("hidden"));
+    act(() => {
+      vi.advanceTimersByTime(60_000);
+    });
+
+    // Scoped deliberately: LiveAnnouncer mounts a permanent assertive region,
+    // so a bare alert query matches two nodes and throws.
+    await waitFor(() =>
+      expect(
+        screen.getByText(/This tab was in the background/i)
+      ).toBeInTheDocument()
+    );
+
+    const spoken = document.querySelector('[aria-live="assertive"]')!;
+
+    await waitFor(() => expect(spoken).toHaveTextContent(/background/i));
+    expect(spoken).toHaveTextContent(/keep this screen open/i);
+  });
+
+  /*
+    A throttled interval may not fire for another minute after the driver
+    returns, so without publishing on the way back the bus stays missing from
+    the map long after they are looking at it again.
+  */
+  it("publishes again the moment the tab comes back", async () => {
+    const { user } = renderWithProviders(<Driver />, { route: "/driver" });
+    asDriver();
+
+    await startSharing(user);
+    await waitFor(() => expect(publish).toHaveBeenCalled());
+
+    act(() => setVisibility("hidden"));
+    publish.mockClear();
+
+    act(() => setVisibility("visible"));
+
+    await waitFor(() => expect(publish).toHaveBeenCalledTimes(1));
+  });
+
+  it("recovers once a publish lands again", async () => {
+    const { user } = renderWithProviders(<Driver />, { route: "/driver" });
+    asDriver();
+
+    await startSharing(user);
+    suspendGeolocation();
+    act(() => setVisibility("hidden"));
+    act(() => {
+      vi.advanceTimersByTime(60_000);
+    });
+
+    await screen.findByText("Your position is not reaching passengers.");
+
+    locate.mockImplementation((onSuccess: PositionCallback) =>
+      onSuccess(AT_HNLU as GeolocationPosition)
+    );
+    act(() => setVisibility("visible"));
+
+    expect(
+      await screen.findByText(/Sharing your live location/)
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("Your position is not reaching passengers.")
+    ).not.toBeInTheDocument();
   });
 });
