@@ -84,19 +84,43 @@ export const ticketSchema = z.object({
  */
 export const unknownArraySchema = z.array(z.unknown());
 
-/**
- * A live driver position as published to the Realtime Database.
- *
- * `routeId` is optional because positions published before drivers declared a
- * route are still in the database; they render without route detail rather
- * than being dropped from the map.
- */
-export const busPositionSchema = z.object({
+const busPositionShape = {
   lat: z.number().min(-90).max(90),
   lng: z.number().min(-180).max(180),
   updatedAt: z.number().int().positive().optional(),
   busId: z.string().max(16).optional(),
+};
+
+/**
+ * A live driver position as PUBLISHED by this client.
+ *
+ * Strict on `routeId`, because we control what we write and must never put an
+ * unknown route into a world-readable node. It stays optional only because
+ * positions published before drivers declared a route are still in there.
+ */
+export const busPositionSchema = z.object({
+  ...busPositionShape,
   routeId: routeIdSchema.optional(),
+});
+
+/**
+ * The same position as READ back from the database.
+ *
+ * Deliberately tolerant where the publish schema is strict, and the difference
+ * is the whole point. `routeId` is parsed as a plain string and resolved
+ * against the known set afterwards, so a route this build has never heard of
+ * costs the bus its route label - not its place on the map.
+ *
+ * On the web that distinction is invisible: a deploy updates every client at
+ * once, so no client is ever behind the data. An installed app is different.
+ * The day a new route opens, every phone that has not updated would drop those
+ * buses entirely, and a passenger would see fewer buses than exist with
+ * nothing anywhere saying so. Every contract change has to be additive and
+ * tolerant, because users do not update.
+ */
+export const inboundBusPositionSchema = z.object({
+  ...busPositionShape,
+  routeId: z.string().max(16).optional(),
 });
 
 export type ValidatedBusPosition = z.infer<typeof busPositionSchema>;

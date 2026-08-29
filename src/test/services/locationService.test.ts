@@ -335,7 +335,19 @@ describe("watching the fleet", () => {
     );
   });
 
-  it("drops an entry claiming a route that does not exist", async () => {
+  /*
+    This used to assert that the bus was dropped, and that was the defect.
+
+    On the web an unknown route cannot happen: a deploy updates every client at
+    once, so no client is ever behind the data. An installed app is different -
+    users do not update. The day a new route opens, every phone still running
+    an older build would drop those buses entirely, and a passenger would see
+    fewer buses than exist with nothing anywhere saying so.
+
+    So an unrecognised route costs the bus its label, never its place on the
+    map. Contract changes have to be additive and tolerant.
+  */
+  it("keeps a bus on a route this build does not know, without its label", async () => {
     seedRtdb(`${REMOTE_PATHS.BUS_LOCATIONS}/driver-9`, {
       lat: 21.25,
       lng: 81.62,
@@ -345,6 +357,24 @@ describe("watching the fleet", () => {
 
     const onBuses = vi.fn();
     subscribeToBuses(onBuses);
+
+    await vi.waitFor(() =>
+      expect(onBuses).toHaveBeenCalledWith([
+        expect.objectContaining({ busId: expect.any(String), routeId: undefined }),
+      ])
+    );
+  });
+
+  it("still keeps it out of a listing filtered to a known route", async () => {
+    seedRtdb(`${REMOTE_PATHS.BUS_LOCATIONS}/driver-9`, {
+      lat: 21.25,
+      lng: 81.62,
+      updatedAt: NOW,
+      routeId: "999",
+    });
+
+    const onBuses = vi.fn();
+    subscribeToBuses(onBuses, undefined, { routeId: "101" });
 
     await vi.waitFor(() => expect(onBuses).toHaveBeenCalledWith([]));
   });

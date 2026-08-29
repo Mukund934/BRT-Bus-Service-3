@@ -3,8 +3,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useTickets } from "@/contexts/TicketContext";
 import { isLiveStatus } from "@/domain/ticket/status";
 import { STOP_COORDS } from "@/domain/transit/stops";
-import { subscribeToBuses } from "@/services/locationService";
-import { selectNearestDistanceKm, shouldAlert } from "@/services/notificationService";
+import { classifyBuses, subscribeToBuses } from "@/services/locationService";
+import { selectNearestDistanceKm, shouldAlert } from "@/domain/alerts/arrival";
 import { useNotification } from "@/components/NotificationPopup";
 
 /**
@@ -30,7 +30,7 @@ const ArrivalMonitor = () => {
     if (!stopCoord) return;
 
     return subscribeToBuses((buses) => {
-      const distanceKm = selectNearestDistanceKm(buses, stopCoord);
+      const distanceKm = selectNearestDistanceKm(classifyBuses(buses), stopCoord);
 
       if (shouldAlert(distanceKm)) notify(activeTicket.route, boardingStop);
     });

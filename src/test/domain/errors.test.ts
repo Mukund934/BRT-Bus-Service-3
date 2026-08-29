@@ -7,7 +7,7 @@
  * addresses are registered. The first test here is the one that matters.
  */
 
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   AuthenticationError,
   AuthorizationError,
@@ -19,6 +19,25 @@ import {
 import { PERMISSIONS } from "@/domain/auth/permissions";
 
 const firebaseError = (code: string) => Object.assign(new Error("raw"), { code });
+
+/*
+  These mappers log the real error before returning a safe one, which is the
+  point of them - the detail has to survive for whoever debugs it. In a test
+  run that logging printed a fixture reading "FIRESTORE (12.0.0) INTERNAL
+  ASSERTION FAILED: project brtbus-116fa index missing" on every single run,
+  and it was read as evidence that something was reaching a real Firestore.
+  Nothing was. Silenced here, and asserted below so it stays real behaviour
+  rather than becoming noise nobody checks.
+*/
+let logged: ReturnType<typeof vi.spyOn>;
+
+beforeEach(() => {
+  logged = vi.spyOn(console, "error").mockImplementation(() => undefined);
+});
+
+afterEach(() => {
+  logged.mockRestore();
+});
 
 describe("sign-in failures cannot be used to enumerate accounts", () => {
   it("returns one identical message for every credential failure", () => {
@@ -112,6 +131,18 @@ describe("turning any thrown value into something safe to show", () => {
 
     expect(message).toBe("Something went wrong. Please try again.");
     expect(message).not.toMatch(/brtbus/);
+  });
+
+  /*
+    Redacting for the user must not mean discarding for the developer. If this
+    ever stops holding, an unmapped failure becomes invisible everywhere.
+  */
+  it("still logs the real error for whoever has to debug it", () => {
+    const leaky = new Error("FIRESTORE INTERNAL ASSERTION FAILED: index missing");
+
+    toSafeMessage(leaky);
+
+    expect(logged).toHaveBeenCalledWith(expect.stringContaining("Unhandled"), leaky);
   });
 
   it("accepts a caller-supplied fallback", () => {

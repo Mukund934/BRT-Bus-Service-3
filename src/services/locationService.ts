@@ -25,8 +25,12 @@ import { fromDriverRecord } from "@/domain/fleet/adapters";
 import { classifyAll, isPassengerVisible, type ClassifiedVehicle } from "@/domain/fleet/state";
 import { acceptTelemetry, createTelemetryGate } from "@/domain/fleet/validation";
 import type { VehicleTelemetry } from "@/domain/fleet/telemetry";
-import type { RouteId } from "@/domain/transit/routes";
-import { busPositionSchema, type ValidatedBusPosition } from "@/domain/validation/schemas";
+import { isRouteId, type RouteId } from "@/domain/transit/routes";
+import {
+  busPositionSchema,
+  inboundBusPositionSchema,
+  type ValidatedBusPosition,
+} from "@/domain/validation/schemas";
 import type { Actor } from "@/types/user";
 
 /** A bus position as consumed by the UI. */
@@ -243,14 +247,50 @@ export const subscribeToBuses = (
       }
 
       const buses: LiveBus[] = [];
+      let unreadable = 0;
+      let unknownRoutes = 0;
 
       for (const [uid, value] of Object.entries(raw)) {
-        const parsed = busPositionSchema.safeParse(value);
+        const parsed = inboundBusPositionSchema.safeParse(value);
 
-        if (!parsed.success) continue;
-        if (options.routeId && parsed.data.routeId !== options.routeId) continue;
+        if (!parsed.success) {
+          unreadable += 1;
+          continue;
+        }
 
-        buses.push({ ...parsed.data, busId: parsed.data.busId ?? toBusId(uid) });
+        /*
+          An unrecognised route costs the bus its label, never its place on
+          the map. A build that predates a new route must still show the
+          buses running on it.
+        */
+        const routeId = isRouteId(parsed.data.routeId)
+          ? parsed.data.routeId
+          : undefined;
+
+        if (parsed.data.routeId !== undefined && routeId === undefined) {
+          unknownRoutes += 1;
+        }
+
+        if (options.routeId && routeId !== options.routeId) continue;
+
+        buses.push({
+          ...parsed.data,
+          routeId,
+          busId: parsed.data.busId ?? toBusId(uid),
+        });
+      }
+
+      /*
+        Counted rather than silently dropped. A bare `continue` here meant a
+        malformed or newer record left no trace at all, so a passenger seeing
+        fewer buses than exist had nothing to report and we had nothing to
+        look at.
+      */
+      if (unreadable > 0 || unknownRoutes > 0) {
+        console.warn(
+          `Live buses: ${unreadable} position(s) could not be read, ` +
+            `${unknownRoutes} on a route this build does not know.`
+        );
       }
 
       /*

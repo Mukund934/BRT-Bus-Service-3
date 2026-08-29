@@ -11,7 +11,7 @@ import {
 import { X } from "lucide-react";
 import { NOTIFICATION_RULES } from "@/constants/config";
 import { useAnnounce } from "@/components/a11y/LiveAnnouncer";
-import { createAlertThrottle } from "@/services/notificationService";
+import { createAlertThrottle } from "@/domain/alerts/arrival";
 
 interface ArrivalNotification {
   id: string;
