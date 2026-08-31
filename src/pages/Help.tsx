@@ -179,11 +179,13 @@ const Help = () => {
 
               <Answer question="Will my ticket work without a signal?">
                 <p>
-                  Not reliably. Your ticket is stored on this device, but the app itself
-                  has to load before it can show you anything, and loading it needs a
-                  connection. Keeping a saved ticket readable without one is planned and
-                  not yet built, so do not count on showing a ticket where you have no
-                  signal.
+                  Yes, once you have opened it. After your first visit the app is kept on
+                  this device, so any page you have already opened - your ticket
+                  included - opens again with no connection at all.
+                </p>
+                <p>
+                  A page you have never opened will not, because there is nothing stored
+                  to show. Booking a new ticket needs a connection either way.
                 </p>
               </Answer>
 

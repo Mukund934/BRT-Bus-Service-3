@@ -3,6 +3,7 @@ import ReactDOM from "react-dom/client";
 import App from "./App";
 import ErrorBoundary from "./components/ErrorBoundary";
 import "./index.css";
+import { registerServiceWorker } from "./services/serviceWorker";
 
 // ✅ Suppress React Router v7 deprecation warnings
 const originalWarn = console.warn;
@@ -24,3 +25,6 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
     </ErrorBoundary>
   </React.StrictMode>
 );
+
+// Registered after render so it never competes with the first paint.
+void registerServiceWorker();

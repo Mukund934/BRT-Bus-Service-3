@@ -116,14 +116,21 @@ describe("what it says about a ticket", () => {
     ).toBeInTheDocument();
   });
 
-  it("does not promise a ticket the app cannot currently keep", () => {
+  /*
+    This promise was withdrawn in §25 because nothing cached the app shell, and
+    restored in §30 once a service worker did. It is deliberately conditional:
+    a page never opened has nothing stored to show.
+  */
+  it("promises offline only for a ticket already opened", () => {
     renderHelp();
 
     expect(
       screen.getByRole("heading", { name: "Will my ticket work without a signal?" })
     ).toBeInTheDocument();
-    expect(screen.getByText(/loading it needs a\s+connection/i)).toBeInTheDocument();
-    expect(screen.queryByText(/shown again with no connection/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/Yes, once you have opened it/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/A page you have never opened will not/i)
+    ).toBeInTheDocument();
   });
 });
 

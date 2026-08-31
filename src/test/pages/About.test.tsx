@@ -169,13 +169,20 @@ describe("what it says about live tracking", () => {
 });
 
 describe("what it refuses to promise", () => {
-  it("does not tell a passenger a ticket opens without a connection", () => {
+  /*
+    Withdrawn in §25 when nothing cached the app shell, restored in §30 once a
+    service worker did - and still conditional, because a page never opened has
+    nothing stored to show.
+  */
+  it("promises offline only for a ticket already opened", () => {
     renderAbout();
 
     expect(
-      screen.getByText(/planned and not yet built/i)
+      screen.getByText(/a ticket\s+you have already opened will open again with no connection/i)
     ).toBeInTheDocument();
-    expect(pageText()).not.toMatch(/tickets? (?:work|open)s? offline/i);
+    expect(
+      screen.getByText(/A page\s+you have never opened will not/i)
+    ).toBeInTheDocument();
   });
 
   it("calls booking a demonstration while no gateway settles money", () => {

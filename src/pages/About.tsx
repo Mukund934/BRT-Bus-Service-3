@@ -241,9 +241,10 @@ const About = () => {
                   : "Booking is a demonstration: no money changes hands, and a ticket bought here is not accepted as a fare."}
               </p>
               <p>
-                It needs a connection to load. Keeping tickets readable without one
-                is planned and not yet built, so do not rely on opening a ticket
-                where you have no signal.
+                After your first visit the app is kept on this device, so a ticket
+                you have already opened will open again with no connection. A page
+                you have never opened will not, and booking a new ticket still
+                needs one.
               </p>
             </Section>
 
@@ -285,7 +286,7 @@ const About = () => {
                   appear in other journey planners rather than only here.
                 </li>
                 <li>Hindi alongside English.</li>
-                <li>Keeping a saved ticket readable without a connection.</li>
+                <li>Installing the site as an app on your phone.</li>
               </ul>
             </Section>
 

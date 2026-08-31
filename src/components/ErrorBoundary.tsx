@@ -26,6 +26,14 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   override render() {
     if (!this.state.hasError) return this.props.children;
 
+    /*
+      Read at failure time rather than tracked: this renders once, and
+      `navigator.onLine` only claims there is a network interface, so it is
+      used to soften the wording and never to assert a diagnosis.
+    */
+    const offline =
+      typeof navigator !== "undefined" && navigator.onLine === false;
+
     return (
       <main
         id="main-content"
@@ -42,12 +50,19 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
           />
 
           <h1 className="text-xl font-semibold text-gray-900 mb-2">
-            Something went wrong
+            {offline ? "This page needs a connection" : "Something went wrong"}
           </h1>
 
+          {/*
+            Offline is a distinct failure now that the app has a service
+            worker. A page opened before is served from the cache; one that
+            has not been is simply absent, and telling somebody with no signal
+            to reload is advice that cannot work.
+          */}
           <p className="text-gray-600 mb-6">
-            This page could not be displayed. Reloading usually fixes it,
-            especially if the app was updated while this tab was open.
+            {offline
+              ? "You appear to be offline, and this page has not been opened on this device before. Pages you have already visited still work."
+              : "This page could not be displayed. Reloading usually fixes it, especially if the app was updated while this tab was open."}
           </p>
 
           <div className="flex flex-wrap gap-3 justify-center">
