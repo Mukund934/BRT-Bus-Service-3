@@ -37,6 +37,7 @@ const Fares = lazy(() => import("./pages/Fares"));
 const Timetable = lazy(() => import("./pages/Timetable"));
 const Contact = lazy(() => import("./pages/Contact"));
 const Help = lazy(() => import("./pages/Help"));
+const About = lazy(() => import("./pages/About"));
 const Login = lazy(() => import("./pages/Login"));
 const Driver = lazy(() => import("./pages/Driver"));
 const MapPage = lazy(() => import("./pages/MapPage"));
@@ -96,6 +97,7 @@ const App = () => (
                   <Route path="/timetable" element={<Timetable />} />
                   <Route path="/contact" element={<Contact />} />
                   <Route path="/help" element={<Help />} />
+                  <Route path="/about" element={<About />} />
                   <Route path="/map" element={<MapPage />} />
 
                   <Route

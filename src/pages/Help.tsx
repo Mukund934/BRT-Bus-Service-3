@@ -179,9 +179,11 @@ const Help = () => {
 
               <Answer question="Will my ticket work without a signal?">
                 <p>
-                  Yes. Tickets are stored on this device as well as on our servers, so a
-                  ticket you have already opened can be shown again with no connection.
-                  Booking a new one does need a connection.
+                  Not reliably. Your ticket is stored on this device, but the app itself
+                  has to load before it can show you anything, and loading it needs a
+                  connection. Keeping a saved ticket readable without one is planned and
+                  not yet built, so do not count on showing a ticket where you have no
+                  signal.
                 </p>
               </Answer>
 
@@ -256,8 +258,8 @@ const Help = () => {
                   fare and the time you booked.
                 </p>
                 <p>
-                  Tickets are kept both on this device and on our servers. The copy
-                  on your device is what lets a ticket open without a connection.
+                  Tickets are kept both on this device and on our servers, so losing
+                  one copy does not lose your ticket.
                 </p>
               </Answer>
 

@@ -116,10 +116,14 @@ describe("what it says about a ticket", () => {
     ).toBeInTheDocument();
   });
 
-  it("tells the passenger a ticket still opens without a connection", () => {
+  it("does not promise a ticket the app cannot currently keep", () => {
     renderHelp();
 
-    expect(screen.getByText(/shown again with no connection/i)).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Will my ticket work without a signal?" })
+    ).toBeInTheDocument();
+    expect(screen.getByText(/loading it needs a\s+connection/i)).toBeInTheDocument();
+    expect(screen.queryByText(/shown again with no connection/i)).not.toBeInTheDocument();
   });
 });
 
