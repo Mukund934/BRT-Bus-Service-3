@@ -137,10 +137,17 @@ const NearbyPlaces = () => {
 
                       <div className="p-5">
                         <div className="flex items-start justify-between gap-3">
+                          {/*
+                            `inline-block` with a little vertical padding so the
+                            tap target clears 24px (SC 2.5.8). As a bare inline
+                            link it was 21px tall - the whole heading is the
+                            link, so there is no surrounding text for the
+                            criterion's inline exception to apply to.
+                          */}
                           <h2 className="font-bold text-foreground leading-tight">
                             <Link
                               to={`/nearby/${place.id}`}
-                              className="hover:underline underline-offset-2"
+                              className="inline-block py-0.5 hover:underline underline-offset-2"
                             >
                               {place.name}
                             </Link>

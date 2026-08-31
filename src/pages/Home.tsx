@@ -199,7 +199,14 @@ const Home = () => {
                 className="px-5 py-3 bg-white text-primary-deep rounded-xl hover:bg-white/90 transition-colors font-semibold flex items-center gap-2"
               >
                 <Search className="w-4 h-4" aria-hidden="true" />
-                <span className="hidden sm:inline">Search</span>
+                {/*
+                  Visually hidden rather than `hidden`, which is `display:none`
+                  and removes it from the accessibility tree too - with the icon
+                  already aria-hidden, that left the button with no accessible
+                  name at all below 640px. jsdom applies no CSS, so axe could
+                  not see it; a real browser at 320px could.
+                */}
+                <span className="sr-only sm:not-sr-only">Search</span>
               </button>
             </form>
 

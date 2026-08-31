@@ -71,20 +71,25 @@ const Search = () => {
             <label htmlFor="search-query" className="sr-only">
               Search stops, routes and places
             </label>
+            {/*
+              `min-w-0` because a flex item defaults to `min-width: auto`, so
+              the placeholder's intrinsic width stopped the field shrinking and
+              pushed the button off a 320px screen entirely.
+            */}
             <input
               id="search-query"
               type="search"
               value={draft}
               onChange={(event) => setDraft(event.target.value)}
               placeholder="Try CBD, Trunk Route, or Jungle Safari"
-              className="flex-1 bg-white rounded-xl px-4 py-3 border-2 border-input focus:border-primary transition-colors"
+              className="flex-1 min-w-0 bg-white rounded-xl px-4 py-3 border-2 border-input focus:border-primary transition-colors"
             />
             <button
               type="submit"
-              className="px-5 py-3 bg-primary text-white rounded-xl hover:bg-primary-strong transition-colors font-semibold flex items-center gap-2"
+              className="px-5 py-3 bg-primary text-white rounded-xl hover:bg-primary-strong transition-colors font-semibold flex items-center gap-2 flex-shrink-0"
             >
               <SearchIcon className="w-4 h-4" aria-hidden="true" />
-              Search
+              <span className="sr-only sm:not-sr-only">Search</span>
             </button>
           </form>
 
