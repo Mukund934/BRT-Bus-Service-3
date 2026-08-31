@@ -18,7 +18,20 @@
   cache happens to expire. Stale transit data is not a stale website.
 */
 
-const VERSION = "brt-v1";
+/*
+  Stamped at build time from the hash of the emitted bundle, by the
+  `stamp-service-worker` plugin in `vite.config.ts`. It has to change when the
+  build changes, and for two reasons rather than one.
+
+  A browser only installs a new worker when the BYTES of this file differ. With
+  a hand-written constant they never did, so after the first deploy no later
+  worker ever installed, `activate` never ran again, and the purge below was
+  unreachable code guarding caches that were never superseded anyway - the
+  assets cache simply grew, keeping every hashed file ever shipped.
+
+  The literal survives in development, where no worker is registered at all.
+*/
+const VERSION = "brt-__BUILD_ID__";
 const SHELL = `${VERSION}-shell`;
 const ASSETS = `${VERSION}-assets`;
 
@@ -91,7 +104,20 @@ const assetFirst = async (request, immutable) => {
 
       return response;
     })
-    .catch(() => cached);
+    .catch((error) => {
+      /*
+        Falling back to `cached` here read as harmless and was not: on the
+        path where nothing is cached AND the network fails, it resolved to
+        `undefined`, and `respondWith(undefined)` is a TypeError. An offline
+        request for an asset this worker had never seen therefore failed as a
+        fault inside the worker rather than as the ordinary network error it
+        is - which is the difference between a browser that retries and a
+        console full of exceptions blamed on the offline shell.
+      */
+      if (cached) return cached;
+
+      throw error;
+    });
 
   return cached ?? network;
 };
