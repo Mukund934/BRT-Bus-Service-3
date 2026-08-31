@@ -23,6 +23,17 @@ import { getTrips, type Trip } from "@/domain/transit/schedule";
 import { serviceOn } from "@/domain/transit/calendar";
 import { STOPS } from "@/domain/transit/stops";
 
+/*
+  Derived, not named. "Muktangan" used to be a stop with no departures and is
+  now served by the inbound working - the kind of premise that rots the moment
+  the timetable grows. This asks the data instead.
+*/
+const UNSERVED = STOPS.find(
+  (stop) =>
+    departuresFrom("weekday", stop).length === 0 &&
+    departuresFrom("weekend", stop).length === 0
+)!;
+
 /** A corridor-local wall clock, given as the UTC instant it corresponds to. */
 const ist = (date: string, hour: number, minute = 0) => {
   const utcHour = hour - 5;
@@ -73,7 +84,7 @@ describe("listing departures from a stop", () => {
   });
 
   it("is empty for a stop with no scheduled service", () => {
-    expect(departuresFrom("weekday", "Muktangan")).toEqual([]);
+    expect(departuresFrom("weekday", UNSERVED)).toEqual([]);
   });
 });
 
@@ -158,7 +169,7 @@ describe("when the day's service has finished", () => {
   });
 
   it("distinguishes a stop with no service at all from a finished day", () => {
-    expect(outlookFor("Muktangan", at(MONDAY, 9, 0)).kind).toBe("no-service");
+    expect(outlookFor(UNSERVED, at(MONDAY, 9, 0)).kind).toBe("no-service");
   });
 });
 
@@ -295,5 +306,71 @@ describe("what leaves next that actually gets there", () => {
     if (served.kind === "ended") {
       expect(served.last.time).toBeTruthy();
     }
+  });
+});
+
+/**
+ * Both directions.
+ *
+ * `getTrips` defaults to outbound so the timetable grid can render one working
+ * per table. `departuresFrom` inherited that default, and five of the eight
+ * published routes - 201 to 205, which run inbound only - reported no
+ * departures anywhere in the product. These pin the fix at the layer every
+ * surface reads from.
+ */
+describe("serving a stop in both directions", () => {
+  const morning = new Date("2026-08-31T09:00:00+05:30");
+
+  it("counts inbound trips, which five published routes run exclusively", () => {
+    const inboundOnly = ["201", "202", "203", "204", "205"];
+
+    const routes = new Set(
+      ["weekday", "weekend"].flatMap((service) =>
+        STOPS.flatMap((stop) =>
+          departuresFrom(service as "weekday" | "weekend", stop).map(
+            (departure) => departure.trip.routeId as string
+          )
+        )
+      )
+    );
+
+    for (const route of inboundOnly) {
+      expect(routes, `route ${route} is invisible again`).toContain(route);
+    }
+  });
+
+  it("returns more from a stop than either direction alone", () => {
+    const both = departuresFrom("weekday", "CBD").length;
+    const out = departuresFrom("weekday", "CBD", "outbound").length;
+    const inb = departuresFrom("weekday", "CBD", "inbound").length;
+
+    expect(out).toBeGreaterThan(0);
+    expect(inb).toBeGreaterThan(0);
+    expect(both).toBe(out + inb);
+  });
+
+  it("scopes to one direction when a surface asks for one", () => {
+    for (const departure of departuresFrom("weekday", "CBD", "inbound")) {
+      expect(departure.trip.direction).toBe("inbound");
+    }
+  });
+
+  /*
+    The planner's defect in one assertion: this journey is published on the
+    inbound working, and the page told passengers it did not exist.
+  */
+  it("finds a return journey the operator publishes", () => {
+    const back = journeyDeparturesFrom("CBD", "HNLU", morning);
+
+    expect(back.length).toBeGreaterThan(0);
+    expect(back.every((d) => d.trip.direction === "inbound")).toBe(true);
+  });
+
+  it("answers a stop question with whichever direction leaves first", () => {
+    const next = nextDepartureFrom("CBD", morning);
+    const outboundNext = nextDepartureFrom("CBD", morning, "outbound");
+
+    expect(next).not.toBeNull();
+    expect(next!.minutes).toBeLessThanOrEqual(outboundNext!.minutes);
   });
 });

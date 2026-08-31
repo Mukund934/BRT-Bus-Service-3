@@ -64,8 +64,22 @@ const captionFor = (service: ServiceDay, direction: Direction): string =>
  * a live layer, and a passenger must be able to tell which one they are
  * reading without knowing the product.
  */
-const NextBusCard = ({ now, origin }: { now: Date; origin: StopName }) => {
-  const outlook = outlookFor(origin, now);
+/*
+  Scoped to the direction on screen. Without it the inbound tab answered with
+  an outbound bus ARRIVING at the terminus and presented it as the next return
+  departure - the stop is served both ways, so "what leaves here next" is the
+  wrong question once a direction is being shown.
+*/
+const NextBusCard = ({
+  now,
+  origin,
+  direction,
+}: {
+  now: Date;
+  origin: StopName;
+  direction: Direction;
+}) => {
+  const outlook = outlookFor(origin, now, direction);
 
   if (outlook.kind === "no-service") return null;
 
@@ -460,7 +474,9 @@ const Timetable = () => {
           )}
         </div>
 
-        {isToday && origin && <NextBusCard now={now} origin={origin} />}
+        {isToday && origin && (
+          <NextBusCard now={now} origin={origin} direction={direction} />
+        )}
 
         <div className="max-w-5xl mx-auto mb-10">
           {/*

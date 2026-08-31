@@ -18,12 +18,14 @@ import {
   serviceWeekdayName,
 } from "./calendar";
 import {
+  getAllTrips,
   getCallTime,
   getDestinationsFrom,
   getTrips,
   type ServiceDay,
   type Trip,
 } from "./schedule";
+import type { Direction } from "./timetable";
 import type { StopName } from "./stops";
 
 /** One scheduled departure from a stop. */
@@ -60,14 +62,25 @@ export const toMinutes = (time: string): number | null => {
   return hour24 * 60 + minutes;
 };
 
-/** Every scheduled departure from a stop on a service day, in time order. */
+/**
+ * Every scheduled departure from a stop on a service day, in time order.
+ *
+ * **Both directions unless one is named.** A stop is served both ways and a
+ * passenger standing at it wants to know about both; scoping to a direction is
+ * for a surface that renders one working at a time, like the timetable grid.
+ * This defaulted to outbound once, which is how five of the eight published
+ * routes came to report no departures at all.
+ */
 export const departuresFrom = (
   service: ServiceDay,
-  stop: StopName
+  stop: StopName,
+  direction?: Direction
 ): Departure[] => {
   const departures: Departure[] = [];
 
-  for (const trip of getTrips(service)) {
+  const trips = direction ? getTrips(service, direction) : getAllTrips(service);
+
+  for (const trip of trips) {
     const time = getCallTime(trip, stop);
 
     if (time === null) continue;
@@ -86,11 +99,12 @@ export const departuresFrom = (
 export const upcomingDeparturesFrom = (
   stop: StopName,
   at: Date,
-  limit = 3
+  limit = 3,
+  direction?: Direction
 ): Departure[] => {
   const now = serviceMinutesOf(at);
 
-  return departuresFrom(serviceOn(at), stop)
+  return departuresFrom(serviceOn(at), stop, direction)
     .filter((departure) => departure.minutes >= now)
     .slice(0, limit);
 };
@@ -158,17 +172,21 @@ export const journeyOutlookFor = (
 };
 
 /** The next departure from a stop today, or null once service has ended. */
-export const nextDepartureFrom = (stop: StopName, at: Date): Departure | null =>
-  upcomingDeparturesFrom(stop, at, 1)[0] ?? null;
+export const nextDepartureFrom = (
+  stop: StopName,
+  at: Date,
+  direction?: Direction
+): Departure | null => upcomingDeparturesFrom(stop, at, 1, direction)[0] ?? null;
 
 /** The most recent departure that has already gone, or null before service. */
 export const previousDepartureFrom = (
   stop: StopName,
-  at: Date
+  at: Date,
+  direction?: Direction
 ): Departure | null => {
   const now = serviceMinutesOf(at);
 
-  const gone = departuresFrom(serviceOn(at), stop).filter(
+  const gone = departuresFrom(serviceOn(at), stop, direction).filter(
     (departure) => departure.minutes < now
   );
 
@@ -195,8 +213,12 @@ export type StopOutlook =
     }
   | { kind: "no-service" };
 
-export const outlookFor = (stop: StopName, at: Date): StopOutlook => {
-  const upcoming = upcomingDeparturesFrom(stop, at, 4);
+export const outlookFor = (
+  stop: StopName,
+  at: Date,
+  direction?: Direction
+): StopOutlook => {
+  const upcoming = upcomingDeparturesFrom(stop, at, 4, direction);
 
   if (upcoming.length > 0) {
     return { kind: "upcoming", next: upcoming[0]!, following: upcoming.slice(1) };
@@ -204,7 +226,7 @@ export const outlookFor = (stop: StopName, at: Date): StopOutlook => {
 
   const tomorrow = nextServiceDate(at);
   const tomorrowService = serviceOn(tomorrow);
-  const first = departuresFrom(tomorrowService, stop)[0];
+  const first = departuresFrom(tomorrowService, stop, direction)[0];
 
   if (!first) return { kind: "no-service" };
 

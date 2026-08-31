@@ -48,17 +48,32 @@ export const serviceFor = (date: Date): ServiceDay =>
   date.getDay() === 0 || date.getDay() === 6 ? "weekend" : "weekday";
 
 /**
- * Trips for a service day, in timetable order.
+ * Trips for a service day in one direction, in timetable order.
  *
- * Direction defaults to outbound because every caller predates the inbound
- * working existing, and an outbound-only screen that silently started showing
- * return services would render its stop columns in the wrong order.
+ * Direction defaults to outbound because a grid that renders its stop columns
+ * from one working cannot show the other in the same table - the reverse
+ * pattern is not the mirror of the forward one.
+ *
+ * **That default is for column rendering only.** Anything answering "what is
+ * there to catch" must ask `getAllTrips`, or it silently drops the 47 published
+ * inbound trips and tells a passenger a real service does not exist.
  */
 export const getTrips = (
   service: ServiceDay,
   direction: Direction = "outbound"
 ): readonly Trip[] =>
   TRIPS.filter((trip) => trip.service === service && trip.direction === direction);
+
+/**
+ * Every trip on a service day, both directions.
+ *
+ * A stop is served in both directions and a passenger standing at one wants to
+ * know about both. Routes 201-205 run inbound only, so a caller using
+ * `getTrips` alone reports nothing at all for five of the eight published
+ * routes.
+ */
+export const getAllTrips = (service: ServiceDay): readonly Trip[] =>
+  TRIPS.filter((trip) => trip.service === service);
 
 /** Scheduled time this trip calls at a stop, or null when it does not. */
 export const getCallTime = (trip: Trip, stop: StopName): string | null =>

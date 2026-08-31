@@ -164,8 +164,15 @@ describe("a notice about the journey being planned", () => {
 
     await screen.findByText("On your way");
 
-    const order = screen
-      .getAllByText(/On your way|Elsewhere entirely/)
+    /*
+      Scoped to the alerts region, and matched on the whole string rather than
+      a substring. An unscoped getAllByText searches the entire document and
+      matches any ancestor whose textContent merely contains the title, so it
+      counted a wrapper as a third notice under full-suite load while passing
+      in isolation.
+    */
+    const order = within(alertsRegion()!)
+      .getAllByText(/^(On your way|Elsewhere entirely)$/)
       .map((node) =>
         node.textContent?.includes("On your way") ? "targeted" : "other"
       );

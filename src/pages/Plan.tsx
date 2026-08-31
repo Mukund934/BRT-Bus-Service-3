@@ -15,9 +15,9 @@ import { parseTimeToDate } from "@/domain/time";
 import { calculateFare } from "@/domain/transit/fares";
 import { isInterchange } from "@/domain/transit/routes";
 import {
+  getAllTrips,
   getCallTime,
   getTripStops,
-  getTrips,
   hasScheduledService,
   serviceFor,
   type Trip,
@@ -100,7 +100,7 @@ const Plan = () => {
     const [hours = 0, mins = 0] = searchedTime.split(":").map(Number);
     const earliest = hours * 60 + mins;
 
-    return getTrips(serviceFor(new Date(`${searchedDate}T00:00:00`)))
+    return getAllTrips(serviceFor(new Date(`${searchedDate}T00:00:00`)))
       .filter((trip) => tripServesJourney(trip, origin, destination))
       .map((trip) => {
         const departure = getCallTime(trip, origin)!;
@@ -326,9 +326,10 @@ const Plan = () => {
                       </p>
                     ) : (
                       <p className="text-sm text-muted-foreground">
-                        The timetable currently runs from HNLU towards Raipur
-                        Railway Station only, and departures are listed for the
-                        selected day after {searchedTime}.
+                        No published trip runs from {origin} to {destination} on
+                        the selected day after {searchedTime}. Both directions
+                        are searched; try an earlier time, or check the
+                        timetable for the days this journey runs.
                       </p>
                     )}
                   </div>

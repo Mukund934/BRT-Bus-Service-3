@@ -21,7 +21,7 @@ import {
   isSimulatorPermitted,
   type SimulatorOptions,
 } from "@/domain/fleet/simulator";
-import { SCHEDULED_STOPS, getTrips } from "@/domain/transit/schedule";
+import { SCHEDULED_STOPS, getAllTrips } from "@/domain/transit/schedule";
 import { findStops } from "@/domain/transit/stops";
 
 const networkRoutes = getNetworkRoutes();
@@ -121,9 +121,9 @@ const RouteExplorer = () => {
               {ROUTE_IDS.map((id) => {
                 const route = getRoute(id);
                 const trips =
-                  getTrips("weekday").filter((trip) => trip.routeId === id)
+                  getAllTrips("weekday").filter((trip) => trip.routeId === id)
                     .length +
-                  getTrips("weekend").filter((trip) => trip.routeId === id)
+                  getAllTrips("weekend").filter((trip) => trip.routeId === id)
                     .length;
 
                 return (

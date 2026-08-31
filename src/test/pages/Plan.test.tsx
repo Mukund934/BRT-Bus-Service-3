@@ -82,14 +82,25 @@ describe("pricing a journey", () => {
     );
   });
 
-  it("still explains the one-way timetable when both stops are served", async () => {
+  /*
+    This test used to assert the opposite - that the page explains "the
+    timetable currently runs from HNLU towards Raipur Railway Station only".
+    That sentence stopped being true when the inbound working landed, and the
+    assertion then protected the defect instead of catching it: CBD to HNLU is
+    a published return journey on routes 201-205. The claim is gone and the
+    journey is found.
+  */
+  it("plans a return journey, which the published timetable does run", async () => {
     renderWithProviders(<Plan />, {
       route: "/plan?from=CBD&to=HNLU&date=2026-07-20&time=00:00",
     });
 
     expect(
-      await screen.findByText(/The timetable currently runs from HNLU/)
+      await screen.findByRole("heading", { name: /departures?$/ })
     ).toBeInTheDocument();
+    expect(screen.getByRole("main")).not.toHaveTextContent(
+      "No scheduled service for this journey"
+    );
   });
 
   it("asks for a firmer choice when what was typed matches several stops", async () => {

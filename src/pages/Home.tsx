@@ -5,7 +5,7 @@ import Footer from "@/components/Footer";
 import RouteCard from "@/components/RouteCard";
 import heroBus from "@/assets/hero-brts.webp";
 import { Clock, Compass, MapPin, Search, Shield, Zap } from "lucide-react";
-import { getTripStops, getTrips, type Trip } from "@/domain/transit/schedule";
+import { getAllTrips, getTripStops, type Trip } from "@/domain/transit/schedule";
 import { serviceOn, serviceMinutesOf, SERVICE_LABELS } from "@/domain/transit/calendar";
 import { tripTimings } from "@/domain/transit/departures";
 import { useNow } from "@/hooks/use-now";
@@ -85,7 +85,7 @@ const Home = () => {
   const service = serviceOn(now);
 
   const featured = useMemo(() => {
-    const trips = getTrips(service);
+    const trips = getAllTrips(service);
     const timings = tripTimings(trips, serviceMinutesOf(now));
 
     return trips.filter((_, index) => timings[index] !== "departed").slice(0, 6);
