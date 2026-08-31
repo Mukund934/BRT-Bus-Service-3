@@ -36,7 +36,7 @@
         },
 
         "routeId": {
-          ".validate": "newData.isString() && newData.val().matches(/^(101|102)$/)"
+          ".validate": "newData.isString() && newData.val().matches(/^(101|102|105|201|202|203|204|205)$/)"
         },
 
         "$other": {

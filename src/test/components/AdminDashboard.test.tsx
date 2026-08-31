@@ -322,6 +322,23 @@ describe("changing somebody's role", () => {
   const roleSelect = (name: string) =>
     screen.getByRole("combobox", { name: `Role for ${name}` });
 
+  /*
+    The gap this closes is not cosmetic. The Realtime Database gates position
+    writes on `driverAllowlist`, which no client may write and which
+    `setUserRole` does not touch, so the role granted here does not let anyone
+    broadcast. An administrator who was told otherwise would hand out a driver
+    account and then have no reason to look for the missing half.
+  */
+  it("says that the driver role alone does not enable broadcasting", async () => {
+    await showPanel();
+
+    const note = screen.getByRole("note");
+
+    expect(note).toHaveTextContent(/driver role is not enough on its own/i);
+    expect(note).toHaveTextContent(/driverAllowlist/);
+    expect(note).toHaveTextContent(/Firebase console/i);
+  });
+
   it("offers every role the system recognises", async () => {
     const { user } = await showPanel();
 

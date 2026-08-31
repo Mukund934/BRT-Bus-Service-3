@@ -320,6 +320,28 @@ const AdminDashboard = ({ onError }: AdminDashboardProps) => {
             </button>
           </div>
 
+          {/*
+            Granting the driver role here is only half of enabling a driver.
+            The Realtime Database gates every position write on an allowlist of
+            driver UIDs, and that node is deliberately unwritable by every
+            client - it is a list of people, so publishing it would recreate
+            the personal-data problem the public map avoids. Saying nothing
+            here is how an administrator ends up believing they have enabled
+            somebody who cannot broadcast at all.
+          */}
+          <div
+            role="note"
+            className="mb-4 rounded-lg border border-primary/30 bg-accent px-4 py-3"
+          >
+            <p className="text-sm text-primary-deep">
+              <strong>Granting the driver role is not enough on its own.</strong>{" "}
+              A driver can only broadcast a position once their user ID is added
+              to the <code>driverAllowlist</code> in the Realtime Database. That
+              node is closed to every client by design, so it has to be set from
+              the Firebase console.
+            </p>
+          </div>
+
           <div className="relative">
             <label htmlFor={searchId} className="sr-only">
               Search users by name or email
