@@ -12,6 +12,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useTickets } from "@/contexts/TicketContext";
 import { PAYMENT_FAILURE_MESSAGES } from "@/domain/payment/types";
 import type { JourneySelection, PaymentStatus } from "@/domain/ticket/types";
+import { confirmPayment } from "@/domain/ticket/factory";
 import { activePaymentProvider } from "@/services/payment/demoProvider";
 import { BOOKING_FAILURE_MESSAGES } from "@/services/ticketService";
 
@@ -118,7 +119,13 @@ const PaymentModal = ({ open, onClose, selection, onSuccess }: PaymentModalProps
 
       // Past this point the passenger owns the ticket, so issuing cannot
       // refuse. A storage failure is reported without destroying it.
-      const issued = await issueTicket(validation.ticket);
+      //
+      // The ticket is stamped with what the provider returned rather than
+      // stored as built: until this line it says the payment is PENDING,
+      // which is what it was.
+      const issued = await issueTicket(
+        confirmPayment(validation.ticket, outcome.intent)
+      );
 
       setStatus("SUCCESS");
       setWarning(

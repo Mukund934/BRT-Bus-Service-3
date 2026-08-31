@@ -53,7 +53,15 @@ interface TicketContextValue {
   validateBooking: (draft: TicketDraft) => BookingValidation;
   /** Persists a validated, paid-for ticket. Never refuses. */
   issueTicket: (ticket: Ticket) => Promise<{ ticket: Ticket; persisted: boolean }>;
-  cancelTicket: (ticketId: string) => Promise<void>;
+  /**
+   * Cancels a ticket, reporting whether it actually happened.
+   *
+   * It can legitimately fail - a ticket that already departed, one that
+   * belongs to somebody else, or a storage write that is refused - and a
+   * caller that ignores the answer tells the passenger their ticket is
+   * cancelled while it is still live.
+   */
+  cancelTicket: (ticketId: string) => Promise<boolean>;
   refreshTickets: () => void;
 }
 
@@ -191,18 +199,25 @@ export const TicketProvider = ({ children }: { children: ReactNode }) => {
   );
 
   const cancelTicket = useCallback(
-    async (ticketId: string): Promise<void> => {
-      if (!userId) return;
+    async (ticketId: string): Promise<boolean> => {
+      if (!userId) return false;
 
       const next = cancelTicketInStorage(userId, tickets, ticketId);
 
-      if (!next) return;
+      if (!next) return false;
 
       setTickets(next);
 
       const cancelled = next.find((ticket) => ticket.ticketId === ticketId);
 
       if (cancelled) await pushTicketStatus(cancelled);
+
+      /*
+        The local cancellation is what counts. `pushTicketStatus` is a
+        best-effort broadcast to the operator and its failure must not tell
+        the passenger their cancellation did not take, because it did.
+      */
+      return true;
     },
     [userId, tickets]
   );

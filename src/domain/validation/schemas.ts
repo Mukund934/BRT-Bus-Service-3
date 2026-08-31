@@ -70,6 +70,12 @@ export const ticketSchema = z.object({
   expiresAt: isoDate,
   status: ticketStatusSchema,
   paymentStatus: paymentStatusSchema,
+  /*
+    Optional because every ticket issued before payments were recorded lacks
+    it, and refusing those would delete a passenger's history to fix a field
+    that is only ever read by a human reconciling a payment.
+  */
+  paymentReference: z.string().min(1).max(128).optional(),
   qrData: z.string().max(4096),
   validationToken: z.string().min(1).max(128),
 });

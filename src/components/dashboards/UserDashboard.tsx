@@ -75,7 +75,18 @@ const UserDashboard = () => {
    */
   const handleCancel = useCallback(
     async (ticketId: string) => {
-      await cancelTicket(ticketId);
+      const cancelled = await cancelTicket(ticketId);
+
+      if (!cancelled) {
+        const message =
+          "That ticket could not be cancelled. It may have already departed.";
+
+        toast.error(message);
+        announce(message, "assertive");
+
+        return;
+      }
+
       toast.success("Ticket cancelled.");
       announce("Your ticket has been cancelled.");
     },
