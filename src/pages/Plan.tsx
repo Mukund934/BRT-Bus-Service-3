@@ -248,7 +248,7 @@ const Plan = () => {
               <button
                 type="button"
                 onClick={handleSwap}
-                className="px-6 py-3 rounded-xl border border-border text-foreground font-medium transition-colors duration-150 hover:bg-secondary flex items-center justify-center gap-2 touch-target"
+                className="px-6 py-3 rounded-xl border border-border text-foreground font-medium transition-colors duration-state hover:bg-secondary flex items-center justify-center gap-2 touch-target"
               >
                 <Repeat className="w-4 h-4" aria-hidden="true" />
                 Swap

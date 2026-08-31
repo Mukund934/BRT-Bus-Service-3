@@ -16,9 +16,10 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:ui": "vitest --ui",
-    "verify": "npm run typecheck && npm run typecheck:domain && npm run lint && npm run test:coverage && npm run test:domain && npm run build",
+    "verify": "npm run typecheck && npm run typecheck:domain && npm run lint && npm run test:coverage && npm run test:domain && npm run build && npm run test:bundle",
     "typecheck:domain": "tsc -p tsconfig.domain.json",
-    "test:domain": "vitest run --config vitest.domain.config.ts"
+    "test:domain": "vitest run --config vitest.domain.config.ts",
+    "test:bundle": "vitest run --config vitest.bundle.config.ts"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.14",

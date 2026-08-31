@@ -32,7 +32,7 @@ const Footer = ({
 							to="/"
 							className="flex items-center gap-3 text-primary-foreground group"
 						>
-							<div className="bg-white/10 p-2 rounded-xl group-hover:bg-white/20 transition-colors duration-150">
+							<div className="bg-white/10 p-2 rounded-xl group-hover:bg-white/20 transition-colors duration-state">
 								{/* Decorative: the brand name is right beside it. */}
 								<img
 									src="/logo1.png"
@@ -71,7 +71,7 @@ const Footer = ({
 								<li key={to}>
 									<Link
 										to={to}
-										className="text-primary-foreground/90 hover:text-white transition-colors duration-200"
+										className="text-primary-foreground/90 hover:text-white transition-colors duration-enter"
 									>
 										{label}
 									</Link>

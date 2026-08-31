@@ -182,7 +182,7 @@ const RouteExplorer = () => {
                       type="button"
                       aria-pressed={showSimulated}
                       onClick={() => setShowSimulated((on) => !on)}
-                      className={`px-4 py-2 rounded-xl text-sm font-medium touch-target transition-colors duration-150 border ${
+                      className={`px-4 py-2 rounded-xl text-sm font-medium touch-target transition-colors duration-state border ${
                         showSimulated
                           ? "bg-primary text-primary-foreground border-primary"
                           : "border-border text-foreground hover:bg-secondary"
@@ -220,7 +220,7 @@ const RouteExplorer = () => {
                       type="button"
                       aria-pressed={view === option}
                       onClick={() => setView(option)}
-                      className={`px-4 py-2 rounded-xl text-sm font-medium touch-target transition-colors duration-150 ${
+                      className={`px-4 py-2 rounded-xl text-sm font-medium touch-target transition-colors duration-state ${
                         view === option
                           ? "bg-primary text-primary-foreground"
                           : "border border-border text-foreground hover:bg-secondary"
@@ -415,14 +415,14 @@ const RouteExplorer = () => {
 
                       <Link
                         to="/fares"
-                        className="px-6 py-3 rounded-xl border border-border text-foreground font-medium transition-colors duration-150 hover:bg-secondary inline-flex items-center gap-2 touch-target"
+                        className="px-6 py-3 rounded-xl border border-border text-foreground font-medium transition-colors duration-state hover:bg-secondary inline-flex items-center gap-2 touch-target"
                       >
                         Check fares
                       </Link>
 
                       <Link
                         to="/timetable"
-                        className="px-6 py-3 rounded-xl border border-border text-foreground font-medium transition-colors duration-150 hover:bg-secondary inline-flex items-center gap-2 touch-target"
+                        className="px-6 py-3 rounded-xl border border-border text-foreground font-medium transition-colors duration-state hover:bg-secondary inline-flex items-center gap-2 touch-target"
                       >
                         Timetable
                       </Link>

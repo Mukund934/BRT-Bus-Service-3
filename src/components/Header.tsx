@@ -173,7 +173,7 @@ const Header = () => {
 
 	return (
 		<header
-			className={`sticky top-0 z-50 w-full transition-[background-color,box-shadow] duration-200 ${
+			className={`sticky top-0 z-50 w-full transition-[background-color,box-shadow] duration-enter ${
 				isScrolled
 					? "bg-primary/95 backdrop-blur-xl shadow-[0_10px_35px_rgba(0,0,0,0.18)]"
 					: "bg-primary"
@@ -188,7 +188,7 @@ const Header = () => {
 						aria-label="BRT Bus Service, go to home page"
 					>
 						<div className="p-[2px] rounded-xl bg-white/20">
-							<div className="bg-white/10 rounded-xl p-2 group-hover:bg-white/20 transition duration-300">
+							<div className="bg-white/10 rounded-xl p-2 group-hover:bg-white/20 transition duration-enter">
 								<img
 									src="/logo1.png"
 									alt=""
@@ -215,14 +215,14 @@ const Header = () => {
 								<Link
 									key={to}
 									to={to}
-									className="relative px-3 py-2.5 rounded-xl text-sm font-medium text-white/90 hover:text-white transition-colors duration-150 group flex items-center gap-2 hover:bg-white/10"
+									className="relative px-3 py-2.5 rounded-xl text-sm font-medium text-white/90 hover:text-white transition-colors duration-state group flex items-center gap-2 hover:bg-white/10"
 									aria-current={active ? "page" : undefined}
 								>
 									<Icon className="w-4 h-4 opacity-80 group-hover:opacity-100 transition" aria-hidden="true" />
 									<span className="relative z-10">{label}</span>
 									<span
 										aria-hidden="true"
-										className={`absolute bottom-[6px] left-1/2 h-[2px] w-[70%] -translate-x-1/2 origin-center bg-white rounded-full transition-transform duration-150 ease-out ${
+										className={`absolute bottom-[6px] left-1/2 h-[2px] w-[70%] -translate-x-1/2 origin-center bg-white rounded-full transition-transform duration-state ease-out ${
 											active
 												? "scale-x-100"
 												: "scale-x-0 group-hover:scale-x-100"
@@ -238,7 +238,7 @@ const Header = () => {
 							{!user ? (
 								<Link
 									to="/login"
-									className="px-6 py-2.5 rounded-xl bg-white text-primary font-semibold shadow-[0_8px_25px_rgba(255,255,255,0.25)] transition-[transform,box-shadow] duration-150 hover:-translate-y-[2px] hover:shadow-[0_12px_35px_rgba(255,255,255,0.35)]"
+									className="px-6 py-2.5 rounded-xl bg-white text-primary font-semibold shadow-[0_8px_25px_rgba(255,255,255,0.25)] transition-[transform,box-shadow] duration-state hover:-translate-y-[2px] hover:shadow-[0_12px_35px_rgba(255,255,255,0.35)]"
 								>
 									Login
 								</Link>
@@ -248,7 +248,7 @@ const Header = () => {
 										type="button"
 										ref={profileButtonRef}
 										onClick={() => setIsProfileOpen((open) => !open)}
-										className="relative flex items-center justify-center w-10 h-10 rounded-full bg-white text-primary font-semibold text-sm hover:scale-110 transition-transform duration-300 shadow-lg border-2 border-white/30 hover:border-white focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-primary"
+										className="relative flex items-center justify-center w-10 h-10 rounded-full bg-white text-primary font-semibold text-sm hover:scale-110 transition-transform duration-enter shadow-lg border-2 border-white/30 hover:border-white focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-primary"
 										aria-expanded={isProfileOpen}
 										aria-controls={profileMenuId}
 										aria-label={`Account menu for ${displayName}`}
@@ -272,7 +272,7 @@ const Header = () => {
 									{isProfileOpen && (
 										<div
 											id={profileMenuId}
-											className="absolute top-full mt-3 right-0 w-56 bg-white text-gray-800 rounded-2xl shadow-2xl overflow-hidden z-[60] animate-in fade-in zoom-in-95 duration-200"
+											className="absolute top-full mt-3 right-0 w-56 bg-white text-gray-800 rounded-2xl shadow-2xl overflow-hidden z-[60] animate-in fade-in zoom-in-95 duration-enter"
 										>
 											<div className="p-4 border-b border-gray-200 bg-gradient-to-r from-secondary to-accent">
 												<div className="flex items-center gap-3">
@@ -300,7 +300,7 @@ const Header = () => {
 											<button
 												type="button"
 												onClick={handleDashboardClick}
-												className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-secondary transition-colors duration-200 border-b border-gray-100 touch-target"
+												className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-secondary transition-colors duration-enter border-b border-gray-100 touch-target"
 											>
 												<LayoutDashboard className="w-4 h-4 text-primary flex-shrink-0" aria-hidden="true" />
 												<span>Dashboard</span>
@@ -310,7 +310,7 @@ const Header = () => {
 												type="button"
 												onClick={handleLogout}
 												disabled={isLoggingOut}
-												className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-destructive/10 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed touch-target"
+												className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-destructive/10 transition-colors duration-enter disabled:opacity-50 disabled:cursor-not-allowed touch-target"
 											>
 												<LogOut className="w-4 h-4 text-destructive flex-shrink-0" aria-hidden="true" />
 												<span>{isLoggingOut ? "Signing out…" : "Logout"}</span>
@@ -352,7 +352,7 @@ const Header = () => {
 			<div
 				id={mobileMenuId}
 				ref={mobileMenuRef}
-				className={`xl:hidden fixed inset-y-0 right-0 w-64 max-w-[85vw] bg-primary transform transition-transform duration-300 z-50 ${
+				className={`xl:hidden fixed inset-y-0 right-0 w-64 max-w-[85vw] bg-primary transform transition-transform duration-enter z-50 ${
 					isMenuOpen ? "translate-x-0" : "translate-x-full"
 				}`}
 			>
@@ -364,7 +364,7 @@ const Header = () => {
 								key={to}
 								to={to}
 								onClick={() => closeMenu()}
-								className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors duration-200 touch-target ${
+								className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors duration-enter touch-target ${
 									isActive(to)
 										? "bg-white/20 text-white"
 										: "text-white/90 hover:bg-white/10 hover:text-white"
@@ -382,7 +382,7 @@ const Header = () => {
 							<Link
 								to="/login"
 								onClick={() => closeMenu()}
-								className="w-full flex justify-center px-5 py-3 rounded-xl bg-white text-primary font-semibold transition-transform duration-200 hover:scale-105 active:scale-95 touch-target"
+								className="w-full flex justify-center px-5 py-3 rounded-xl bg-white text-primary font-semibold transition-transform duration-enter hover:scale-105 active:scale-95 touch-target"
 							>
 								Login
 							</Link>
@@ -412,7 +412,7 @@ const Header = () => {
 								<button
 									type="button"
 									onClick={handleDashboardClick}
-									className="w-full flex justify-center items-center gap-2 px-5 py-3 rounded-xl bg-white/20 text-white font-semibold border border-white/30 hover:bg-white/30 transition-colors duration-200 mb-2 active:bg-white/40 touch-target"
+									className="w-full flex justify-center items-center gap-2 px-5 py-3 rounded-xl bg-white/20 text-white font-semibold border border-white/30 hover:bg-white/30 transition-colors duration-enter mb-2 active:bg-white/40 touch-target"
 								>
 									<LayoutDashboard className="w-4 h-4" aria-hidden="true" />
 									Dashboard
@@ -422,7 +422,7 @@ const Header = () => {
 									type="button"
 									onClick={handleLogout}
 									disabled={isLoggingOut}
-									className="w-full flex justify-center items-center gap-2 px-5 py-3 rounded-xl bg-white/10 text-white font-semibold border border-white/40 hover:bg-white/20 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed active:bg-destructive/40 touch-target"
+									className="w-full flex justify-center items-center gap-2 px-5 py-3 rounded-xl bg-white/10 text-white font-semibold border border-white/40 hover:bg-white/20 transition-colors duration-enter disabled:opacity-50 disabled:cursor-not-allowed active:bg-destructive/40 touch-target"
 								>
 									<LogOut className="w-4 h-4" aria-hidden="true" />
 									<span>{isLoggingOut ? "Signing out…" : "Logout"}</span>

@@ -39,7 +39,7 @@ const RouteStopList = ({ routeId, stops, scheduled }: RouteStopListProps) => (
               {scheduled.has(stop) ? (
                 <Link
                   to={`/plan?from=${encodeURIComponent(stop)}`}
-                  className="font-semibold text-foreground rounded transition-colors duration-200 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                  className="font-semibold text-foreground rounded transition-colors duration-enter hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
                 >
                   {stop}
                   <span className="sr-only"> - plan a journey from here</span>

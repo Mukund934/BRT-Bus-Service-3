@@ -544,7 +544,7 @@ const Login = () => {
 						`pointer-events-none` alone would still leave them tabbable.
 					*/}
 					<div
-						className={`absolute top-0 left-0 w-1/2 h-full flex flex-col items-center justify-center px-10 transition-[transform,opacity] duration-[400ms] ${
+						className={`absolute top-0 left-0 w-1/2 h-full flex flex-col items-center justify-center px-10 transition-[transform,opacity] duration-settle ${
 							isSignUpView ? "translate-x-full opacity-100 z-[5]" : "opacity-0 z-[1] pointer-events-none"
 						}`}
 					>
@@ -552,7 +552,7 @@ const Login = () => {
 					</div>
 
 					<div
-						className={`absolute top-0 left-0 w-1/2 h-full flex flex-col items-center justify-center px-10 transition-[transform,opacity] duration-[400ms] z-[2] ${
+						className={`absolute top-0 left-0 w-1/2 h-full flex flex-col items-center justify-center px-10 transition-[transform,opacity] duration-settle z-[2] ${
 							isSignUpView ? "-translate-x-full opacity-0 pointer-events-none" : ""
 						}`}
 					>
@@ -560,7 +560,7 @@ const Login = () => {
 					</div>
 
 					<div
-						className={`absolute top-0 left-1/2 w-1/2 h-full overflow-hidden rounded-l-[150px] transition-[transform,border-radius] duration-[400ms] z-[100] ${
+						className={`absolute top-0 left-1/2 w-1/2 h-full overflow-hidden rounded-l-[150px] transition-[transform,border-radius] duration-settle z-[100] ${
 							isSignUpView ? "-translate-x-full rounded-l-none rounded-r-[150px]" : ""
 						}`}
 					>
@@ -575,7 +575,7 @@ const Login = () => {
 									<button
 										type="button"
 										onClick={() => switchView(true)}
-										className="border border-white px-10 py-2.5 rounded-lg font-semibold hover:bg-white hover:text-primary transition-colors duration-300 touch-target"
+										className="border border-white px-10 py-2.5 rounded-lg font-semibold hover:bg-white hover:text-primary transition-colors duration-enter touch-target"
 									>
 										Sign up
 									</button>
@@ -589,7 +589,7 @@ const Login = () => {
 									<button
 										type="button"
 										onClick={() => switchView(false)}
-										className="border border-white px-10 py-2.5 rounded-lg font-semibold hover:bg-white hover:text-primary transition-colors duration-300 touch-target"
+										className="border border-white px-10 py-2.5 rounded-lg font-semibold hover:bg-white hover:text-primary transition-colors duration-enter touch-target"
 									>
 										Sign in
 									</button>

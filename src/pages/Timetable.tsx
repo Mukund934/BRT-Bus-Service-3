@@ -343,7 +343,7 @@ const TimetableTable = ({
                       type="button"
                       disabled={!available}
                       onClick={() => onBook(trip)}
-                      className="px-2 py-1.5 text-[10px] lg:text-xs bg-primary text-primary-foreground rounded-md hover:-translate-y-0.5 transition-[transform,box-shadow] duration-150 hover:shadow-md active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+                      className="px-2 py-1.5 text-[10px] lg:text-xs bg-primary text-primary-foreground rounded-md hover:-translate-y-0.5 transition-[transform,box-shadow] duration-state hover:shadow-md active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
                     >
                       Book
                       {/*

@@ -71,6 +71,12 @@ jobs:
       - name: Build
         run: npm run build
 
+      # Weighs what a first-time visitor downloads. Runs after the build
+      # because the build is the thing being measured - the chunking strategy
+      # has silently reverted before while the source still read as lazy.
+      - name: Bundle budget
+        run: npm run test:bundle
+
       - name: Upload coverage report
         # Runs even when a gate above failed - the coverage of a failing
         # build is often what explains it.

@@ -290,7 +290,7 @@ const PaymentModal = ({ open, onClose, selection, onSuccess }: PaymentModalProps
               <button
                 type="button"
                 onClick={onClose}
-                className="px-5 py-2.5 rounded-xl border border-border text-foreground font-medium transition-colors duration-150 hover:bg-secondary touch-target"
+                className="px-5 py-2.5 rounded-xl border border-border text-foreground font-medium transition-colors duration-state hover:bg-secondary touch-target"
               >
                 Close
               </button>

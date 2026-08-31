@@ -16,6 +16,8 @@
  * body without the surrounding document, which is an artefact of rendering a
  * component rather than a defect in the page.
  *
+ * Frames are not descended into either - see `iframes` below.
+ *
  * Automated rules catch roughly a third to a half of real barriers. Passing
  * here is a floor, not a verdict - the keyboard, focus-visibility, target-size
  * and reflow checks that need a real browser are recorded in ROADMAP-2.0.md.
@@ -23,6 +25,7 @@
 
 import { describe, expect, it, vi } from "vitest";
 import axe, { type Result } from "axe-core";
+import { Route, Routes } from "react-router-dom";
 
 import Home from "@/pages/Home";
 import Plan from "@/pages/Plan";
@@ -35,13 +38,27 @@ import Help from "@/pages/Help";
 import About from "@/pages/About";
 import Search from "@/pages/Search";
 import NotFound from "@/pages/NotFound";
+import MapPage from "@/pages/MapPage";
+import PlaceDetail from "@/pages/PlaceDetail";
+import Dashboard from "@/pages/Dashboard";
 
-import { renderWithProviders } from "../helpers/render";
+import { act, renderWithProviders } from "../helpers/render";
+import { makeUser, signInAs } from "../helpers/firebase";
 
 vi.mock("@/services/userService", async () => {
   const helper = await import("../helpers/userService");
   return helper.userServiceMock();
 });
+
+/*
+  The map opens a Realtime Database listener on mount. Auditing the page does
+  not need live buses, but it does need that subscription not to reach a real
+  SDK, so it is stubbed to a no-op unsubscribe.
+*/
+vi.mock("@/services/locationService", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/services/locationService")>()),
+  subscribeToBuses: vi.fn(() => vi.fn()),
+}));
 
 const DISABLED = { "color-contrast": { enabled: false }, region: { enabled: false } };
 
@@ -52,10 +69,30 @@ const describeViolation = (violation: Result) =>
     .map((node) => `    ${node.html.slice(0, 120)}`)
     .join("\n");
 
+/*
+  An audit of nothing passes. That is the failure mode this whole file is most
+  exposed to - a page that renders empty because a provider was missing or a
+  route did not match would report zero violations and look like a pass - so
+  every audit asserts it was given something to audit first.
+*/
 const auditOf = async (container: HTMLElement): Promise<string[]> => {
+  expect(
+    container.querySelectorAll("*").length,
+    "nothing rendered - this audit would have passed vacuously"
+  ).toBeGreaterThan(10);
+
   const results = await axe.run(container, {
     runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"] },
     rules: DISABLED,
+
+    /*
+      Do not descend into frames. The map embeds OpenStreetMap cross-origin,
+      and axe cannot reach into a frame jsdom never really loaded - it throws
+      rather than reporting a violation. The frame ELEMENT is still audited
+      from this side, which is where its accessible name lives; what is not
+      audited is OpenStreetMap's own markup, which is not ours to fix.
+    */
+    iframes: false,
   });
 
   return results.violations.map(describeViolation);
@@ -73,6 +110,7 @@ const PAGES: [string, () => JSX.Element, string][] = [
   ["About", () => <About />, "/about"],
   ["Search", () => <Search />, "/search?q=CBD"],
   ["Not found", () => <NotFound />, "/nowhere"],
+  ["Live map", () => <MapPage />, "/map"],
 ];
 
 describe("every page a passenger can reach", () => {
@@ -85,4 +123,48 @@ describe("every page a passenger can reach", () => {
       expect(violations.join("\n"), `${name}:\n${violations.join("\n")}`).toBe("");
     }, 30_000);
   }
+});
+
+/*
+  Two pages that cannot be audited by dropping the component into the tree.
+
+  A place detail page reads its subject from the URL, so it needs the route
+  pattern that captures it. Rendered without one it is a not-found page, and
+  auditing a not-found page while believing it is the place page is worse than
+  not auditing at all.
+*/
+describe("a page that depends on its route", () => {
+  it("Place detail has no accessibility violations", async () => {
+    const { container } = renderWithProviders(
+      <Routes>
+        <Route path="/nearby/:placeId" element={<PlaceDetail />} />
+      </Routes>,
+      { route: "/nearby/miraj-cinema" }
+    );
+
+    const violations = await auditOf(container);
+
+    expect(violations.join("\n"), `Place detail:\n${violations.join("\n")}`).toBe("");
+  }, 30_000);
+});
+
+/*
+  And one that depends on who is looking. The dashboard shows a signed-out
+  visitor almost nothing, so an audit of that state would pass by describing
+  an empty container - the page a passenger actually uses is the signed-in one.
+*/
+describe("a page that depends on being signed in", () => {
+  it("Dashboard has no accessibility violations", async () => {
+    const { container } = renderWithProviders(<Dashboard />, {
+      route: "/dashboard",
+    });
+
+    await act(async () => {
+      signInAs(makeUser({ uid: "user-1" }));
+    });
+
+    const violations = await auditOf(container);
+
+    expect(violations.join("\n"), `Dashboard:\n${violations.join("\n")}`).toBe("");
+  }, 30_000);
 });

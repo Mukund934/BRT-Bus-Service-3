@@ -235,9 +235,9 @@ const Home = () => {
               {features.map((feature, idx) => (
                 <div
                   key={idx}
-                  className="group rounded-[22px] p-[1px] bg-gradient-to-br from-primary/25 via-primary/15 to-transparent transition-transform duration-150 hover:-translate-y-[6px]"
+                  className="group rounded-[22px] p-[1px] bg-gradient-to-br from-primary/25 via-primary/15 to-transparent transition-transform duration-state hover:-translate-y-[6px]"
                 >
-                  <div className="rounded-[22px] bg-white/95 backdrop-blur-xl p-6 border border-border shadow-[0_10px_30px_rgba(0,0,0,0.05)] transition-shadow duration-150 group-hover:shadow-[0_25px_70px_rgba(0,0,0,0.08)]">
+                  <div className="rounded-[22px] bg-white/95 backdrop-blur-xl p-6 border border-border shadow-[0_10px_30px_rgba(0,0,0,0.05)] transition-shadow duration-state group-hover:shadow-[0_25px_70px_rgba(0,0,0,0.08)]">
 
                     <div className="w-12 h-12 rounded-xl bg-accent flex items-center justify-center mb-4">
                       <feature.icon className="w-6 h-6 text-primary" />
@@ -282,7 +282,7 @@ const Home = () => {
 
             <Link
               to="/nearby"
-              className="inline-flex items-center gap-2 px-7 py-3 rounded-xl bg-primary text-white font-semibold whitespace-nowrap transition-[transform,box-shadow] duration-150 hover:-translate-y-[2px] hover:shadow-[0_15px_35px_hsl(var(--primary)/0.35)]"
+              className="inline-flex items-center gap-2 px-7 py-3 rounded-xl bg-primary text-white font-semibold whitespace-nowrap transition-[transform,box-shadow] duration-state hover:-translate-y-[2px] hover:shadow-[0_15px_35px_hsl(var(--primary)/0.35)]"
             >
               <Compass className="w-5 h-5" aria-hidden="true" />
               Explore nearby places
@@ -337,7 +337,7 @@ const Home = () => {
                 {featured.map((trip) => (
                   <div
                     key={trip.id}
-                    className="group transition-transform duration-150 hover:-translate-y-[5px]"
+                    className="group transition-transform duration-state hover:-translate-y-[5px]"
                   >
                     <RouteCard
                       title={`${trip.calls[0]?.time} · Route ${trip.routeId}`}

@@ -53,20 +53,20 @@ const Contact = () => {
 
 							<div className="relative group">
 
-								<div className="absolute inset-0 rounded-[28px] bg-gradient-to-br from-primary/25 via-primary/15 to-transparent blur-2xl opacity-60 group-hover:opacity-90 transition duration-700"></div>
+								<div className="absolute inset-0 rounded-[28px] bg-gradient-to-br from-primary/25 via-primary/15 to-transparent blur-2xl opacity-60 group-hover:opacity-90 transition duration-settle"></div>
 
-								<div className="relative bg-white/90 backdrop-blur-xl rounded-[28px] p-8 md:p-12 border border-border shadow-[0_20px_60px_rgba(0,0,0,0.08)] transition-[transform,box-shadow] duration-150 group-hover:-translate-y-[3px] group-hover:shadow-[0_40px_100px_rgba(0,0,0,0.12)]">
+								<div className="relative bg-white/90 backdrop-blur-xl rounded-[28px] p-8 md:p-12 border border-border shadow-[0_20px_60px_rgba(0,0,0,0.08)] transition-[transform,box-shadow] duration-state group-hover:-translate-y-[3px] group-hover:shadow-[0_40px_100px_rgba(0,0,0,0.12)]">
 
 									<div className="grid grid-cols-1 md:grid-cols-3 gap-8">
 
 										{team.map((member) => (
 											<div
 												key={member.name}
-												className="group/card relative rounded-[22px] p-[1px] bg-gradient-to-br from-primary/25 via-primary/15 to-transparent transition-[transform,box-shadow] duration-150 hover:-translate-y-[6px]"
+												className="group/card relative rounded-[22px] p-[1px] bg-gradient-to-br from-primary/25 via-primary/15 to-transparent transition-[transform,box-shadow] duration-state hover:-translate-y-[6px]"
 											>
-												<div className="rounded-[22px] bg-white/95 backdrop-blur-xl p-6 border border-border shadow-[0_10px_30px_rgba(0,0,0,0.05)] transition-transform duration-150 group-hover/card:shadow-[0_25px_70px_rgba(0,0,0,0.08)]">
+												<div className="rounded-[22px] bg-white/95 backdrop-blur-xl p-6 border border-border shadow-[0_10px_30px_rgba(0,0,0,0.05)] transition-transform duration-state group-hover/card:shadow-[0_25px_70px_rgba(0,0,0,0.08)]">
 
-													<div className="absolute inset-0 rounded-[22px] opacity-0 group-hover/card:opacity-100 transition duration-500 bg-gradient-to-br from-primary/15 to-transparent"></div>
+													<div className="absolute inset-0 rounded-[22px] opacity-0 group-hover/card:opacity-100 transition duration-settle bg-gradient-to-br from-primary/15 to-transparent"></div>
 
 													<div className="relative">
 														<ContactCard {...member} />

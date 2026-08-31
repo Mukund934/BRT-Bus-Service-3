@@ -214,6 +214,107 @@ describe("what is allowed to animate", () => {
 });
 
 /*
+  The gap the stylesheet check could not see.
+
+  `keeps every duration in the stylesheet on a token` reads `index.css` only,
+  and Tailwind's `duration-*` utilities never reach it - they emit literal
+  milliseconds straight into the component layer. So the app shipped 300ms,
+  500ms and 700ms transitions that matched no token, and the guard passed.
+
+  The tokens are now spellable as class names (`duration-state`,
+  `duration-enter`, `duration-settle`, see `tailwind.config.ts`), which makes a
+  raw duration a thing to reject rather than the only option available.
+
+  `components/ui` is exempt: it is vendored shadcn, and rewriting it on every
+  upgrade to satisfy our token names would cost more than it protects.
+*/
+describe("the component layer is on the same tokens", () => {
+  const OWN_CODE = sourceFiles(SRC).filter(
+    (file) => !file.replace(/\\/g, "/").includes("/components/ui/")
+  );
+
+  const offenders = (pattern: RegExp) =>
+    OWN_CODE.flatMap((file) => {
+      const matches = readFileSync(file, "utf8").match(pattern) ?? [];
+
+      return matches.map((match) => `${file.replace(SRC, "src")}: ${match}`);
+    });
+
+  it("finds source files to check at all", () => {
+    expect(OWN_CODE.length).toBeGreaterThan(20);
+  });
+
+  it("spells no duration as a raw number", () => {
+    expect(offenders(/\bduration-(?:\d+|\[[^\]]+\])/g)).toEqual([]);
+  });
+
+  it("spells no delay as a raw number", () => {
+    expect(offenders(/\bdelay-(?:\d+|\[[^\]]+\])/g)).toEqual([]);
+  });
+
+  /*
+    Proves the replacement is actually reachable rather than merely absent -
+    a rule satisfied by deleting all motion would be no rule at all.
+  */
+  it("uses the token utilities instead", () => {
+    expect(
+      offenders(/\bduration-(?:state|enter|settle)/g).length
+    ).toBeGreaterThan(10);
+  });
+});
+
+/*
+  MOTION-6, the dependency tripwire.
+
+  The decision not to add an animation library was reasoned about at length
+  and recorded in a private document, which is exactly where a decision goes
+  to die: the first contributor who hits a jank complaint runs `npm i motion`
+  and nothing objects. The reasoning is summarised here because a test is the
+  only part of the argument that survives contact with a new contributor.
+*/
+describe("no animation library", () => {
+  const manifest = JSON.parse(
+    readFileSync(join(process.cwd(), "package.json"), "utf8")
+  ) as { dependencies?: Record<string, string>; devDependencies?: Record<string, string> };
+
+  const installed = Object.keys({
+    ...manifest.dependencies,
+    ...manifest.devDependencies,
+  });
+
+  /*
+    The app's motion is three CSS tokens and a reduced-motion block. A runtime
+    animation library would add a bundle to the initial load, and - the part
+    that matters - it would animate through WAAPI, which the CSS
+    reduced-motion override in `index.css` does not reach. The accessibility
+    guarantee asserted at the top of this file would silently stop applying.
+  */
+  it("is installed", () => {
+    const banned = [
+      "motion",
+      "framer-motion",
+      "gsap",
+      "react-spring",
+      "@react-spring/web",
+      "animejs",
+      "popmotion",
+      "auto-animate",
+      "@formkit/auto-animate",
+    ];
+
+    const found = installed.filter((name) => banned.includes(name));
+
+    expect(
+      found,
+      `${found.join(", ")} would animate through WAAPI, which the ` +
+        "reduced-motion rule in index.css cannot override. If this is a " +
+        "deliberate reversal, the reduced-motion guarantee needs rebuilding " +
+        "in JS first."
+    ).toEqual([]);
+  });
+});
+
+/*
   The tripwire. An exit-animation library, a second layout wrapper or a
   duplicated page shell all show up as a second `#main-content`, which
   silently points the skip link at the wrong page.

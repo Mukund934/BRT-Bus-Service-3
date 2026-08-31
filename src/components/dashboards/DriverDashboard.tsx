@@ -49,7 +49,7 @@ const DriverDashboard = () => {
 
           <Link
             to="/driver"
-            className="px-8 py-4 rounded-xl font-bold text-lg transition-[transform,box-shadow] duration-150 inline-flex items-center justify-center gap-2 mx-auto bg-white text-blue-600 hover:shadow-lg hover:-translate-y-1"
+            className="px-8 py-4 rounded-xl font-bold text-lg transition-[transform,box-shadow] duration-state inline-flex items-center justify-center gap-2 mx-auto bg-white text-blue-600 hover:shadow-lg hover:-translate-y-1"
           >
             Open live tracking
             <ArrowRight className="w-5 h-5" aria-hidden="true" />

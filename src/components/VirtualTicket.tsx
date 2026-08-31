@@ -226,7 +226,7 @@ const VirtualTicket = ({ ticket, onCancel }: VirtualTicketProps) => {
             <button
               type="button"
               onClick={downloadQr}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border text-xs font-medium text-foreground transition-colors duration-150 hover:bg-secondary touch-target"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border text-xs font-medium text-foreground transition-colors duration-state hover:bg-secondary touch-target"
             >
               <Download className="w-3.5 h-3.5" aria-hidden="true" />
               Save QR
@@ -236,7 +236,7 @@ const VirtualTicket = ({ ticket, onCancel }: VirtualTicketProps) => {
               <button
                 type="button"
                 onClick={() => onCancel(ticket.ticketId)}
-                className="px-3 py-2 rounded-lg border border-destructive/40 text-xs font-medium text-destructive transition-colors duration-150 hover:bg-destructive/10 touch-target"
+                className="px-3 py-2 rounded-lg border border-destructive/40 text-xs font-medium text-destructive transition-colors duration-state hover:bg-destructive/10 touch-target"
               >
                 Cancel ticket
                 <span className="sr-only">
