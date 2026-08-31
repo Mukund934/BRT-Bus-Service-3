@@ -7,6 +7,8 @@ import Footer from "@/components/Footer";
 import StopField from "@/components/StopField";
 import BookingModal from "@/components/BookingModal";
 import PaymentModal from "@/components/PaymentModal";
+import JourneyShortcuts from "@/components/JourneyShortcuts";
+import type { JourneyPair } from "@/domain/journeys";
 import { useAuth } from "@/contexts/AuthContext";
 import type { JourneySelection } from "@/domain/ticket/types";
 import { parseTimeToDate } from "@/domain/time";
@@ -143,6 +145,12 @@ const Plan = () => {
     setTo(from);
   };
 
+  const handlePick = (journey: JourneyPair) => {
+    setFrom(journey.from);
+    setTo(journey.to);
+    setParams({ from: journey.from, to: journey.to, date, time });
+  };
+
   const handleBook = (trip: Trip) => {
     if (!user) {
       toast.info("Please sign in to book a ticket.");
@@ -247,6 +255,12 @@ const Plan = () => {
               </button>
             </div>
           </div>
+
+          <JourneyShortcuts
+            from={searched && !sameStop ? origin : null}
+            to={searched && !sameStop ? destination : null}
+            onPick={handlePick}
+          />
 
           <div aria-live="polite" className="mt-8">
             {sameStop && (

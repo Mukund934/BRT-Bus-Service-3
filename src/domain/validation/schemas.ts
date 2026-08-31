@@ -125,6 +125,27 @@ export const inboundBusPositionSchema = z.object({
 
 export type ValidatedBusPosition = z.infer<typeof busPositionSchema>;
 
+/**
+ * Journeys kept on this device.
+ *
+ * Stops are parsed **strictly** against the registry here, unlike an operator
+ * alert's route id. The difference is what a stale value costs: an alert
+ * naming an unknown route is still a warning worth showing, while a saved
+ * journey naming a stop that no longer exists is a shortcut that cannot be
+ * taken. Dropping it lets the list heal itself the next time it is read.
+ */
+export const journeyPairSchema = z.object({
+  from: stopNameSchema,
+  to: stopNameSchema,
+});
+
+export const recentJourneySchema = journeyPairSchema.extend({
+  at: z.number().int().nonnegative(),
+});
+
+export const savedJourneysSchema = z.array(journeyPairSchema).max(50);
+export const recentJourneysSchema = z.array(recentJourneySchema).max(50);
+
 export const announcementSeveritySchema = z.enum(ANNOUNCEMENT_SEVERITIES);
 
 /**

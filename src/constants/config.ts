@@ -88,12 +88,30 @@ export const QR_CONFIG = {
   ERROR_CORRECTION: "M",
 } as const;
 
+/** How many journeys this device keeps. */
+export const JOURNEY_RULES = {
+  /** Recent journeys are written automatically, so the oldest is dropped. */
+  RECENT_LIMIT: 6,
+  /**
+   * Saved journeys are put there deliberately, so reaching this refuses the
+   * addition rather than deleting one of the passenger's own choices.
+   */
+  SAVED_LIMIT: 20,
+} as const;
+
 /** Namespaced browser-storage keys. */
 export const STORAGE_KEYS = {
   /** Per-user ticket collection: `brt.tickets.<uid>`. */
   TICKETS_PREFIX: "brt.tickets",
   /** Pre-Sprint-2 single-ticket key, migrated then removed on first login. */
   LEGACY_TICKET: "latestTicket",
+  /**
+   * Journeys kept on this device, deliberately not scoped to a signed-in
+   * account: saving a journey must not require an account, because a
+   * passenger who has to sign in to keep one will simply retype it.
+   */
+  SAVED_JOURNEYS: "brt.journeys.saved",
+  RECENT_JOURNEYS: "brt.journeys.recent",
 } as const;
 
 /** Remote data locations. */
