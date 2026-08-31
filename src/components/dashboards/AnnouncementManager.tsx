@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useId, useState } from "react";
-import { Megaphone, Trash2 } from "lucide-react";
+import { Megaphone, Plus, Trash2, X } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { PERMISSIONS, can } from "@/domain/auth/permissions";
 import { toSafeMessage } from "@/domain/auth/errors";
@@ -15,6 +15,20 @@ import {
   type Announcement,
   type AnnouncementSeverity,
 } from "@/types/announcement";
+import { describeEntities, type InformedEntity } from "@/domain/alerts/targeting";
+import { ROUTE_IDS } from "@/domain/transit/routes";
+import { STOPS } from "@/domain/transit/stops";
+
+const ANY = "";
+
+/** A `datetime-local` value as milliseconds, or undefined when left blank. */
+const toEpoch = (value: string): number | undefined => {
+  if (value === "") return undefined;
+
+  const parsed = new Date(value).getTime();
+
+  return Number.isNaN(parsed) ? undefined : parsed;
+};
 
 const SEVERITY_STYLES: Record<AnnouncementSeverity, string> = {
   INFO: "bg-blue-100 text-blue-800",
@@ -32,6 +46,11 @@ const AnnouncementManager = () => {
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [severity, setSeverity] = useState<AnnouncementSeverity>("INFO");
+  const [entities, setEntities] = useState<InformedEntity[]>([]);
+  const [draftRoute, setDraftRoute] = useState(ANY);
+  const [draftStop, setDraftStop] = useState(ANY);
+  const [startsAt, setStartsAt] = useState("");
+  const [endsAt, setEndsAt] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [saving, setSaving] = useState(false);
@@ -40,6 +59,10 @@ const AnnouncementManager = () => {
   const titleId = `${ids}-title`;
   const bodyId = `${ids}-body`;
   const severityId = `${ids}-severity`;
+  const routeId = `${ids}-route`;
+  const stopId = `${ids}-stop`;
+  const startsId = `${ids}-starts`;
+  const endsId = `${ids}-ends`;
 
   const load = useCallback(async () => {
     if (!mayManage) {
@@ -62,6 +85,30 @@ const AnnouncementManager = () => {
 
   if (!mayManage) return null;
 
+  /*
+    One affected thing at a time, because the two dimensions do not combine the
+    way a pair of tick-lists would suggest. Route and stop inside a single row
+    mean "route 101, at CBD"; two rows mean "route 101, or CBD". Offering two
+    independent multi-selects would let an administrator express the first while
+    believing they had said the second, and nothing downstream could tell.
+  */
+  const addEntity = () => {
+    if (draftRoute === ANY && draftStop === ANY) return;
+
+    const entity: InformedEntity = {
+      ...(draftRoute === ANY ? {} : { routeId: draftRoute }),
+      ...(draftStop === ANY ? {} : { stopId: draftStop }),
+    };
+
+    setEntities((previous) => [...previous, entity]);
+    setDraftRoute(ANY);
+    setDraftStop(ANY);
+  };
+
+  const removeEntity = (index: number) => {
+    setEntities((previous) => previous.filter((_, at) => at !== index));
+  };
+
   const publish = async (event: React.FormEvent) => {
     event.preventDefault();
 
@@ -69,7 +116,14 @@ const AnnouncementManager = () => {
     setSuccess("");
     setSaving(true);
 
-    const result = await publishAnnouncement(actor, { title, body, severity });
+    const result = await publishAnnouncement(actor, {
+      title,
+      body,
+      severity,
+      informedEntities: entities.length > 0 ? entities : undefined,
+      startsAt: toEpoch(startsAt),
+      endsAt: toEpoch(endsAt),
+    });
 
     setSaving(false);
 
@@ -82,6 +136,9 @@ const AnnouncementManager = () => {
     setTitle("");
     setBody("");
     setSeverity("INFO");
+    setEntities([]);
+    setStartsAt("");
+    setEndsAt("");
     setSuccess("Announcement published.");
   };
 
@@ -129,7 +186,7 @@ const AnnouncementManager = () => {
       </div>
 
       <p className="text-sm text-gray-600 mb-6">
-        Anything published here is shown to every visitor on the home page. Write only
+        Anything published here is shown to every visitor, on every page. Write only
         what the operator has confirmed.
       </p>
 
@@ -192,6 +249,140 @@ const AnnouncementManager = () => {
             ))}
           </select>
         </div>
+
+        <fieldset className="border border-border rounded-lg p-4">
+          <legend className="text-sm font-medium text-gray-700 px-1">
+            What this affects
+          </legend>
+
+          <p className="text-xs text-gray-600 mb-3">
+            Add one affected thing at a time. Choosing a route and a stop together
+            means that route at that stop; add a second row to cover another route
+            or stop as well. Add nothing to tell every passenger.
+          </p>
+
+          {entities.length > 0 && (
+            <ul className="space-y-2 mb-3">
+              {describeEntities(entities).map((label, index) => (
+                <li
+                  key={`${label}-${index}`}
+                  className="flex items-center justify-between gap-2 bg-gray-50 rounded-lg px-3 py-2"
+                >
+                  <span className="text-sm text-gray-800">{label}</span>
+                  <button
+                    type="button"
+                    onClick={() => removeEntity(index)}
+                    className="text-gray-500 hover:text-destructive transition-colors"
+                    aria-label={`Remove ${label}`}
+                  >
+                    <X className="w-4 h-4" aria-hidden="true" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+            <div>
+              <label
+                htmlFor={routeId}
+                className="block text-xs font-medium text-gray-700 mb-1"
+              >
+                Route
+              </label>
+              <select
+                id={routeId}
+                value={draftRoute}
+                onChange={(event) => setDraftRoute(event.target.value)}
+                className="w-full bg-gray-50 rounded-lg px-3 py-2 border-2 border-input focus:border-primary transition-colors"
+              >
+                <option value={ANY}>Any route</option>
+                {ROUTE_IDS.map((option) => (
+                  <option key={option} value={option}>
+                    Route {option}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label
+                htmlFor={stopId}
+                className="block text-xs font-medium text-gray-700 mb-1"
+              >
+                Stop
+              </label>
+              <select
+                id={stopId}
+                value={draftStop}
+                onChange={(event) => setDraftStop(event.target.value)}
+                className="w-full bg-gray-50 rounded-lg px-3 py-2 border-2 border-input focus:border-primary transition-colors"
+              >
+                <option value={ANY}>Any stop</option>
+                {STOPS.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <button
+              type="button"
+              onClick={addEntity}
+              disabled={draftRoute === ANY && draftStop === ANY}
+              className="flex items-center justify-center gap-1 px-4 py-2 rounded-lg border-2 border-input text-sm font-medium text-gray-700 hover:border-primary transition-colors disabled:opacity-50"
+            >
+              <Plus className="w-4 h-4" aria-hidden="true" />
+              Add
+            </button>
+          </div>
+        </fieldset>
+
+        <fieldset className="border border-border rounded-lg p-4">
+          <legend className="text-sm font-medium text-gray-700 px-1">
+            When it applies
+          </legend>
+
+          <p className="text-xs text-gray-600 mb-3">
+            Optional. A notice with no dates shows until you retire it; one with an
+            end date stops showing on its own.
+          </p>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <label
+                htmlFor={startsId}
+                className="block text-xs font-medium text-gray-700 mb-1"
+              >
+                Starts
+              </label>
+              <input
+                id={startsId}
+                type="datetime-local"
+                value={startsAt}
+                onChange={(event) => setStartsAt(event.target.value)}
+                className="w-full bg-gray-50 rounded-lg px-3 py-2 border-2 border-input focus:border-primary transition-colors"
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor={endsId}
+                className="block text-xs font-medium text-gray-700 mb-1"
+              >
+                Ends
+              </label>
+              <input
+                id={endsId}
+                type="datetime-local"
+                value={endsAt}
+                onChange={(event) => setEndsAt(event.target.value)}
+                className="w-full bg-gray-50 rounded-lg px-3 py-2 border-2 border-input focus:border-primary transition-colors"
+              />
+            </div>
+          </div>
+        </fieldset>
 
         <button
           type="submit"

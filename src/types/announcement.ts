@@ -1,4 +1,5 @@
 import type { TimestampLike } from "./user";
+import type { InformedEntity } from "@/domain/alerts/targeting";
 
 export const ANNOUNCEMENT_SEVERITIES = ["INFO", "WARNING", "CRITICAL"] as const;
 
@@ -25,6 +26,17 @@ export interface Announcement {
   severity: AnnouncementSeverity;
   /** Retired notices stay readable to an administrator but leave the site. */
   active: boolean;
+  /**
+   * What this notice is about, absent when it concerns the whole network.
+   *
+   * Optional because every notice written before targeting existed has none,
+   * and those must keep reaching passengers rather than being read as
+   * affecting nothing.
+   */
+  informedEntities?: InformedEntity[];
+  /** Milliseconds since the epoch; an absent bound is open. */
+  startsAt?: number;
+  endsAt?: number;
   createdAt?: TimestampLike;
 }
 
@@ -32,4 +44,7 @@ export interface AnnouncementDraft {
   title: string;
   body: string;
   severity: AnnouncementSeverity;
+  informedEntities?: InformedEntity[];
+  startsAt?: number;
+  endsAt?: number;
 }

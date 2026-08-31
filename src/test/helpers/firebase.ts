@@ -94,6 +94,13 @@ export const resetFirebaseMocks = (): void => {
   state.listeners.clear();
   state.nextAuthError = null;
   docs.clear();
+  /*
+    The generated-id counter has to go back with the documents. Without this it
+    kept climbing across a file, so `readDoc("…", "generated-1")` only found
+    anything in whichever test happened to write the first document - and any
+    later test asserting on what it published silently read undefined.
+  */
+  generatedDocs = 0;
   resetRtdbMock();
 };
 

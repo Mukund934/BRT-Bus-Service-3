@@ -1,7 +1,14 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { AlertTriangle, Info, OctagonAlert } from "lucide-react";
 import { fetchActiveAnnouncements } from "@/services/announcementService";
 import { useAnnounce } from "@/components/a11y/LiveAnnouncer";
+import {
+  affectsScope,
+  describeEntities,
+  isGloballyScoped,
+  type AlertScope,
+} from "@/domain/alerts/targeting";
 import {
   SEVERITY_LABELS,
   type Announcement,
@@ -21,14 +28,54 @@ const SEVERITY_ICONS: Record<AnnouncementSeverity, typeof Info> = {
 };
 
 /**
+ * What the passenger is currently looking at, read from the URL.
+ *
+ * `from`/`to` belong to the planner and `route` to the route explorer, which
+ * are also the two shapes people share and bookmark - the same links P0-7 was
+ * about. Everywhere else there is no scope, and every notice is simply listed.
+ *
+ * Returns a label as well as a scope because "affects your journey" is only
+ * true when the passenger named a journey; on a route page the honest words
+ * are different.
+ */
+const readScope = (
+  params: URLSearchParams
+): { scope: AlertScope; matchLabel: string | null } => {
+  const stopIds = [params.get("from"), params.get("to")].filter(
+    (value): value is string => value !== null && value !== ""
+  );
+
+  const route = params.get("route");
+  const routeIds = route ? [route] : [];
+
+  if (stopIds.length > 0) {
+    return { scope: { stopIds, routeIds }, matchLabel: "Affects your journey" };
+  }
+
+  if (routeIds.length > 0) {
+    return { scope: { routeIds }, matchLabel: "Affects this route" };
+  }
+
+  return { scope: {}, matchLabel: null };
+};
+
+/**
  * Operator notices, shown to everyone.
  *
  * Renders nothing at all when there is nothing to say, so an ordinary day
  * costs the passenger no screen space and no reassurance they did not ask for.
+ *
+ * Scope orders this list; it never filters it. A notice the passenger's own
+ * journey touches is lifted to the top and labelled, but nothing is hidden on
+ * the strength of a URL - a passenger who has typed one journey into the
+ * planner has not thereby said the rest of the network is none of their
+ * business, and a hidden disruption is the one failure this component exists
+ * to prevent.
  */
 const ServiceAlerts = () => {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const announce = useAnnounce();
+  const [params] = useSearchParams();
 
   useEffect(() => {
     let stale = false;
@@ -41,6 +88,25 @@ const ServiceAlerts = () => {
       stale = true;
     };
   }, []);
+
+  const { scope, matchLabel } = useMemo(() => readScope(params), [params]);
+
+  /*
+    A globally scoped notice is deliberately not counted as targeted. It does
+    affect this passenger, but so does it affect everyone, and badging it
+    "affects your journey" would make the badge meaningless on exactly the
+    notices where it should mean something.
+  */
+  const ordered = useMemo(() => {
+    const targeted = (announcement: Announcement): boolean =>
+      matchLabel !== null &&
+      !isGloballyScoped(announcement.informedEntities) &&
+      affectsScope(announcement.informedEntities, scope);
+
+    return announcements
+      .map((announcement) => ({ announcement, targeted: targeted(announcement) }))
+      .sort((a, b) => Number(b.targeted) - Number(a.targeted));
+  }, [announcements, scope, matchLabel]);
 
   /*
     The announcement is routed through the shared live region rather than
@@ -82,8 +148,9 @@ const ServiceAlerts = () => {
       </h2>
 
       <div className="max-w-5xl mx-auto space-y-3">
-        {announcements.map((announcement) => {
+        {ordered.map(({ announcement, targeted }) => {
           const Icon = SEVERITY_ICONS[announcement.severity];
+          const affected = describeEntities(announcement.informedEntities);
 
           return (
             <div
@@ -102,6 +169,13 @@ const ServiceAlerts = () => {
                   {announcement.title}
                 </p>
                 <p className="text-sm mt-0.5">{announcement.body}</p>
+
+                {affected.length > 0 && (
+                  <p className="text-xs mt-2 opacity-90">
+                    Affects {affected.join("; ")}
+                    {targeted && matchLabel ? ` — ${matchLabel.toLowerCase()}` : ""}
+                  </p>
+                )}
               </div>
             </div>
           );

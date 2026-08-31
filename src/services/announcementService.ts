@@ -19,6 +19,7 @@ import { announcementSchema } from "@/domain/validation/schemas";
 import type { Actor } from "@/types/user";
 import { isTimestampLike } from "@/types/user";
 import type { Announcement, AnnouncementDraft } from "@/types/announcement";
+import { isWithinWindow } from "@/domain/alerts/targeting";
 
 /** Client-side bound on a read, matching the cap the rules expect. */
 export const MAX_ANNOUNCEMENTS_PER_READ = 50;
@@ -71,10 +72,30 @@ const readAnnouncements = async (): Promise<Announcement[]> => {
   return announcements.sort((a, b) => createdAtMs(b) - createdAtMs(a));
 };
 
-/** What a passenger should currently be told. Never throws into a render. */
-export const fetchActiveAnnouncements = async (): Promise<Announcement[]> => {
+/**
+ * What a passenger should currently be told. Never throws into a render.
+ *
+ * Two gates, and they mean different things. `active` is an administrator
+ * deciding a notice is live; the window is the notice describing its own
+ * occasion. A planned diversion can therefore be written on Monday for
+ * Saturday without somebody having to remember to publish it, and it stops
+ * showing on Sunday without somebody having to remember to retire it - which
+ * is the failure that leaves a stale disruption on a transit site for weeks.
+ *
+ * `now` is a parameter so the boundary can be tested without a fake clock.
+ */
+export const fetchActiveAnnouncements = async (
+  now: number = Date.now()
+): Promise<Announcement[]> => {
   try {
-    return (await readAnnouncements()).filter((announcement) => announcement.active);
+    return (await readAnnouncements()).filter(
+      (announcement) =>
+        announcement.active &&
+        isWithinWindow(
+          { startsAt: announcement.startsAt, endsAt: announcement.endsAt },
+          now
+        )
+    );
   } catch (error) {
     console.error("Could not load announcements:", error);
     return [];
@@ -124,8 +145,23 @@ export const publishAnnouncement = async (
 
     const createdAt = new Date();
 
+    /*
+      Absent fields are omitted rather than written as undefined. Firestore
+      rejects an undefined field value outright, so a notice about the whole
+      network - which is most of them - would fail to publish while every test
+      against an in-memory double passed.
+    */
+    const { informedEntities, startsAt, endsAt, ...core } = parsed.data;
+
+    const stored = {
+      ...core,
+      ...(informedEntities === undefined ? {} : { informedEntities }),
+      ...(startsAt === undefined ? {} : { startsAt }),
+      ...(endsAt === undefined ? {} : { endsAt }),
+    };
+
     const written = await addDoc(collection(db, REMOTE_PATHS.ANNOUNCEMENTS), {
-      ...parsed.data,
+      ...stored,
       createdAt,
     });
 
@@ -133,7 +169,7 @@ export const publishAnnouncement = async (
       ok: true,
       announcement: {
         id: written.id,
-        ...parsed.data,
+        ...stored,
         createdAt: { toDate: () => createdAt },
       },
     };

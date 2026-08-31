@@ -134,10 +134,28 @@ export const announcementSeveritySchema = z.enum(ANNOUNCEMENT_SEVERITIES);
  * from a compromised admin session would otherwise be a denial-of-service on
  * every passenger who loads the home page.
  */
+/**
+ * One thing a notice affects.
+ *
+ * Ids are bounded strings rather than the `RouteId` / `StopName` unions on
+ * purpose. Parsing them as enums would make an older build discard an
+ * operator's warning about a route that opened after it shipped, which is the
+ * version-skew failure applied to the one message a passenger must not miss.
+ * An unknown id simply never matches a scope; the notice still shows.
+ */
+export const informedEntitySchema = z.object({
+  routeId: z.string().trim().min(1).max(32).optional(),
+  stopId: z.string().trim().min(1).max(64).optional(),
+});
+
 export const announcementDraftSchema = z.object({
   title: z.string().trim().min(1, "A title is required").max(120, "Title is too long"),
   body: z.string().trim().min(1, "A message is required").max(1000, "Message is too long"),
   severity: announcementSeveritySchema,
+  /* Bounded like the body: a stored list is untrusted input rendered publicly. */
+  informedEntities: z.array(informedEntitySchema).max(20).optional(),
+  startsAt: z.number().int().nonnegative().optional(),
+  endsAt: z.number().int().nonnegative().optional(),
 });
 
 export const announcementSchema = announcementDraftSchema.extend({
