@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import RouteCard from "@/components/RouteCard";
 import heroBus from "@/assets/hero-brts.webp";
-import { Clock, Compass, MapPin, Shield, Zap } from "lucide-react";
+import { Clock, Compass, MapPin, Search, Shield, Zap } from "lucide-react";
 import { getTripStops, getTrips, type Trip } from "@/domain/transit/schedule";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 
@@ -60,6 +60,8 @@ const features = [
 const Home = () => {
   const [textIndex, setTextIndex] = useState(0);
   const [animKey, setAnimKey] = useState(0);
+  const [search, setSearch] = useState("");
+  const navigate = useNavigate();
   const reducedMotion = useReducedMotion();
 
   /*
@@ -137,6 +139,42 @@ const Home = () => {
             <p className="text-white/90 text-lg md:text-xl mt-6 max-w-2xl mx-auto leading-relaxed">
               Your Journey, Our Priority — Fast, Safe, and Reliable
             </p>
+
+            {/*
+              Navigates rather than searching in place. The search domain
+              reaches the whole place dataset, and this is the landing page -
+              keeping the lookup on its own lazy route means a visitor who
+              never searches never downloads it.
+            */}
+            <form
+              onSubmit={(event) => {
+                event.preventDefault();
+
+                const term = search.trim();
+                if (term) navigate(`/search?q=${encodeURIComponent(term)}`);
+              }}
+              role="search"
+              className="mt-8 flex gap-2 max-w-xl mx-auto"
+            >
+              <label htmlFor="home-search" className="sr-only">
+                Search stops, routes and places
+              </label>
+              <input
+                id="home-search"
+                type="search"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Search a stop, route or place"
+                className="flex-1 bg-white rounded-xl px-4 py-3 border-2 border-white/40 focus:border-white transition-colors"
+              />
+              <button
+                type="submit"
+                className="px-5 py-3 bg-white text-primary-deep rounded-xl hover:bg-white/90 transition-colors font-semibold flex items-center gap-2"
+              >
+                <Search className="w-4 h-4" aria-hidden="true" />
+                <span className="hidden sm:inline">Search</span>
+              </button>
+            </form>
 
           </div>
 

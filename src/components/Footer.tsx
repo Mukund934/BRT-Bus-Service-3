@@ -13,6 +13,7 @@ const FOOTER_LINKS = [
 	{ to: "/map", label: "Live Map" },
 	{ to: "/timetable", label: "Timetable" },
 	{ to: "/fares", label: "Fares" },
+	{ to: "/search", label: "Search" },
 	{ to: "/about", label: "About" },
 	{ to: "/contact", label: "Contact" },
 	{ to: "/help", label: "Help" },

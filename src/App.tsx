@@ -38,6 +38,7 @@ const Timetable = lazy(() => import("./pages/Timetable"));
 const Contact = lazy(() => import("./pages/Contact"));
 const Help = lazy(() => import("./pages/Help"));
 const About = lazy(() => import("./pages/About"));
+const Search = lazy(() => import("./pages/Search"));
 const Login = lazy(() => import("./pages/Login"));
 const Driver = lazy(() => import("./pages/Driver"));
 const MapPage = lazy(() => import("./pages/MapPage"));
@@ -98,6 +99,7 @@ const App = () => (
                   <Route path="/contact" element={<Contact />} />
                   <Route path="/help" element={<Help />} />
                   <Route path="/about" element={<About />} />
+                  <Route path="/search" element={<Search />} />
                   <Route path="/map" element={<MapPage />} />
 
                   <Route
