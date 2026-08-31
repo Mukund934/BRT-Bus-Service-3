@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -6,6 +6,10 @@ import RouteCard from "@/components/RouteCard";
 import heroBus from "@/assets/hero-brts.webp";
 import { Clock, Compass, MapPin, Search, Shield, Zap } from "lucide-react";
 import { getTripStops, getTrips, type Trip } from "@/domain/transit/schedule";
+import { serviceOn, serviceMinutesOf, SERVICE_LABELS } from "@/domain/transit/calendar";
+import { tripTimings } from "@/domain/transit/departures";
+import { useNow } from "@/hooks/use-now";
+import JourneyOutlook from "@/components/JourneyOutlook";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 
 const rotatingTexts = [
@@ -14,15 +18,6 @@ const rotatingTexts = [
   "Stay Informed About Routes & Fares",
   "Welcome to the Bus Tracker",
 ];
-
-/**
- * The first few weekday departures, read from the timetable.
- *
- * These were previously a hardcoded list next to a hand-written stop summary
- * that named a stop ("IIIM") the network does not have and misspelled two
- * others.
- */
-const FEATURED_TRIPS = getTrips("weekday").slice(0, 5);
 
 /** "A, B, C, … Z" - enough to convey the corridor without filling the card. */
 const summariseStops = (trip: Trip): string => {
@@ -34,26 +29,39 @@ const summariseStops = (trip: Trip): string => {
   return `${stops.slice(0, 4).join(", ")}, … ${last}`;
 };
 
+/*
+  Each of these is checkable somewhere else on the site.
+
+  The first card previously promised "accurate arrival predictions", which the
+  app deliberately does not make - P0-14 removed the ETA maths outright because
+  the function grew as a bus got closer. The third vouched for the safety and
+  maintenance of buses we neither run nor inspect. Neither belonged on the page
+  a first-time passenger reads first.
+*/
 const features = [
   {
     icon: Clock,
-    title: "Real-Time Updates",
-    description: "Track buses in real-time and get accurate arrival predictions",
+    title: "Published timetable",
+    description:
+      "Departures come from the operator's published timetable, shown for today's service.",
   },
   {
     icon: MapPin,
-    title: "Route Planning",
-    description: "Plan your journey with detailed route information",
+    title: "Live when shared",
+    description:
+      "A bus appears on the map while its driver is sharing a position. Nothing is predicted.",
   },
   {
     icon: Shield,
-    title: "Safe & Reliable",
-    description: "Travel with confidence on our secure and maintained buses",
+    title: "Official fares",
+    description:
+      "Prices come from the official BRTS fare chart, never from distance measured on a map.",
   },
   {
     icon: Zap,
-    title: "Fast Service",
-    description: "Quick and efficient transportation to your destination",
+    title: "One place to plan",
+    description:
+      "Two stops gives you the departures, the fare and the journey time together.",
   },
 ];
 
@@ -63,6 +71,25 @@ const Home = () => {
   const [search, setSearch] = useState("");
   const navigate = useNavigate();
   const reducedMotion = useReducedMotion();
+  const now = useNow(60_000);
+
+  /*
+    Today's service, and only what has not left yet.
+
+    This was `getTrips("weekday").slice(0, 5)` evaluated once at import: a
+    visitor on a Sunday evening was shown Monday's first five departures, all
+    of them hours in the past, presented as "available buses". The service day
+    comes from the IST calendar and the cut is made against the clock, so the
+    list is about the moment somebody is reading it.
+  */
+  const service = serviceOn(now);
+
+  const featured = useMemo(() => {
+    const trips = getTrips(service);
+    const timings = tripTimings(trips, serviceMinutesOf(now));
+
+    return trips.filter((_, index) => timings[index] !== "departed").slice(0, 6);
+  }, [service, now]);
 
   /*
     The headline cycles for as long as the page is open, which is exactly the
@@ -260,17 +287,22 @@ const Home = () => {
 
       </section>
 
-      <section className="pb-24 px-4">
+      <JourneyOutlook />
+
+      <section className="pb-24 px-4" aria-labelledby="next-buses-heading">
 
         <div className="max-w-7xl mx-auto">
 
           <div className="text-center mb-12">
-            <h2 className="text-[34px] md:text-[40px] font-semibold text-primary tracking-tight">
-              Available buses
+            <h2
+              id="next-buses-heading"
+              className="text-[34px] md:text-[40px] font-semibold text-primary tracking-tight"
+            >
+              Still to come today
             </h2>
 
             <p className="text-muted-foreground text-[15px] md:text-[16px] mt-3">
-              Choose from our scheduled bus services
+              {SERVICE_LABELS[service]}, from the published timetable.
             </p>
           </div>
 
@@ -278,21 +310,36 @@ const Home = () => {
 
             <div className="absolute inset-0 rounded-[30px] bg-gradient-to-br from-primary/20 via-primary/10 to-transparent blur-3xl opacity-70"></div>
 
-            <div className="relative grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-
-              {FEATURED_TRIPS.map((trip, index) => (
-                <div
-                  key={trip.id}
-                  className="group transition-transform duration-150 hover:-translate-y-[5px]"
-                >
-                  <RouteCard
-                    title={`BUS ${index + 1} - ${trip.calls[0]?.time} Departure`}
-                    stops={summariseStops(trip)}
-                  />
-                </div>
-              ))}
-
-            </div>
+            {featured.length === 0 ? (
+              <div className="relative text-center">
+                <p className="text-foreground font-semibold">
+                  Today&rsquo;s service has finished.
+                </p>
+                <p className="text-muted-foreground text-sm mt-2">
+                  <Link
+                    to="/timetable"
+                    className="text-primary font-medium underline underline-offset-2"
+                  >
+                    Check the timetable
+                  </Link>{" "}
+                  for when it starts again.
+                </p>
+              </div>
+            ) : (
+              <div className="relative grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {featured.map((trip) => (
+                  <div
+                    key={trip.id}
+                    className="group transition-transform duration-150 hover:-translate-y-[5px]"
+                  >
+                    <RouteCard
+                      title={`${trip.calls[0]?.time} · Route ${trip.routeId}`}
+                      stops={summariseStops(trip)}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
 
           </div>
 

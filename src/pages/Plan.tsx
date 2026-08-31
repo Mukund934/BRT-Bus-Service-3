@@ -16,13 +16,13 @@ import { calculateFare } from "@/domain/transit/fares";
 import { isInterchange } from "@/domain/transit/routes";
 import {
   getCallTime,
-  getDestinationsFrom,
   getTripStops,
   getTrips,
   hasScheduledService,
   serviceFor,
   type Trip,
 } from "@/domain/transit/schedule";
+import { tripServesJourney } from "@/domain/transit/departures";
 import { findStops, isStopName, type StopName } from "@/domain/transit/stops";
 
 interface JourneyOption {
@@ -101,7 +101,7 @@ const Plan = () => {
     const earliest = hours * 60 + mins;
 
     return getTrips(serviceFor(new Date(`${searchedDate}T00:00:00`)))
-      .filter((trip) => getDestinationsFrom(trip, origin).includes(destination))
+      .filter((trip) => tripServesJourney(trip, origin, destination))
       .map((trip) => {
         const departure = getCallTime(trip, origin)!;
         const arrival = getCallTime(trip, destination)!;

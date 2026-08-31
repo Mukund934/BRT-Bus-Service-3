@@ -8,15 +8,20 @@
 import { describe, expect, it } from "vitest";
 import {
   departuresFrom,
+  journeyDeparturesFrom,
+  journeyOutlookFor,
   nextDepartureFrom,
   outlookFor,
   previousDepartureFrom,
   toMinutes,
   tripDepartureMinutes,
+  tripServesJourney,
   tripTimings,
   upcomingDeparturesFrom,
 } from "@/domain/transit/departures";
 import { getTrips, type Trip } from "@/domain/transit/schedule";
+import { serviceOn } from "@/domain/transit/calendar";
+import { STOPS } from "@/domain/transit/stops";
 
 /** A corridor-local wall clock, given as the UTC instant it corresponds to. */
 const ist = (date: string, hour: number, minute = 0) => {
@@ -223,5 +228,72 @@ describe("marking a listing against the clock", () => {
     const nextIndex = timings.indexOf("next");
 
     expect(scrambled[nextIndex]!.calls[0]!.time).toBe("8:40 AM");
+  });
+});
+
+/**
+ * Journey-aware departures.
+ *
+ * `nextDepartureFrom` answers "what leaves this stop next", which on a
+ * corridor running in both directions is often a bus that never reaches where
+ * the passenger is going. Anywhere a destination is known, the honest question
+ * is this one.
+ */
+describe("what leaves next that actually gets there", () => {
+  const morning = new Date("2026-08-31T09:00:00+05:30");
+
+  it("only counts trips that reach the destination", () => {
+    for (const departure of journeyDeparturesFrom("HNLU", "CBD", morning)) {
+      expect(tripServesJourney(departure.trip, "HNLU", "CBD")).toBe(true);
+    }
+  });
+
+  it("never returns more than the stop's own departures", () => {
+    const all = departuresFrom(serviceOn(morning), "CBD").length;
+
+    expect(journeyDeparturesFrom("CBD", "HNLU", morning).length).toBeLessThanOrEqual(all);
+  });
+
+  /*
+    Proven against the real timetable rather than asserted: this searches for a
+    journey whose next usable bus is NOT the next bus out of the origin. If the
+    data ever stopped containing such a case the distinction would be
+    theoretical, and this test says so by failing.
+  */
+  it("skips a bus that leaves from here but does not go there", () => {
+    const divergent: string[] = [];
+
+    for (const from of STOPS) {
+      const leaving = nextDepartureFrom(from, morning);
+      if (!leaving) continue;
+
+      for (const to of STOPS) {
+        if (to === from) continue;
+
+        const outlook = journeyOutlookFor(from, to, morning);
+        if (outlook.kind !== "upcoming") continue;
+
+        if (outlook.next.trip.id !== leaving.trip.id) {
+          divergent.push(`${from}>${to}`);
+        }
+      }
+    }
+
+    expect(divergent.length).toBeGreaterThan(0);
+  });
+
+  it("reports a journey no bus makes today as unserved, not merely finished", () => {
+    expect(journeyOutlookFor("CBD", "CBD", morning)).toEqual({ kind: "not-served" });
+  });
+
+  it("distinguishes nothing-more-today from no-bus-runs-this-way", () => {
+    const late = new Date("2026-08-31T23:45:00+05:30");
+
+    const served = journeyOutlookFor("HNLU", "CBD", late);
+
+    expect(served.kind).toBe("ended");
+    if (served.kind === "ended") {
+      expect(served.last.time).toBeTruthy();
+    }
   });
 });

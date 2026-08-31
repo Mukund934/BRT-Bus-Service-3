@@ -17,7 +17,13 @@ import {
   nextServiceDate,
   serviceWeekdayName,
 } from "./calendar";
-import { getCallTime, getTrips, type ServiceDay, type Trip } from "./schedule";
+import {
+  getCallTime,
+  getDestinationsFrom,
+  getTrips,
+  type ServiceDay,
+  type Trip,
+} from "./schedule";
 import type { StopName } from "./stops";
 
 /** One scheduled departure from a stop. */
@@ -87,6 +93,68 @@ export const upcomingDeparturesFrom = (
   return departuresFrom(serviceOn(at), stop)
     .filter((departure) => departure.minutes >= now)
     .slice(0, limit);
+};
+
+/**
+ * Whether a trip can carry somebody from one stop to another.
+ *
+ * Not "calls at both": it has to reach the destination **after** the origin,
+ * which `getDestinationsFrom` answers by walking the trip's own calls. The
+ * inbound working calls at HNLU twice, so a naive membership test would sell a
+ * journey that runs the wrong way down the corridor.
+ */
+export const tripServesJourney = (
+  trip: Trip,
+  from: StopName,
+  to: StopName
+): boolean => getDestinationsFrom(trip, from).includes(to);
+
+/**
+ * Every departure today that carries a passenger from one stop to the other,
+ * in time order.
+ */
+export const journeyDeparturesFrom = (
+  from: StopName,
+  to: StopName,
+  at: Date
+): Departure[] =>
+  from === to
+    ? []
+    : departuresFrom(serviceOn(at), from).filter((departure) =>
+        tripServesJourney(departure.trip, from, to)
+      );
+
+/**
+ * What a passenger holding this journey should be told right now.
+ *
+ * Shaped like `StopOutlook` and for the same reason: "nothing more today" and
+ * "no bus runs this way today" are different facts, and collapsing both into a
+ * missing departure leaves a passenger unable to tell whether to wait.
+ *
+ * Distinct from `nextDepartureFrom`, which answers "what leaves this stop
+ * next" and may be a bus that never reaches where they are going. Wherever a
+ * destination is known, this is the honest question.
+ */
+export type JourneyOutlook =
+  | { kind: "upcoming"; next: Departure }
+  | { kind: "ended"; last: Departure }
+  | { kind: "not-served" };
+
+export const journeyOutlookFor = (
+  from: StopName,
+  to: StopName,
+  at: Date
+): JourneyOutlook => {
+  const departures = journeyDeparturesFrom(from, to, at);
+
+  if (departures.length === 0) return { kind: "not-served" };
+
+  const now = serviceMinutesOf(at);
+  const next = departures.find((departure) => departure.minutes >= now);
+
+  return next
+    ? { kind: "upcoming", next }
+    : { kind: "ended", last: departures[departures.length - 1]! };
 };
 
 /** The next departure from a stop today, or null once service has ended. */
