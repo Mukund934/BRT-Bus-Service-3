@@ -50,11 +50,23 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
+      # The domain layer is compiled a second time against a config with no DOM
+      # and no path aliases. That is the whole portability guarantee - it is
+      # what proves the shared layer could be lifted into a React Native or
+      # server build - and it passes or fails independently of the app build.
+      - name: Typecheck domain
+        run: npm run typecheck:domain
+
       - name: Lint
         run: npm run lint
 
       - name: Test with coverage
         run: npm run test:coverage
+
+      # Same tests, node environment, no jsdom. A domain module that reaches
+      # for `window` passes the main suite and fails here.
+      - name: Test domain
+        run: npm run test:domain
 
       - name: Build
         run: npm run build

@@ -10,8 +10,8 @@ ticket, and follow buses that drivers are actively sharing.
 ![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)
 ![Vite](https://img.shields.io/badge/Vite-5-646CFF?logo=vite&logoColor=white)
 ![Firebase](https://img.shields.io/badge/Firebase-Auth%20%7C%20Firestore%20%7C%20RTDB-FFCA28?logo=firebase&logoColor=black)
-![Tests](https://img.shields.io/badge/tests-611%20passing-brightgreen)
-![Coverage](https://img.shields.io/badge/lines-96.7%25-brightgreen)
+![Tests](https://img.shields.io/badge/tests-1047%20passing-brightgreen)
+![Coverage](https://img.shields.io/badge/lines-97.6%25-brightgreen)
 
 **Live:** https://bus-service-lyart.vercel.app/
 
@@ -246,8 +246,8 @@ ticket opens offline, then reconcile with the server.
 
 | | |
 |---|---|
-| Tests | **611**, across 45 files |
-| Coverage | **96.7% lines**, 89.2% branches, 87.8% functions |
+| Tests | **1,047**, across 72 files |
+| Coverage | **97.6% lines**, 90.2% branches, 92.9% functions |
 | Thresholds | 95 lines / 86 branches / 83 functions — a ratchet set just below actuals, raised deliberately |
 | Typecheck | clean |
 | Lint | 0 errors |
@@ -363,8 +363,10 @@ Node 20 and 22. Each gate is a separate step, so a red run names what broke:
 |---|---|
 | `npm ci` | lockfile drift |
 | `npm run typecheck` | any type error |
+| `npm run typecheck:domain` | a domain module that needs the DOM or a path alias |
 | `npm run lint` | any ESLint error |
 | `npm run test:coverage` | a failing test **or** coverage below threshold |
+| `npm run test:domain` | a domain test that only passes inside jsdom |
 | `npm run build` | a broken production build |
 
 Coverage and the built `dist/` are uploaded as artifacts. Run the identical
@@ -449,7 +451,7 @@ is rejected outright.
 
 ```bash
 npm install
-npm run verify     # typecheck, lint, tests with coverage, build
+npm run verify     # typecheck, domain typecheck, lint, coverage, domain tests, build
 ```
 
 `npm run verify` is exactly what CI runs, in the same order. Please keep it green, and add
