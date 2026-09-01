@@ -4,7 +4,7 @@ import MapPage from "@/pages/MapPage";
 import { POLLING } from "@/constants/config";
 import { STOP_COORDS } from "@/domain/transit/stops";
 import { subscribeToBuses, type LiveBus } from "@/services/locationService";
-import { act, renderWithProviders, screen, within } from "../helpers/render";
+import { act, renderWithProviders, screen, waitFor, within } from "../helpers/render";
 
 vi.mock("@/services/userService", async () => {
   const helper = await import("../helpers/userService");
@@ -262,5 +262,147 @@ describe("telling a passenger where a bus is going", () => {
 
     expect(within(row).queryByText("Route 101")).not.toBeInTheDocument();
     expect(within(row).getAllByText("—").length).toBeGreaterThanOrEqual(2);
+  });
+});
+
+/*
+  WCAG 2.2.2 (Pause, Stop, Hide). This page auto-updates vehicle information
+  for as long as it is open, alongside other content, so it must offer a way
+  to stop it. The criterion is one of the few in this area that is legally
+  mandatory rather than best practice.
+
+  The requirement these encode is not merely "a button exists": pausing has to
+  actually stop the content changing, the frozen view has to SAY it is frozen
+  and as of when, and resuming has to show the present rather than the backlog.
+*/
+describe("stopping the updates", () => {
+  const pauseButton = () =>
+    screen.getByRole("button", { name: /pause live updates/i });
+
+  const resumeButton = () =>
+    screen.getByRole("button", { name: /resume live updates/i });
+
+  it("offers a way to stop the page updating itself", () => {
+    renderWithProviders(<MapPage />, { route: "/map" });
+
+    report([{ busId: "BUS-0001", lat: 21, lng: 81, updatedAt: Date.now() }]);
+
+    expect(pauseButton()).toBeInTheDocument();
+  });
+
+  it("holds the fleet still once paused", async () => {
+    const { user } = renderWithProviders(<MapPage />, { route: "/map" });
+
+    report([{ busId: "BUS-0001", lat: 21, lng: 81, updatedAt: Date.now() }]);
+    await user.click(pauseButton());
+
+    // A second bus reports while the passenger is reading the first.
+    report([
+      { busId: "BUS-0001", lat: 21, lng: 81, updatedAt: Date.now() },
+      { busId: "BUS-0002", lat: 21.5, lng: 81.5, updatedAt: Date.now() },
+    ]);
+
+    expect(screen.getByText("BUS-0001")).toBeInTheDocument();
+    expect(screen.queryByText("BUS-0002")).not.toBeInTheDocument();
+  });
+
+  /*
+    The honesty requirement. A frozen view that does not say it is frozen is
+    the same defect as stale data presented as current - and worse here,
+    because the passenger asked for it and may forget.
+  */
+  it("says that it is paused, and what moment it is showing", async () => {
+    const { user } = renderWithProviders(<MapPage />, { route: "/map" });
+
+    report([{ busId: "BUS-0001", lat: 21, lng: 81, updatedAt: Date.now() }]);
+    await user.click(pauseButton());
+
+    expect(screen.getByText(/^Paused\./)).toBeInTheDocument();
+
+    const status = screen.getByText(/Showing the corridor as it stood at/);
+    expect(status).toHaveTextContent(/\d{1,2}:\d{2}\s?(AM|PM)/i);
+  });
+
+  it("describes itself as live when it is", () => {
+    renderWithProviders(<MapPage />, { route: "/map" });
+
+    report([{ busId: "BUS-0001", lat: 21, lng: 81, updatedAt: Date.now() }]);
+
+    expect(
+      screen.getByText(/Updating automatically as buses report/i)
+    ).toBeInTheDocument();
+  });
+
+  /*
+    Spoken through the app's shared polite region rather than a second one of
+    this page's own - see the comment beside the control.
+  */
+  it("announces the change to a screen reader", async () => {
+    const { user } = renderWithProviders(<MapPage />, { route: "/map" });
+
+    report([{ busId: "BUS-0001", lat: 21, lng: 81, updatedAt: Date.now() }]);
+    await user.click(pauseButton());
+
+    await waitFor(() =>
+      expect(screen.getByRole("status")).toHaveTextContent(/Live updates paused/i)
+    );
+
+    await user.click(resumeButton());
+
+    await waitFor(() =>
+      expect(screen.getByRole("status")).toHaveTextContent(/Live updates resumed/i)
+    );
+  });
+
+  /* The state has to be conveyed to somebody who cannot see the button. */
+  it("reports its state to assistive technology", async () => {
+    const { user } = renderWithProviders(<MapPage />, { route: "/map" });
+
+    report([{ busId: "BUS-0001", lat: 21, lng: 81, updatedAt: Date.now() }]);
+
+    expect(pauseButton()).toHaveAttribute("aria-pressed", "false");
+
+    await user.click(pauseButton());
+
+    expect(resumeButton()).toHaveAttribute("aria-pressed", "true");
+  });
+
+  /*
+    Resume shows the present, not a replay. The subscription was never closed,
+    so there is no backlog to catch up on - which is the whole reason pausing
+    is a display decision rather than a connection one.
+  */
+  it("jumps to the current fleet on resume", async () => {
+    const { user } = renderWithProviders(<MapPage />, { route: "/map" });
+
+    report([{ busId: "BUS-0001", lat: 21, lng: 81, updatedAt: Date.now() }]);
+    await user.click(pauseButton());
+
+    report([{ busId: "BUS-0002", lat: 21.5, lng: 81.5, updatedAt: Date.now() }]);
+
+    await user.click(resumeButton());
+
+    expect(screen.getByText("BUS-0002")).toBeInTheDocument();
+    expect(screen.queryByText("BUS-0001")).not.toBeInTheDocument();
+  });
+
+  /*
+    A paused view is the corridor as it stood at that instant, so a bus that
+    was fresh then must not decay to stale while somebody reads it. Without
+    this, pausing would quietly empty the table.
+  */
+  it("does not let the frozen fleet go stale while it is held", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+
+    const { user } = renderWithProviders(<MapPage />, { route: "/map" });
+
+    report([{ busId: "BUS-0001", lat: 21, lng: 81, updatedAt: Date.now() }]);
+    await user.click(pauseButton());
+
+    await act(async () => {
+      vi.advanceTimersByTime(DEFAULT_FRESHNESS.staleMs + POLLING.BUS_FRESHNESS_MS * 2);
+    });
+
+    expect(screen.getByText("BUS-0001")).toBeInTheDocument();
   });
 });

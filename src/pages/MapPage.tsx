@@ -1,7 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Pause, Play } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { MAP_CONFIG, POLLING } from "@/constants/config";
+import { serviceClockLabel } from "@/domain/transit/calendar";
+import { useAnnounce } from "@/components/a11y/LiveAnnouncer";
 import { DEFAULT_MAP_CENTER } from "@/domain/transit/stops";
 import { destinationOf, getRoute } from "@/domain/transit/routes";
 import { STATE_DESCRIPTIONS, STATE_LABELS } from "@/domain/fleet/state";
@@ -25,6 +28,47 @@ const MapPage = () => {
   const [checkedAt, setCheckedAt] = useState(() => Date.now());
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
+
+  /*
+    WCAG 2.2.2. This page auto-updates vehicle information indefinitely
+    alongside other content, so it has to offer a way to stop it - for anyone
+    reading with a screen magnifier, anyone whose attention the movement takes
+    away, and anyone simply trying to write down a bus number before the row
+    moves.
+
+    Freezing is a display decision, not a connection one: the subscription
+    stays open, so resuming shows the present rather than replaying a backlog.
+    The snapshot keeps the instant it was taken, because a frozen view that
+    does not say it is frozen is the same lie as a stale one presented as
+    current.
+  */
+  const [frozen, setFrozen] = useState<{ buses: LiveBus[]; at: number } | null>(
+    null
+  );
+
+  const paused = frozen !== null;
+
+  const announce = useAnnounce();
+
+  const togglePaused = useCallback(() => {
+    setFrozen((current) => {
+      if (current) return null;
+
+      return { buses, at: checkedAt };
+    });
+
+    if (paused) {
+      // Resuming jumps to now rather than to whenever the next tick lands.
+      setCheckedAt(Date.now());
+      announce("Live updates resumed.");
+    } else {
+      announce(
+        `Live updates paused. Showing the corridor at ${serviceClockLabel(
+          new Date(checkedAt)
+        )}.`
+      );
+    }
+  }, [announce, buses, checkedAt, paused]);
 
   /*
     Availability is reported through the error callback rather than checked
@@ -53,17 +97,27 @@ const MapPage = () => {
     staleness rule hold while the tab stays open.
   */
   useEffect(() => {
+    if (paused) return;
+
     const interval = setInterval(
       () => setCheckedAt(Date.now()),
       POLLING.BUS_FRESHNESS_MS
     );
 
     return () => clearInterval(interval);
-  }, []);
+  }, [paused]);
 
+  /*
+    Staleness is judged against the frozen instant too. A paused view is the
+    corridor as it stood at that moment, so a bus that was fresh then is still
+    shown as fresh - it does not decay while the passenger is reading it.
+  */
   const active = useMemo(
-    () => selectFreshBuses(buses, checkedAt),
-    [buses, checkedAt]
+    () =>
+      frozen
+        ? selectFreshBuses(frozen.buses, frozen.at)
+        : selectFreshBuses(buses, checkedAt),
+    [buses, checkedAt, frozen]
   );
 
   /*
@@ -105,6 +159,47 @@ const MapPage = () => {
           <h1 className="text-2xl font-bold text-center mb-6 text-primary-deep">
             Live Bus Tracking
           </h1>
+
+          {/*
+            The control sits above the thing it controls and before it in the
+            reading order, so somebody who needs the updates to stop reaches
+            the button without first having to get past the content that is
+            moving.
+          */}
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+            <button
+              type="button"
+              onClick={togglePaused}
+              aria-pressed={paused}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-primary/40 bg-white text-primary-deep font-medium transition-colors duration-state hover:bg-accent focus:outline-none focus:ring-2 focus:ring-ring"
+            >
+              {paused ? (
+                <Play className="w-4 h-4" aria-hidden="true" />
+              ) : (
+                <Pause className="w-4 h-4" aria-hidden="true" />
+              )}
+              {paused ? "Resume live updates" : "Pause live updates"}
+            </button>
+
+            {/*
+              Deliberately NOT its own live region. The app already mounts one
+              polite region at the root, present from first paint, and a
+              second would compete with it - the same reasoning that keeps
+              `ServiceAlerts` cards from carrying their own roles. The state
+              change is spoken through `announce`, and `aria-pressed` carries
+              it for anyone who focuses the button.
+            */}
+            <p className="text-sm text-gray-600">
+              {paused ? (
+                <>
+                  Paused. Showing the corridor as it stood at{" "}
+                  <strong>{serviceClockLabel(new Date(frozen.at))}</strong>.
+                </>
+              ) : (
+                "Updating automatically as buses report."
+              )}
+            </p>
+          </div>
 
           <div className="w-full h-[400px] rounded-xl overflow-hidden shadow mb-4 relative">
             <iframe

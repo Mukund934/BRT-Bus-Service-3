@@ -80,7 +80,6 @@ const loadWorker = (fetchImpl: (request: unknown) => Promise<FakeResponse>) => {
     clients: { claim: vi.fn() },
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-implied-eval, no-new-func
   const evaluate = new Function("self", "caches", "fetch", "URL", source);
   evaluate(self, storage.caches, fetchImpl, URL);
 
