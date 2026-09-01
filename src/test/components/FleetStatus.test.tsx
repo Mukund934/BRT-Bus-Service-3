@@ -98,7 +98,7 @@ describe("who may see the fleet", () => {
 });
 
 describe("matching a driver to their vehicle", () => {
-  it("marks a broadcasting driver as on shift", async () => {
+  it("marks a broadcasting driver as live", async () => {
     seedDriver("driver-1", "Asha Verma");
     broadcast("driver-1");
 
@@ -108,7 +108,7 @@ describe("matching a driver to their vehicle", () => {
     await screen.findByText("Asha Verma");
 
     await waitFor(() =>
-      expect(within(rowFor("Asha Verma")).getByText("On shift")).toBeInTheDocument()
+      expect(within(rowFor("Asha Verma")).getByText("Live")).toBeInTheDocument()
     );
   });
 
@@ -125,7 +125,7 @@ describe("matching a driver to their vehicle", () => {
     expect(screen.queryByText("driver-1")).not.toBeInTheDocument();
   });
 
-  it("marks a driver who is not reporting as offline", async () => {
+  it("says a driver has not started rather than calling them offline", async () => {
     seedDriver("driver-1", "Asha Verma");
 
     renderFleet();
@@ -133,7 +133,7 @@ describe("matching a driver to their vehicle", () => {
 
     await screen.findByText("Asha Verma");
 
-    expect(within(rowFor("Asha Verma")).getByText("Offline")).toBeInTheDocument();
+    expect(within(rowFor("Asha Verma")).getByText("No shift started")).toBeInTheDocument();
   });
 
   it("does not credit one driver with another's bus", async () => {
@@ -147,9 +147,9 @@ describe("matching a driver to their vehicle", () => {
     await screen.findByText("Ravi Kumar");
 
     await waitFor(() =>
-      expect(within(rowFor("Asha Verma")).getByText("On shift")).toBeInTheDocument()
+      expect(within(rowFor("Asha Verma")).getByText("Live")).toBeInTheDocument()
     );
-    expect(within(rowFor("Ravi Kumar")).getByText("Offline")).toBeInTheDocument();
+    expect(within(rowFor("Ravi Kumar")).getByText("No shift started")).toBeInTheDocument();
   });
 
   it("leaves passengers out of the driver list", async () => {
@@ -210,7 +210,7 @@ describe("counting the fleet", () => {
     await screen.findByText("Asha Verma");
 
     const drivers = screen.getByText("Driver accounts").closest("div")!;
-    const onShift = screen.getByText("On shift", { selector: "p" }).closest("div")!;
+    const onShift = screen.getByText("Reporting", { selector: "p" }).closest("div")!;
 
     expect(within(drivers).getByText("2")).toBeInTheDocument();
     await waitFor(() => expect(within(onShift).getByText("1")).toBeInTheDocument());
@@ -227,10 +227,10 @@ describe("counting the fleet", () => {
     await screen.findByText("Ravi Kumar");
 
     await waitFor(() =>
-      expect(within(rowFor("Asha Verma")).getByText("On shift")).toBeInTheDocument()
+      expect(within(rowFor("Asha Verma")).getByText("Live")).toBeInTheDocument()
     );
 
-    await user.click(screen.getByRole("button", { name: "On shift" }));
+    await user.click(screen.getByRole("button", { name: "Reporting" }));
 
     expect(screen.getByText("Asha Verma")).toBeInTheDocument();
     expect(screen.queryByText("Ravi Kumar")).not.toBeInTheDocument();
@@ -238,7 +238,16 @@ describe("counting the fleet", () => {
 });
 
 describe("a driver who stops reporting", () => {
-  it("drops off shift on the next check, without a further report", async () => {
+  /*
+    The distinction this whole component was failing to draw.
+
+    `selectFreshBuses` removed a stale vehicle from the array, so a driver
+    whose phone lost signal rendered identically to one who never started a
+    shift - and the operator is the only person who could tell the difference
+    by ringing them. The fleet is now classified rather than filtered, so the
+    evidence survives.
+  */
+  it("says it stopped reporting rather than that it never started", async () => {
     const start = Date.now();
 
     seedDriver("driver-1", "Asha Verma");
@@ -252,7 +261,7 @@ describe("a driver who stops reporting", () => {
 
     await screen.findByText("Asha Verma");
     await waitFor(() =>
-      expect(within(rowFor("Asha Verma")).getByText("On shift")).toBeInTheDocument()
+      expect(within(rowFor("Asha Verma")).getByText("Live")).toBeInTheDocument()
     );
 
     act(() => {
@@ -260,7 +269,107 @@ describe("a driver who stops reporting", () => {
       vi.advanceTimersByTime(POLLING.BUS_FRESHNESS_MS);
     });
 
-    expect(within(rowFor("Asha Verma")).getByText("Offline")).toBeInTheDocument();
+    const row = within(rowFor("Asha Verma"));
+
+    expect(row.getByText("Not reporting")).toBeInTheDocument();
+    expect(row.queryByText("No shift started")).not.toBeInTheDocument();
+  });
+
+  it("passes through delayed before it gives up on the bus", async () => {
+    const start = Date.now();
+
+    seedDriver("driver-1", "Asha Verma");
+    broadcast("driver-1", { updatedAt: start });
+
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.setSystemTime(start);
+
+    renderFleet();
+    asAdmin();
+
+    await screen.findByText("Asha Verma");
+
+    act(() => {
+      vi.setSystemTime(start + DEFAULT_FRESHNESS.recentMs + 1);
+      vi.advanceTimersByTime(POLLING.BUS_FRESHNESS_MS);
+    });
+
+    expect(within(rowFor("Asha Verma")).getByText("Delayed report")).toBeInTheDocument();
+  });
+
+  /*
+    A count the operator can act on: it excludes drivers who never began,
+    because there is nothing to chase there.
+  */
+  it("counts it as needing attention, not merely as absent", async () => {
+    const start = Date.now();
+
+    seedDriver("driver-1", "Asha Verma");
+    seedDriver("driver-2", "Ravi Kumar");
+    broadcast("driver-1", { updatedAt: start });
+
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.setSystemTime(start);
+
+    renderFleet();
+    asAdmin();
+
+    await screen.findByText("Asha Verma");
+
+    act(() => {
+      vi.setSystemTime(start + DEFAULT_FRESHNESS.staleMs + 1);
+      vi.advanceTimersByTime(POLLING.BUS_FRESHNESS_MS);
+    });
+
+    const attention = screen
+      .getByText("Needs attention", { selector: "p" })
+      .closest("div")!;
+
+    expect(within(attention).getByText("1")).toBeInTheDocument();
+  });
+});
+
+describe("fleet health at a glance", () => {
+  it("names every state, including the ones at zero", async () => {
+    seedDriver("driver-1", "Asha Verma");
+    broadcast("driver-1");
+
+    renderFleet();
+    asAdmin();
+
+    await screen.findByText("Asha Verma");
+
+    const strip = screen.getByLabelText(/vehicles by reporting state/i);
+
+    for (const label of [
+      "Live",
+      "Recent",
+      "Delayed report",
+      "Not reporting",
+      "Unknown",
+    ]) {
+      expect(within(strip).getByText(label)).toBeInTheDocument();
+    }
+  });
+
+  /*
+    A missing row reads as "no problem"; a row showing 0 reads as "checked,
+    and there are none". For fleet health those are different claims.
+  */
+  it("shows a zero rather than omitting the state", async () => {
+    seedDriver("driver-1", "Asha Verma");
+    broadcast("driver-1");
+
+    renderFleet();
+    asAdmin();
+
+    await screen.findByText("Asha Verma");
+
+    const strip = screen.getByLabelText(/vehicles by reporting state/i);
+
+    const offline = within(strip).getByText("Not reporting").closest("div")!;
+
+    expect(within(offline).getByText("0")).toBeInTheDocument();
   });
 });
 

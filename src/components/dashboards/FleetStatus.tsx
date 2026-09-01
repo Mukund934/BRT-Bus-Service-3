@@ -6,20 +6,53 @@ import { POLLING } from "@/constants/config";
 import { destinationOf, getRoute } from "@/domain/transit/routes";
 import type { VehicleTelemetry } from "@/domain/fleet/telemetry";
 import {
-  selectFreshBuses,
+  classifyBuses,
   subscribeToBuses,
   toBusId,
   type LiveBus,
 } from "@/services/locationService";
+import {
+  countByState,
+  STATE_DESCRIPTIONS,
+  STATE_LABELS,
+  type VehicleState,
+} from "@/domain/fleet/state";
 import type { UserRecord } from "@/types/user";
 
-type Filter = "ALL" | "ON_SHIFT";
+type Filter = "ALL" | "REPORTING" | "ATTENTION";
 
-const FILTERS: Filter[] = ["ALL", "ON_SHIFT"];
+const FILTERS: Filter[] = ["ALL", "REPORTING", "ATTENTION"];
 
 const FILTER_LABELS: Record<Filter, string> = {
   ALL: "All drivers",
-  ON_SHIFT: "On shift",
+  REPORTING: "Reporting",
+  ATTENTION: "Needs attention",
+};
+
+/** States where the operator is seeing a position they can trust. */
+const REPORTING: readonly VehicleState[] = ["LIVE", "RECENT"];
+
+/*
+  Every state is spelled out, including the ones at zero.
+
+  A missing row reads as "no problem"; a row showing 0 reads as "checked, and
+  there are none". For a fleet-health strip those are different claims, and
+  the operator is entitled to the second one.
+*/
+const STATE_ORDER: readonly VehicleState[] = [
+  "LIVE",
+  "RECENT",
+  "STALE",
+  "OFFLINE",
+  "UNKNOWN",
+];
+
+const STATE_STYLES: Record<VehicleState, string> = {
+  LIVE: "bg-green-100 text-green-800",
+  RECENT: "bg-emerald-50 text-emerald-800",
+  STALE: "bg-amber-100 text-amber-900",
+  OFFLINE: "bg-destructive/10 text-destructive",
+  UNKNOWN: "bg-gray-200 text-gray-700",
 };
 
 const lastSeen = (telemetry: VehicleTelemetry): string =>
@@ -70,11 +103,23 @@ const FleetStatus = ({ users, loading }: FleetStatusProps) => {
     return () => clearInterval(interval);
   }, [mayView]);
 
-  const live = useMemo(() => selectFreshBuses(buses, checkedAt), [buses, checkedAt]);
+  /*
+    Classified, NOT filtered - the difference this component exists to fix.
+
+    `selectFreshBuses` drops STALE and OFFLINE vehicles, which is right for the
+    public map: a position several minutes old should not be drawn as if the
+    bus were there. It is wrong here. Filtering deletes the only evidence that
+    a bus HAS stopped reporting, so a driver whose phone lost signal looked
+    exactly like one who never started a shift - to the one person who could
+    ring them and ask.
+  */
+  const fleet = useMemo(() => classifyBuses(buses, checkedAt), [buses, checkedAt]);
+
+  const counts = useMemo(() => countByState(fleet), [fleet]);
 
   const byBusId = useMemo(
-    () => new Map(live.map((vehicle) => [vehicle.telemetry.vehicleId, vehicle])),
-    [live]
+    () => new Map(fleet.map((vehicle) => [vehicle.telemetry.vehicleId, vehicle])),
+    [fleet]
   );
 
   const rows = useMemo(
@@ -87,12 +132,29 @@ const FleetStatus = ({ users, loading }: FleetStatusProps) => {
     [drivers, byBusId]
   );
 
-  const visible = useMemo(
-    () => (filter === "ON_SHIFT" ? rows.filter((row) => row.bus) : rows),
-    [filter, rows]
-  );
+  const visible = useMemo(() => {
+    if (filter === "REPORTING") {
+      return rows.filter((row) => row.bus && REPORTING.includes(row.bus.state));
+    }
 
-  const onShift = rows.filter((row) => row.bus).length;
+    if (filter === "ATTENTION") {
+      return rows.filter((row) => row.bus && !REPORTING.includes(row.bus.state));
+    }
+
+    return rows;
+  }, [filter, rows]);
+
+  const reporting = rows.filter(
+    (row) => row.bus && REPORTING.includes(row.bus.state)
+  ).length;
+
+  /*
+    A vehicle that HAS reported and then stopped. A driver who never began a
+    shift is not in this number - there is nothing to chase.
+  */
+  const needsAttention = rows.filter(
+    (row) => row.bus && !REPORTING.includes(row.bus.state)
+  ).length;
 
   if (!mayView) return null;
 
@@ -130,15 +192,35 @@ const FleetStatus = ({ users, loading }: FleetStatusProps) => {
         </div>
 
         <div className="bg-secondary rounded-xl p-4 border border-border">
-          <p className="text-xs text-gray-600 mb-1">On shift</p>
-          <p className="text-2xl font-bold text-gray-900">{onShift}</p>
+          <p className="text-xs text-gray-600 mb-1">Reporting</p>
+          <p className="text-2xl font-bold text-gray-900">{reporting}</p>
         </div>
 
         <div className="bg-secondary rounded-xl p-4 border border-border">
-          <p className="text-xs text-gray-600 mb-1">Buses reporting</p>
-          <p className="text-2xl font-bold text-gray-900">{live.length}</p>
+          <p className="text-xs text-gray-600 mb-1">Needs attention</p>
+          <p className="text-2xl font-bold text-gray-900">{needsAttention}</p>
         </div>
       </div>
+
+      {/*
+        Fleet health in one line. A table of thirty vehicles does not answer
+        "is the feed healthy?"; this does, and it is the reason `countByState`
+        was written.
+      */}
+      <dl
+        className="flex flex-wrap gap-2 mb-6"
+        aria-label="Vehicles by reporting state"
+      >
+        {STATE_ORDER.map((state) => (
+          <div
+            key={state}
+            className={`rounded-lg px-3 py-2 ${STATE_STYLES[state]}`}
+          >
+            <dt className="text-xs font-semibold">{STATE_LABELS[state]}</dt>
+            <dd className="text-lg font-bold">{counts[state]}</dd>
+          </div>
+        ))}
+      </dl>
 
       {trackingFailed && (
         <div className="mb-4 bg-amber-50 border border-amber-200 rounded-lg p-3">
@@ -193,16 +275,30 @@ const FleetStatus = ({ users, loading }: FleetStatusProps) => {
 
                     <td className="font-mono text-xs">{busId}</td>
 
+                    {/*
+                      The badge names the state and carries its explanation as
+                      the accessible title. Colour alone cannot do this - the
+                      design system measured on-time against delayed at a
+                      luminance ratio of 1.05 for a red-green viewer - so the
+                      words are the signal and the colour is the reinforcement.
+
+                      "No shift started" is deliberately distinct from every
+                      reporting state: it means nothing was ever received, not
+                      that something was received and went quiet.
+                    */}
                     <td>
                       <span
-                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                        title={
                           bus
-                            ? "bg-green-100 text-green-700"
-                            : "bg-gray-200 text-gray-600"
+                            ? STATE_DESCRIPTIONS[bus.state]
+                            : "This driver has not started broadcasting."
+                        }
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                          bus ? STATE_STYLES[bus.state] : "bg-gray-200 text-gray-600"
                         }`}
                       >
                         <Bus className="w-3 h-3" aria-hidden="true" />
-                        {bus ? "On shift" : "Offline"}
+                        {bus ? STATE_LABELS[bus.state] : "No shift started"}
                       </span>
                     </td>
 

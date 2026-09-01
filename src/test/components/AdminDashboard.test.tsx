@@ -215,7 +215,16 @@ describe("when a record is incomplete", () => {
     await showPanel();
 
     expect(screen.getByText("nameless")).toBeInTheDocument();
-    expect(screen.getByText("Unknown")).toBeInTheDocument();
+
+    /*
+      Scoped to the roster table. "Unknown" is also a vehicle-reporting state
+      in the fleet panel above, so an unscoped query matches whichever the
+      test did not mean - and would have passed for the wrong reason if the
+      fallback ever broke.
+    */
+    const roster_table = screen.getByRole("table", { name: /registered users/i });
+
+    expect(within(roster_table).getByText("Unknown")).toBeInTheDocument();
   });
 
   it("shows the joined date, and N/A when there is none", async () => {
