@@ -1,10 +1,22 @@
+import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { toBusId } from "@/services/locationService";
+import { subscribeToAssignment } from "@/services/locationService";
 import { ArrowRight, Radio } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const DriverDashboard = () => {
+  /* undefined while we are still asking; null once we know there is none. */
+  const [vehicleId, setVehicleId] = useState<string | null | undefined>(
+    undefined
+  );
+
   const { user } = useAuth();
+
+  useEffect(() => {
+    if (!user) return;
+
+    return subscribeToAssignment(user.uid, setVehicleId);
+  }, [user]);
 
   const getInitials = (name?: string | null) => {
     if (!name) return "D";
@@ -55,13 +67,26 @@ const DriverDashboard = () => {
             <ArrowRight className="w-5 h-5" aria-hidden="true" />
           </Link>
 
-          {user && (
+          {vehicleId && (
             <p className="text-blue-100 text-sm mt-6">
               Passengers see your bus as{" "}
               <span className="font-mono font-semibold text-white">
-                {toBusId(user.uid)}
+                {vehicleId}
               </span>
               . Your name and email address are never published.
+            </p>
+          )}
+
+          {/*
+            Said here as well as on the driver screen, because this is the
+            card a driver lands on. Promising that passengers can see their
+            bus while no bus is assigned would be a claim about something that
+            is not happening.
+          */}
+          {vehicleId === null && (
+            <p className="text-blue-100 text-sm mt-6">
+              No bus is assigned to you right now, so nothing is being shared.
+              The operator assigns one for each shift.
             </p>
           )}
         </div>

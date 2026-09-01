@@ -129,6 +129,8 @@ export const STORAGE_KEYS = {
 export const REMOTE_PATHS = {
   /** Realtime Database node holding live driver positions. */
   BUS_LOCATIONS: "busLocations",
+  /** Who may publish as which vehicle, and until when. Operator-written. */
+  ASSIGNMENTS: "assignments",
   /** Firestore collection holding user profiles and roles. */
   USERS: "users",
   /** Firestore collection holding booked tickets. */

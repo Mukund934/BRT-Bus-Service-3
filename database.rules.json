@@ -11,11 +11,28 @@
       }
     },
 
+    "operatorAllowlist": {
+      ".read": false,
+
+      "$uid": {
+        ".write": false
+      }
+    },
+
+    "assignments": {
+      ".read": "auth != null && root.child('operatorAllowlist').child(auth.uid).val() === true",
+
+      "$driverUid": {
+        ".read": "auth != null && auth.uid === $driverUid",
+        ".write": false
+      }
+    },
+
     "busLocations": {
       ".read": true,
 
-      "$driverUid": {
-        ".write": "auth != null && auth.uid === $driverUid && root.child('driverAllowlist').child(auth.uid).val() === true",
+      "$vehicleId": {
+        ".write": "auth != null && root.child('driverAllowlist').child(auth.uid).val() === true && root.child('assignments').child(auth.uid).child('vehicleId').val() === $vehicleId && root.child('assignments').child(auth.uid).child('validFrom').val() <= now && root.child('assignments').child(auth.uid).child('validTo').val() > now && root.child('assignments').child(auth.uid).child('validTo').val() - root.child('assignments').child(auth.uid).child('validFrom').val() <= 86400000",
 
         ".validate": "!newData.exists() || (newData.hasChildren(['lat', 'lng', 'updatedAt']) && (!data.exists() || newData.child('updatedAt').val() >= data.child('updatedAt').val() + 5000))",
 

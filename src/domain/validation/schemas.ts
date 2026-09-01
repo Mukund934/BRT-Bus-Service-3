@@ -184,6 +184,19 @@ export const storedBusPositionSchema = z.object({
 export type ValidatedBusPosition = z.infer<typeof storedBusPositionSchema>;
 
 /**
+ * A driver's current vehicle assignment, as read back.
+ *
+ * Tolerant in the same way the inbound position schema is: a record this
+ * build does not fully understand costs the driver their shift, so the shape
+ * checked here is only what authorisation actually depends on.
+ */
+export const assignmentSchema = z.object({
+  vehicleId: z.string().min(1).max(32),
+  validFrom: z.number().int().nonnegative(),
+  validTo: z.number().int().nonnegative(),
+});
+
+/**
  * Journeys kept on this device.
  *
  * Stops are parsed **strictly** against the registry here, unlike an operator

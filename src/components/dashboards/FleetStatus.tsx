@@ -8,8 +8,8 @@ import type { VehicleTelemetry } from "@/domain/fleet/telemetry";
 import {
   classifyBuses,
   serverNow,
+  subscribeToAssignments,
   subscribeToBuses,
-  toBusId,
   type LiveBus,
 } from "@/services/locationService";
 import {
@@ -74,6 +74,7 @@ const FleetStatus = ({ users, loading }: FleetStatusProps) => {
   const [buses, setBuses] = useState<LiveBus[]>([]);
   const [checkedAt, setCheckedAt] = useState(() => serverNow());
   const [trackingFailed, setTrackingFailed] = useState(false);
+  const [assignments, setAssignments] = useState<Record<string, string>>({});
   const [filter, setFilter] = useState<Filter>("ALL");
 
   const drivers = useMemo(
@@ -91,6 +92,19 @@ const FleetStatus = ({ users, loading }: FleetStatusProps) => {
       },
       () => setTrackingFailed(true)
     );
+  }, [mayView]);
+
+  /*
+    The roster, which an operator may read and a driver may not. RTDB rules
+    cannot consult a Firestore role, so this is gated on its own allowlist -
+    the same reason `driverAllowlist` exists as a separate node. An operator
+    who is not on it simply sees no assignments, which reads correctly as
+    "nobody is on shift" rather than as an error.
+  */
+  useEffect(() => {
+    if (!mayView) return;
+
+    return subscribeToAssignments(setAssignments);
   }, [mayView]);
 
   useEffect(() => {
@@ -123,14 +137,27 @@ const FleetStatus = ({ users, loading }: FleetStatusProps) => {
     [fleet]
   );
 
+  /*
+    Which bus each driver is in, read from the roster rather than derived.
+
+    It used to be a hash of the driver's account id - a label invented here so
+    that something could be shown. It matched whatever the driver app happened
+    to publish under, and it meant the operator's roster and the public map
+    agreed only because both sides ran the same function. Now the assignment
+    is the answer, and a driver with none is a driver with no bus.
+  */
   const rows = useMemo(
     () =>
-      drivers.map((driver) => ({
-        driver,
-        busId: toBusId(driver.uid),
-        bus: byBusId.get(toBusId(driver.uid)) ?? null,
-      })),
-    [drivers, byBusId]
+      drivers.map((driver) => {
+        const vehicleId = assignments[driver.uid] ?? null;
+
+        return {
+          driver,
+          vehicleId,
+          bus: vehicleId ? (byBusId.get(vehicleId) ?? null) : null,
+        };
+      }),
+    [drivers, byBusId, assignments]
   );
 
   const visible = useMemo(() => {
@@ -262,7 +289,7 @@ const FleetStatus = ({ users, loading }: FleetStatusProps) => {
               </tr>
             </thead>
             <tbody>
-              {visible.map(({ driver, busId, bus }) => {
+              {visible.map(({ driver, vehicleId, bus }) => {
                 return (
                   <tr key={driver.uid} className="border-b">
                     <td className="py-2">
@@ -274,7 +301,7 @@ const FleetStatus = ({ users, loading }: FleetStatusProps) => {
                       </span>
                     </td>
 
-                    <td className="font-mono text-xs">{busId}</td>
+                    <td className="font-mono text-xs">{vehicleId ?? "—"}</td>
 
                     {/*
                       The badge names the state and carries its explanation as

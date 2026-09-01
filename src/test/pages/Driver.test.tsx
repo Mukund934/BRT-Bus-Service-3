@@ -4,7 +4,7 @@ import {
   isLiveTrackingAvailable,
   publishLocation,
   stopPublishing,
-  toBusId,
+  subscribeToAssignment,
 } from "@/services/locationService";
 import { act, renderWithProviders, screen, waitFor } from "../helpers/render";
 import { ROUTE_IDS, getRoute } from "@/domain/transit/routes";
@@ -21,17 +21,40 @@ vi.mock("@/services/locationService", async (importOriginal) => ({
   isLiveTrackingAvailable: vi.fn(async () => true),
   publishLocation: vi.fn(async () => undefined),
   stopPublishing: vi.fn(async () => undefined),
+  subscribeToAssignment: vi.fn(() => () => {}),
 }));
 
 const available = vi.mocked(isLiveTrackingAvailable);
 const publish = vi.mocked(publishLocation);
 const stop = vi.mocked(stopPublishing);
+const assignment = vi.mocked(subscribeToAssignment);
+
+const VEHICLE = "fixture-a";
+
+/*
+  Reports an assignment to whatever the page subscribed with. Called before
+  render, because the page reads it on mount and the answer decides whether
+  there is anything to broadcast as at all.
+*/
+const assign = (_driverUid: string, vehicleId: string | null) => {
+  assignment.mockImplementation((_uid, onAssignment) => {
+    onAssignment(vehicleId);
+
+    return () => {};
+  });
+};
 
 const AT_HNLU = { coords: { latitude: 21.2514, longitude: 81.6296 } };
 
 const locate = vi.fn();
 
 beforeEach(() => {
+  /*
+    On shift by default, since most of these exercise broadcasting. The test
+    for a driver with no bus assigned says so explicitly.
+  */
+  assign("driver-9", VEHICLE);
+
   Object.defineProperty(navigator, "geolocation", {
     configurable: true,
     value: { getCurrentPosition: locate },
@@ -56,12 +79,32 @@ const startSharing = async (user: ReturnType<typeof renderWithProviders>["user"]
 };
 
 describe("who may broadcast", () => {
-  it("names the vehicle without publishing the account it belongs to", async () => {
+  it("names the assigned vehicle, never the account it belongs to", async () => {
     renderWithProviders(<Driver />, { route: "/driver" });
     asDriver();
 
-    expect(await screen.findByText(toBusId("driver-9"))).toBeInTheDocument();
+    expect(await screen.findByText(VEHICLE)).toBeInTheDocument();
     expect(screen.queryByText("driver-9")).not.toBeInTheDocument();
+  });
+
+  /*
+    The state this ships in: nobody has a bus until the operator issues an
+    assignment, and each one expires at the end of a shift. Offering a Start
+    button here would produce a write the database refuses and an error the
+    driver could do nothing about.
+  */
+  it("says plainly when no bus is assigned", async () => {
+    assign("driver-9", null);
+
+    renderWithProviders(<Driver />, { route: "/driver" });
+    asDriver();
+
+    expect(
+      await screen.findByText(/No bus is assigned to you right now/i)
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /start sharing/i })
+    ).toBeDisabled();
   });
 
   it("refuses a passenger who reached the page anyway", async () => {
@@ -180,7 +223,7 @@ describe("declaring which route is being run", () => {
 
     await waitFor(() => expect(publish).toHaveBeenCalled());
 
-    expect(publish.mock.calls[0]![2]).toBe("102");
+    expect(publish.mock.calls[0]![3]).toBe("102");
   });
 
   it("locks the choice while a shift is under way", async () => {

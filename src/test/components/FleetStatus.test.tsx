@@ -12,7 +12,7 @@ import { DEFAULT_FRESHNESS } from "@/domain/fleet/state";
 import FleetStatus from "@/components/dashboards/FleetStatus";
 import { POLLING, REMOTE_PATHS } from "@/constants/config";
 import { STOP_COORDS } from "@/domain/transit/stops";
-import { toBusId } from "@/services/locationService";
+
 import { act, renderWithProviders, screen, waitFor, within } from "../helpers/render";
 import {
   enableRtdb,
@@ -54,15 +54,43 @@ const seedDriver = (uid: string, name: string) => {
   roster.push(driver(uid, name));
 };
 
-const broadcast = (uid: string, over: Record<string, unknown> = {}) =>
-  seedRtdb(`${REMOTE_PATHS.BUS_LOCATIONS}/${uid}`, {
+/** Fixture vehicles. The operator has supplied no fleet list. */
+const vehicleFor = (uid: string) => `fixture-${uid.replace("driver-", "")}`;
+
+const HOUR = 60 * 60 * 1000;
+
+/**
+ * Puts a driver on shift in a vehicle.
+ *
+ * Two records, because the model separates them: the assignment says which
+ * bus this driver may publish as, and the position says where that bus is.
+ * A position with no assignment behind it belongs to no driver, which is
+ * exactly what the operator's table now has to show.
+ */
+const assign = (uid: string, over: Record<string, unknown> = {}) =>
+  seedRtdb(`${REMOTE_PATHS.ASSIGNMENTS}/${uid}`, {
+    vehicleId: vehicleFor(uid),
+    validFrom: Date.now() - HOUR,
+    validTo: Date.now() + 7 * HOUR,
+    ...over,
+  });
+
+/*
+  A broadcasting driver is an assigned one - the rules do not permit anything
+  else - so seeding a position seeds the assignment that authorises it. Tests
+  wanting one without the other call `assign` on its own.
+*/
+const broadcast = (uid: string, over: Record<string, unknown> = {}) => {
+  assign(uid);
+
+  return seedRtdb(`${REMOTE_PATHS.BUS_LOCATIONS}/${vehicleFor(uid)}`, {
     lat: STOP_COORDS["CBD"]!.lat,
     lng: STOP_COORDS["CBD"]!.lng,
     updatedAt: Date.now(),
-    busId: toBusId(uid),
     routeId: "101",
     ...over,
   });
+};
 
 beforeEach(() => {
   roster.length = 0;
@@ -121,7 +149,17 @@ describe("matching a driver to their vehicle", () => {
 
     await screen.findByText("Asha Verma");
 
-    expect(within(rowFor("Asha Verma")).getByText(toBusId("driver-1"))).toBeInTheDocument();
+    /*
+      Waited for, not read once. The driver list comes from Firestore and the
+      assignment from the Realtime Database, on separate async paths - so the
+      row can exist a tick before it knows which bus it names.
+    */
+    await waitFor(() =>
+      expect(
+        within(rowFor("Asha Verma")).getByText(vehicleFor("driver-1"))
+      ).toBeInTheDocument()
+    );
+
     expect(screen.queryByText("driver-1")).not.toBeInTheDocument();
   });
 

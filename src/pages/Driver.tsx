@@ -17,7 +17,7 @@ import {
   isLiveTrackingAvailable,
   publishLocation,
   stopPublishing,
-  toBusId,
+  subscribeToAssignment,
 } from "@/services/locationService";
 
 interface DriverCoords {
@@ -41,6 +41,24 @@ const Driver = () => {
   const [error, setError] = useState("");
 
   /*
+    Which bus this driver may publish as, read live.
+
+    `undefined` means we have not been told yet; `null` means we have, and the
+    answer is nobody has assigned them one. The distinction matters on screen:
+    "checking" and "you have no bus" are different things to be told, and
+    showing the second while the first is true would be a false accusation.
+  */
+  const [vehicleId, setVehicleId] = useState<string | null | undefined>(
+    undefined
+  );
+
+  useEffect(() => {
+    if (!user) return;
+
+    return subscribeToAssignment(user.uid, setVehicleId);
+  }, [user]);
+
+  /*
     Evidence, not intent. The indicator below is driven by when a publish last
     actually succeeded rather than by the Start button, because a background
     tab has its timers clamped and its geolocation suspended - so the old
@@ -58,7 +76,8 @@ const Driver = () => {
   const routeFieldId = useId();
 
   useEffect(() => {
-    if (!isSharing || !mayPublish) return;
+    // No assignment, nothing to publish as - and the rules would refuse it.
+    if (!isSharing || !mayPublish || !vehicleId) return;
 
     let cancelled = false;
 
@@ -70,7 +89,7 @@ const Driver = () => {
           const { latitude, longitude } = position.coords;
           setCoords({ latitude, longitude });
 
-          publishLocation(actor, { latitude, longitude }, routeId)
+          publishLocation(actor, { latitude, longitude }, vehicleId!, routeId)
             .then(() => {
               if (cancelled) return;
               setLastPublishedAt(Date.now());
@@ -124,7 +143,7 @@ const Driver = () => {
       clearInterval(interval);
       document.removeEventListener("visibilitychange", onVisibilityChange);
     };
-  }, [isSharing, mayPublish, actor, routeId]);
+  }, [isSharing, mayPublish, actor, routeId, vehicleId]);
 
   /**
    * Clears the published position when the driver stops or leaves the page,
@@ -137,17 +156,17 @@ const Driver = () => {
     setWasHidden(false);
 
     try {
-      await stopPublishing(actor);
+      if (vehicleId) await stopPublishing(actor, vehicleId);
     } catch (err) {
       console.error("Could not clear published location:", err);
     }
-  }, [actor]);
+  }, [actor, vehicleId]);
 
   useEffect(() => {
     return () => {
-      void stopPublishing(actor);
+      if (vehicleId) void stopPublishing(actor, vehicleId);
     };
-  }, [actor]);
+  }, [actor, vehicleId]);
 
   const health = sharingHealth(
     isSharing,
@@ -192,11 +211,38 @@ const Driver = () => {
           <div className="bg-white rounded-2xl shadow-lg p-8 text-center space-y-6">
             <h1 className="text-2xl font-bold text-primary-deep">Driver Live Tracking</h1>
 
-            {user && (
+            {vehicleId && (
               <p className="text-sm text-gray-500">
                 Broadcasting as{" "}
-                <span className="font-mono font-medium">{toBusId(user.uid)}</span>
+                <span className="font-mono font-medium">{vehicleId}</span>
               </p>
+            )}
+
+            {vehicleId === undefined && (
+              <p className="text-sm text-gray-500">Checking your assignment…</p>
+            )}
+
+            {/*
+              The state this ships in, and it is not an error.
+
+              Nobody has a bus until the operator issues an assignment, and an
+              assignment expires on its own at the end of a shift. Both look
+              the same from here, and in both cases the honest thing is to say
+              there is nothing to broadcast as - rather than offer a Start
+              button that produces a write the database refuses and an error
+              the driver cannot act on.
+            */}
+            {vehicleId === null && (
+              <div
+                role="note"
+                className="rounded-lg border border-primary/30 bg-accent px-4 py-3 text-left"
+              >
+                <p className="text-sm text-primary-deep">
+                  <strong>No bus is assigned to you right now.</strong> Sharing
+                  your position needs an assignment from the operator, and each
+                  one covers a single shift. Ask them to assign you a vehicle.
+                </p>
+              </div>
             )}
 
             <div className="text-left">
@@ -278,7 +324,13 @@ const Driver = () => {
               {!isSharing ? (
                 <button
                   onClick={() => void startSharing()}
-                  disabled={!mayPublish}
+                  /*
+                    Nothing to share as, so there is nothing to start. The
+                    note above says why; a live button here would produce a
+                    write the database refuses and an error the driver could
+                    do nothing about.
+                  */
+                  disabled={!mayPublish || !vehicleId}
                   className="px-6 py-3 rounded-xl bg-green-600 text-white font-medium shadow hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Start Sharing

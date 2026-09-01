@@ -30,7 +30,7 @@ const positionRules = (() => {
   const root = (rules.rules ?? {}) as Record<string, never>;
   const locations = (root[REMOTE_PATHS.BUS_LOCATIONS] ?? {}) as Record<string, never>;
 
-  return (locations["$driverUid"] ?? {}) as Record<string, Record<string, string>>;
+  return (locations["$vehicleId"] ?? {}) as Record<string, Record<string, string>>;
 })();
 
 const routePattern = (() => {
@@ -82,7 +82,29 @@ describe("what the rules keep closed", () => {
     const write = positionRules[".write"] as unknown as string;
 
     expect(write).toContain("driverAllowlist");
-    expect(write).toContain("auth.uid === $driverUid");
+  });
+
+  /*
+    Being allowed to publish is not being allowed to publish as anything. The
+    allowlist says the account may write; the assignment says which bus, and
+    until when. Without the second term any allowlisted driver could publish
+    as any vehicle, indefinitely.
+  */
+  it("binds a position write to the vehicle the driver was assigned", () => {
+    const write = positionRules[".write"] as unknown as string;
+
+    expect(write).toContain("assignments");
+    expect(write).toContain("$vehicleId");
+    expect(write).toContain("validFrom");
+    expect(write).toContain("validTo");
+  });
+
+  it("keeps the roster unwritable by the drivers it names", () => {
+    const root = (rules.rules ?? {}) as Record<string, never>;
+    const assignments = (root.assignments ?? {}) as Record<string, unknown>;
+    const perDriver = assignments["$driverUid"] as Record<string, unknown>;
+
+    expect(perDriver?.[".write"]).toBe(false);
   });
 
   it("refuses any field the position contract does not define", () => {

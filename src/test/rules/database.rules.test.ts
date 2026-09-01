@@ -28,6 +28,18 @@ import { ROUTE_IDS } from "@/domain/transit/routes";
 const DRIVER = "driver-allowed";
 const OUTSIDER = "driver-not-allowed";
 
+/*
+  Fixture ids, deliberately unlike anything real. The operator has supplied no
+  fleet list, so a plausible registration here would be a fabricated claim
+  about a bus that exists.
+*/
+const VEHICLE = "fixture-a";
+const OTHER_VEHICLE = "fixture-b";
+
+const OPERATOR = "operator-1";
+
+const HOUR = 60 * 60 * 1000;
+
 let env: RulesTestEnvironment;
 
 /** A telemetry payload the rules should accept, before any field is broken. */
@@ -40,8 +52,8 @@ const validPosition = (over: Record<string, unknown> = {}) => ({
   ...over,
 });
 
-const positionRef = (db: unknown, uid: string) =>
-  ref(db as Parameters<typeof ref>[0], `busLocations/${uid}`);
+const positionRef = (db: unknown, vehicleId: string) =>
+  ref(db as Parameters<typeof ref>[0], `busLocations/${vehicleId}`);
 
 beforeAll(async () => {
   env = await initializeTestEnvironment({
@@ -72,15 +84,34 @@ beforeEach(async () => {
     one. No real UID appears anywhere in this file.
   */
   await env.withSecurityRulesDisabled(async (context) => {
-    await set(ref(context.database(), `driverAllowlist/${DRIVER}`), true);
+    const db = context.database();
+
+    await set(ref(db, `driverAllowlist/${DRIVER}`), true);
+
+    /*
+      The second half of the grant. Being on the allowlist says this account
+      may publish; the assignment says which bus it may publish AS, and for
+      how long. Both are written by the operator, never by a client.
+    */
+    await set(ref(db, `assignments/${DRIVER}`), {
+      vehicleId: VEHICLE,
+      validFrom: Date.now() - HOUR,
+      validTo: Date.now() + 7 * HOUR,
+    });
   });
 });
+
+/** Replaces the seeded assignment, bypassing rules as the operator would. */
+const assign = (driverUid: string, fields: Record<string, unknown>) =>
+  env.withSecurityRulesDisabled(async (context) => {
+    await set(ref(context.database(), `assignments/${driverUid}`), fields);
+  });
 
 describe("who may publish a bus position", () => {
   it("lets an allowlisted driver write their own position", async () => {
     const db = env.authenticatedContext(DRIVER).database();
 
-    await assertSucceeds(set(positionRef(db, DRIVER), validPosition()));
+    await assertSucceeds(set(positionRef(db, VEHICLE), validPosition()));
   });
 
   /*
@@ -92,27 +123,31 @@ describe("who may publish a bus position", () => {
   it("refuses a signed-in driver who is not on the allowlist", async () => {
     const db = env.authenticatedContext(OUTSIDER).database();
 
-    await assertFails(set(positionRef(db, OUTSIDER), validPosition()));
+    await assertFails(set(positionRef(db, OTHER_VEHICLE), validPosition()));
   });
 
   it("refuses an unauthenticated write", async () => {
     const db = env.unauthenticatedContext().database();
 
-    await assertFails(set(positionRef(db, DRIVER), validPosition()));
+    await assertFails(set(positionRef(db, VEHICLE), validPosition()));
   });
 
-  /* An allowlisted driver is still only allowed to be themselves. */
-  it("refuses an allowlisted driver writing under someone else's uid", async () => {
+  /*
+    Being allowed to publish is not being allowed to publish as anything. The
+    allowlist alone could never express this: it says the account may write,
+    and says nothing about which bus it is driving.
+  */
+  it("refuses an allowlisted driver publishing as a bus they were not given", async () => {
     const db = env.authenticatedContext(DRIVER).database();
 
-    await assertFails(set(positionRef(db, OUTSIDER), validPosition()));
+    await assertFails(set(positionRef(db, OTHER_VEHICLE), validPosition()));
   });
 
   it("lets a driver clear their own position when service ends", async () => {
     const db = env.authenticatedContext(DRIVER).database();
 
-    await assertSucceeds(set(positionRef(db, DRIVER), validPosition()));
-    await assertSucceeds(remove(positionRef(db, DRIVER)));
+    await assertSucceeds(set(positionRef(db, VEHICLE), validPosition()));
+    await assertSucceeds(remove(positionRef(db, VEHICLE)));
   });
 
   /*
@@ -122,13 +157,13 @@ describe("who may publish a bus position", () => {
   it("stops a driver the moment they are removed from the allowlist", async () => {
     const db = env.authenticatedContext(DRIVER).database();
 
-    await assertSucceeds(set(positionRef(db, DRIVER), validPosition()));
+    await assertSucceeds(set(positionRef(db, VEHICLE), validPosition()));
 
     await env.withSecurityRulesDisabled(async (context) => {
       await remove(ref(context.database(), `driverAllowlist/${DRIVER}`));
     });
 
-    await assertFails(set(positionRef(db, DRIVER), validPosition()));
+    await assertFails(set(positionRef(db, VEHICLE), validPosition()));
   });
 
   it("publishes nothing at all while the allowlist is empty", async () => {
@@ -136,7 +171,179 @@ describe("who may publish a bus position", () => {
 
     const db = env.authenticatedContext(DRIVER).database();
 
-    await assertFails(set(positionRef(db, DRIVER), validPosition()));
+    await assertFails(set(positionRef(db, VEHICLE), validPosition()));
+  });
+});
+
+/*
+  The assignment, which is the half of the grant the allowlist cannot express.
+
+  The allowlist answers "may this account publish at all?". It cannot answer
+  "as which bus, and until when?" - so without this, any allowlisted driver
+  could publish as any vehicle, indefinitely.
+
+  The window is the authorisation, and it expires by itself. There is no
+  revocation step for an operator to forget: an assignment nobody renews stops
+  working, which turns a lost or stolen device from an open-ended problem into
+  a bounded one.
+*/
+describe("which bus a driver may publish as", () => {
+  const publish = (vehicleId: string) =>
+    set(
+      positionRef(env.authenticatedContext(DRIVER).database(), vehicleId),
+      validPosition()
+    );
+
+  it("allows the vehicle they were assigned", async () => {
+    await assertSucceeds(publish(VEHICLE));
+  });
+
+  it("refuses a driver with no assignment at all", async () => {
+    await env.withSecurityRulesDisabled(async (context) => {
+      await remove(ref(context.database(), `assignments/${DRIVER}`));
+    });
+
+    await assertFails(publish(VEHICLE));
+  });
+
+  it("refuses a shift that has not started yet", async () => {
+    await assign(DRIVER, {
+      vehicleId: VEHICLE,
+      validFrom: Date.now() + HOUR,
+      validTo: Date.now() + 8 * HOUR,
+    });
+
+    await assertFails(publish(VEHICLE));
+  });
+
+  /*
+    The property the whole design rests on: nobody has to remember to switch
+    this off.
+  */
+  it("refuses a shift that has ended", async () => {
+    await assign(DRIVER, {
+      vehicleId: VEHICLE,
+      validFrom: Date.now() - 9 * HOUR,
+      validTo: Date.now() - HOUR,
+    });
+
+    await assertFails(publish(VEHICLE));
+  });
+
+  /*
+    Enforced where it is actually reachable. Assignments are written by the
+    Admin SDK, which bypasses rules entirely, so a `.validate` on that node
+    would be unreachable decoration. Checking the span at the point of USE
+    means a mis-issued year-long assignment still cannot publish.
+  */
+  it("refuses an assignment issued for longer than a day", async () => {
+    await assign(DRIVER, {
+      vehicleId: VEHICLE,
+      validFrom: Date.now() - HOUR,
+      validTo: Date.now() + 48 * HOUR,
+    });
+
+    await assertFails(publish(VEHICLE));
+  });
+
+  it("allows one issued for exactly a day", async () => {
+    const from = Date.now() - HOUR;
+
+    await assign(DRIVER, {
+      vehicleId: VEHICLE,
+      validFrom: from,
+      validTo: from + 24 * HOUR,
+    });
+
+    await assertSucceeds(publish(VEHICLE));
+  });
+
+  it("still refuses a driver who is assigned but not allowlisted", async () => {
+    await assign(OUTSIDER, {
+      vehicleId: OTHER_VEHICLE,
+      validFrom: Date.now() - HOUR,
+      validTo: Date.now() + 7 * HOUR,
+    });
+
+    const db = env.authenticatedContext(OUTSIDER).database();
+
+    await assertFails(set(positionRef(db, OTHER_VEHICLE), validPosition()));
+  });
+});
+
+describe("who may see an assignment", () => {
+  it("lets a driver read their own", async () => {
+    const db = env.authenticatedContext(DRIVER).database();
+
+    await assertSucceeds(get(ref(db, `assignments/${DRIVER}`)));
+  });
+
+  /*
+    A driver reading the roster would learn who else is on shift and in which
+    bus. That is staff scheduling, and it is not theirs to see.
+  */
+  it("refuses a driver reading somebody else's", async () => {
+    const db = env.authenticatedContext(DRIVER).database();
+
+    await assertFails(get(ref(db, `assignments/${OUTSIDER}`)));
+  });
+
+  it("refuses a driver listing the whole roster", async () => {
+    const db = env.authenticatedContext(DRIVER).database();
+
+    await assertFails(get(ref(db, "assignments")));
+  });
+
+  /*
+    The operator's own view has to answer "who is in which bus?", and RTDB
+    rules cannot read a Firestore role to decide who that is - the same
+    limitation that makes `driverAllowlist` a separate node. So operators get
+    their own allowlist, written the same way and by the same hand.
+  */
+  it("lets an allowlisted operator read the roster", async () => {
+    await env.withSecurityRulesDisabled(async (context) => {
+      await set(ref(context.database(), `operatorAllowlist/${OPERATOR}`), true);
+    });
+
+    const db = env.authenticatedContext(OPERATOR).database();
+
+    await assertSucceeds(get(ref(db, "assignments")));
+  });
+
+  it("refuses an operator who is not on that allowlist", async () => {
+    const db = env.authenticatedContext(OPERATOR).database();
+
+    await assertFails(get(ref(db, "assignments")));
+  });
+
+  it("keeps the operator allowlist itself closed", async () => {
+    await env.withSecurityRulesDisabled(async (context) => {
+      await set(ref(context.database(), `operatorAllowlist/${OPERATOR}`), true);
+    });
+
+    const db = env.authenticatedContext(OPERATOR).database();
+
+    await assertFails(get(ref(db, "operatorAllowlist")));
+    await assertFails(set(ref(db, `operatorAllowlist/${DRIVER}`), true));
+  });
+
+  it("refuses a signed-out visitor entirely", async () => {
+    const db = env.unauthenticatedContext().database();
+
+    await assertFails(get(ref(db, `assignments/${DRIVER}`)));
+  });
+
+  /* Assignments are the operator's to issue, never a client's to claim. */
+  it("refuses a driver assigning themselves a bus", async () => {
+    const db = env.authenticatedContext(DRIVER).database();
+
+    await assertFails(
+      set(ref(db, `assignments/${DRIVER}`), {
+        vehicleId: OTHER_VEHICLE,
+        validFrom: Date.now(),
+        validTo: Date.now() + HOUR,
+      })
+    );
   });
 });
 
@@ -151,7 +358,7 @@ describe("the routes a position may claim", () => {
     const db = env.authenticatedContext(DRIVER).database();
 
     await assertSucceeds(
-      set(positionRef(db, DRIVER), validPosition({ routeId }))
+      set(positionRef(db, VEHICLE), validPosition({ routeId }))
     );
   });
 
@@ -161,7 +368,7 @@ describe("the routes a position may claim", () => {
       const db = env.authenticatedContext(DRIVER).database();
 
       await assertFails(
-        set(positionRef(db, DRIVER), validPosition({ routeId }))
+        set(positionRef(db, VEHICLE), validPosition({ routeId }))
       );
     }
   );
@@ -185,7 +392,7 @@ describe("whose clock decides when a position was taken", () => {
   const publish = (payload: Record<string, unknown>) => {
     const db = env.authenticatedContext(DRIVER).database();
 
-    return set(positionRef(db, DRIVER), payload);
+    return set(positionRef(db, VEHICLE), payload);
   };
 
   it("accepts a server-stamped time", async () => {
@@ -231,7 +438,7 @@ describe("how often a bus may report", () => {
     const db = env.authenticatedContext(DRIVER).database();
 
     return set(
-      positionRef(db, DRIVER),
+      positionRef(db, VEHICLE),
       validPosition({ updatedAt: serverTimestamp() })
     );
   };
@@ -258,14 +465,14 @@ describe("how often a bus may report", () => {
     const db = env.authenticatedContext(DRIVER).database();
 
     await assertSucceeds(publish());
-    await assertSucceeds(remove(positionRef(db, DRIVER)));
+    await assertSucceeds(remove(positionRef(db, VEHICLE)));
   });
 
   it("lets a driver start again straight after stopping", async () => {
     const db = env.authenticatedContext(DRIVER).database();
 
     await assertSucceeds(publish());
-    await assertSucceeds(remove(positionRef(db, DRIVER)));
+    await assertSucceeds(remove(positionRef(db, VEHICLE)));
     await assertSucceeds(publish());
   });
 });
@@ -274,14 +481,14 @@ describe("what a position must look like", () => {
   const rejects = async (over: Record<string, unknown>) => {
     const db = env.authenticatedContext(DRIVER).database();
 
-    await assertFails(set(positionRef(db, DRIVER), validPosition(over)));
+    await assertFails(set(positionRef(db, VEHICLE), validPosition(over)));
   };
 
   it("refuses a position with no latitude", async () => {
     const db = env.authenticatedContext(DRIVER).database();
     const { lat: _lat, ...withoutLat } = validPosition();
 
-    await assertFails(set(positionRef(db, DRIVER), withoutLat));
+    await assertFails(set(positionRef(db, VEHICLE), withoutLat));
   });
 
   it("refuses a latitude off the planet", () => rejects({ lat: 91 }));
