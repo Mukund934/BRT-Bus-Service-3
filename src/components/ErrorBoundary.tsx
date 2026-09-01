@@ -1,5 +1,6 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
 import { AlertTriangle } from "lucide-react";
+import { reportCaught } from "@/services/observability";
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -19,8 +20,14 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
     return { hasError: true };
   }
 
+  /*
+    The passenger sees a fallback and carries on, which means this is the one
+    failure that is handled from their side and invisible from every other.
+    Reporting it is how it still gets counted.
+  */
   override componentDidCatch(error: Error, info: ErrorInfo) {
     console.error("Unhandled render error", error, info.componentStack);
+    reportCaught("boundary", error);
   }
 
   override render() {
