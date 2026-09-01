@@ -66,7 +66,18 @@ export const NOTIFICATION_RULES = {
   DEDUPE_WINDOW_MS: 300_000,
   /** How long a popup stays on screen before auto-dismissing. */
   AUTO_DISMISS_MS: 6_000,
-  ICON_URL: "https://cdn-icons-png.freepik.com/512/1719/1719609.png",
+  /*
+    The app's own icon, served from this origin.
+
+    It used to be hotlinked from a stock-icon CDN, which meant three things
+    nobody chose: every arrival alert told a third party that this person had
+    just been notified, complete with IP and timestamp; the icon carried
+    somebody else's licence terms into a product heading for an operator
+    conversation; and because the service worker caches same-origin requests
+    only, an alert raised with no connection had no icon at all - which is
+    precisely when arrival alerts matter most.
+  */
+  ICON_URL: "/icon-192.png",
 } as const;
 
 /**

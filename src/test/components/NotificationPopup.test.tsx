@@ -141,6 +141,31 @@ describe("raising a browser notification", () => {
     expect(notificationApi().mock.calls[0]![0]).toBe("Bus nearby");
   });
 
+  /*
+    The icon used to be hotlinked from a stock-icon CDN. Every arrival alert
+    therefore told a third party that this person had just been notified, and
+    the request could never be cached - the service worker only touches
+    same-origin - so an alert raised with no connection showed no icon at all,
+    which is exactly when an arrival alert matters most.
+
+    Asserted as first-party rather than as one specific filename, so swapping
+    the artwork does not fail this, and reaching for a CDN again does.
+  */
+  it("draws its icon from this origin, never a third party", async () => {
+    notificationApi().permission = "granted";
+
+    const { user } = renderWithProviders(<AlertTrigger />);
+
+    await user.click(screen.getByRole("button", { name: "Raise alert" }));
+    await screen.findByText("Bus 101");
+
+    const options = notificationApi().mock.calls[0]![1] as { icon?: string };
+
+    expect(options.icon).toBeDefined();
+    expect(options.icon).toMatch(/^\//);
+    expect(options.icon).not.toMatch(/^https?:/);
+  });
+
   it("does not when permission has never been given", async () => {
     notificationApi().permission = "default";
 
