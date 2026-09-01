@@ -17,7 +17,7 @@ export default defineConfig({
       directory is absent - a size guard that quietly skips is a size guard
       that is not running.
     */
-    exclude: ["src/test/bundle/**", "**/node_modules/**"],
+    exclude: ["src/test/bundle/**", "src/test/rules/**", "**/node_modules/**"],
 
     /*
       Firebase's web config is public by design, but the SDK still refuses to

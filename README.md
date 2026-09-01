@@ -289,6 +289,7 @@ Then open http://localhost:8080.
 | `npm run typecheck` | TypeScript, no emit |
 | `npm test` | test suite |
 | `npm run test:coverage` | suite with coverage report |
+| `npm run test:rules` | security rules against the Firebase emulator (needs JDK 21+) |
 | `npm run verify` | everything CI runs, in the same order |
 
 ---
@@ -368,6 +369,8 @@ Node 20 and 22. Each gate is a separate step, so a red run names what broke:
 | `npm run test:coverage` | a failing test **or** coverage below threshold |
 | `npm run test:domain` | a domain test that only passes inside jsdom |
 | `npm run build` | a broken production build |
+| `npm run test:bundle` | an initial payload over budget, or a lazy chunk that stopped being lazy |
+| `npm run test:rules` | a security rule Firebase's evaluator does not enforce the way it reads |
 
 Coverage and the built `dist/` are uploaded as artifacts. Run the identical
 sequence locally with `npm run verify`.
@@ -451,7 +454,7 @@ is rejected outright.
 
 ```bash
 npm install
-npm run verify     # typecheck, domain typecheck, lint, coverage, domain tests, build
+npm run verify     # all eight gates, in CI's order (test:rules needs JDK 21+)
 ```
 
 `npm run verify` is exactly what CI runs, in the same order. Please keep it green, and add
