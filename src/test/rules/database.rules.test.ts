@@ -22,7 +22,7 @@ import {
 } from "@firebase/rules-unit-testing";
 import { readFileSync } from "node:fs";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { get, ref, remove, set } from "firebase/database";
+import { get, ref, remove, serverTimestamp, set } from "firebase/database";
 import { ROUTE_IDS } from "@/domain/transit/routes";
 
 const DRIVER = "driver-allowed";
@@ -165,6 +165,109 @@ describe("the routes a position may claim", () => {
       );
     }
   );
+});
+
+/*
+  The load-bearing change of the ingest design (ARCHITECTURE-2.0 SS11.6).
+
+  Until now `updatedAt` was whatever the publishing device said it was, and
+  every freshness decision in the product rested on it. A device with a wrong
+  clock - or a hostile one - could pin itself permanently fresh, and no amount
+  of care on the reading side could detect that.
+
+  The rules now require the claimed time to sit inside a narrow window around
+  the SERVER's clock, which `ServerValue.TIMESTAMP` satisfies by construction
+  and a guessed value does not. That removes the device clock from the trust
+  model, and it is what makes the throttle below possible at all: a rate limit
+  measured in times the client controls is not a rate limit.
+*/
+describe("whose clock decides when a position was taken", () => {
+  const publish = (payload: Record<string, unknown>) => {
+    const db = env.authenticatedContext(DRIVER).database();
+
+    return set(positionRef(db, DRIVER), payload);
+  };
+
+  it("accepts a server-stamped time", async () => {
+    await assertSucceeds(
+      publish(validPosition({ updatedAt: serverTimestamp() }))
+    );
+  });
+
+  it("accepts a client clock that agrees with the server", async () => {
+    await assertSucceeds(publish(validPosition({ updatedAt: Date.now() })));
+  });
+
+  /*
+    The permanently-fresh attack. `locationService` judges staleness by
+    comparing `updatedAt` to now, so a timestamp in the future never ages -
+    the bus would sit on the public map indefinitely, at a position nobody is
+    at any more.
+  */
+  it("refuses a clock running ahead of the server", async () => {
+    await assertFails(publish(validPosition({ updatedAt: Date.now() + 30_000 })));
+  });
+
+  it("refuses a clock running behind the server", async () => {
+    await assertFails(publish(validPosition({ updatedAt: Date.now() - 30_000 })));
+  });
+
+  it("refuses a position back-dated to look older than it is", async () => {
+    await assertFails(publish(validPosition({ updatedAt: 1 })));
+  });
+});
+
+/*
+  A server-enforced throttle, which the free tier provides nowhere else.
+
+  Drivers publish every 15 s, so a 5 s floor never touches ordinary jitter.
+  What it stops is a device - or a harvested token replayed against the REST
+  API - writing thousands of times a second into a world-readable node, which
+  is the one abuse no client-side check can prevent and the one that would
+  actually cost money.
+*/
+describe("how often a bus may report", () => {
+  const publish = () => {
+    const db = env.authenticatedContext(DRIVER).database();
+
+    return set(
+      positionRef(db, DRIVER),
+      validPosition({ updatedAt: serverTimestamp() })
+    );
+  };
+
+  it("refuses a second position immediately after the first", async () => {
+    await assertSucceeds(publish());
+    await assertFails(publish());
+  });
+
+  it("allows the next one once the floor has passed", async () => {
+    await assertSucceeds(publish());
+
+    await new Promise((resolve) => setTimeout(resolve, 5_200));
+
+    await assertSucceeds(publish());
+  }, 20_000);
+
+  /*
+    Stopping a shift must never be throttled. A driver who finishes and
+    cannot clear their position leaves a phantom bus on the public map, which
+    is worse than any write they could have made.
+  */
+  it("never throttles clearing a position", async () => {
+    const db = env.authenticatedContext(DRIVER).database();
+
+    await assertSucceeds(publish());
+    await assertSucceeds(remove(positionRef(db, DRIVER)));
+  });
+
+  it("lets a driver start again straight after stopping", async () => {
+    const db = env.authenticatedContext(DRIVER).database();
+
+    await assertSucceeds(publish());
+    await assertSucceeds(remove(positionRef(db, DRIVER)));
+    await assertSucceeds(publish());
+  });
 });
 
 describe("what a position must look like", () => {

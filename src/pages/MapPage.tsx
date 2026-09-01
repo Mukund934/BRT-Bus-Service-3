@@ -11,6 +11,7 @@ import { STATE_DESCRIPTIONS, STATE_LABELS } from "@/domain/fleet/state";
 import { hasPosition } from "@/domain/fleet/telemetry";
 import {
   selectFreshBuses,
+  serverNow,
   subscribeToBuses,
   type LiveBus,
 } from "@/services/locationService";
@@ -25,7 +26,7 @@ import {
  */
 const MapPage = () => {
   const [buses, setBuses] = useState<LiveBus[]>([]);
-  const [checkedAt, setCheckedAt] = useState(() => Date.now());
+  const [checkedAt, setCheckedAt] = useState(() => serverNow());
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
 
@@ -59,7 +60,7 @@ const MapPage = () => {
 
     if (paused) {
       // Resuming jumps to now rather than to whenever the next tick lands.
-      setCheckedAt(Date.now());
+      setCheckedAt(serverNow());
       announce("Live updates resumed.");
     } else {
       announce(
@@ -80,7 +81,7 @@ const MapPage = () => {
       subscribeToBuses(
         (next) => {
           setBuses(next);
-          setCheckedAt(Date.now());
+          setCheckedAt(serverNow());
           setLoading(false);
         },
         () => {
@@ -100,7 +101,7 @@ const MapPage = () => {
     if (paused) return;
 
     const interval = setInterval(
-      () => setCheckedAt(Date.now()),
+      () => setCheckedAt(serverNow()),
       POLLING.BUS_FRESHNESS_MS
     );
 

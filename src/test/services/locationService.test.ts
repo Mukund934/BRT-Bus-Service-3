@@ -16,7 +16,9 @@ import {
   isLiveTrackingAvailable,
   publishLocation,
   classifyBuses,
+  resetServerTimeOffset,
   selectFreshBuses,
+  serverNow,
   stopPublishing,
   subscribeToBuses,
   toBusId,
@@ -33,6 +35,7 @@ import {
   readRtdb,
   rtdbListenerCount,
   seedRtdb,
+  wasServerStamped,
 } from "../helpers/firebase";
 
 const driver: Actor = { uid: "driver-1", role: "driver" };
@@ -522,5 +525,81 @@ describe("what a hostile record cannot do", () => {
     });
 
     expect(buses).toEqual([]);
+  });
+});
+
+/*
+  Whose clock decides how fresh a bus looks.
+
+  Everything downstream classifies a vehicle by comparing `updatedAt` against
+  now, so this is not a detail of transport - it is the input to every LIVE,
+  STALE and OFFLINE decision the product makes. Two devices are involved and
+  neither is trustworthy: the driver's phone, which writes the timestamp, and
+  the passenger's, which reads it.
+*/
+describe("the clock a position is judged by", () => {
+  const node = `${REMOTE_PATHS.BUS_LOCATIONS}/driver-1`;
+
+  beforeEach(() => {
+    enableRtdb();
+    resetServerTimeOffset();
+  });
+
+  /*
+    The driver's clock is removed from the trust model entirely. A phone
+    running fast would otherwise report itself permanently current and hold a
+    marker on a public map at a place nobody is, with nothing on the reading
+    side able to tell.
+  */
+  it("asks the database to stamp the time rather than sending our own", async () => {
+    await publishLocation(driver, { latitude: 21.25, longitude: 81.62 });
+
+    /*
+      Asserted on the sentinel, not on the resolved value. The database turns
+      the request into an ordinary number, so a stored timestamp looks
+      identical whether the client chose it or the server did - and that
+      difference is the whole point.
+    */
+    expect(wasServerStamped(node)).toBe(true);
+  });
+
+  it("still stores a plain number, as every reader expects", async () => {
+    await publishLocation(driver, { latitude: 21.25, longitude: 81.62 });
+
+    expect(typeof (readRtdb(node) as { updatedAt: unknown }).updatedAt).toBe(
+      "number"
+    );
+  });
+
+  it("falls back to this device's clock until the offset is known", () => {
+    expect(serverNow()).toBeCloseTo(Date.now(), -2);
+  });
+
+  /*
+    And the passenger's clock is corrected rather than trusted. A phone ten
+    minutes fast would show every bus as stale; one running slow would show a
+    stale bus as live.
+  */
+  it("applies the offset the database reports", async () => {
+    seedRtdb(".info/serverTimeOffset", 600_000);
+
+    const stop = subscribeToBuses(() => {});
+
+    // The listener attaches only once the SDK import resolves.
+    await vi.waitFor(() =>
+      expect(serverNow() - Date.now()).toBeGreaterThan(500_000)
+    );
+
+    stop();
+  });
+
+  it("ignores an offset the database could not give", async () => {
+    seedRtdb(".info/serverTimeOffset", "not a number");
+
+    const stop = subscribeToBuses(() => {});
+    await vi.waitFor(() => expect(readRtdb(".info/serverTimeOffset")).toBeDefined());
+
+    expect(serverNow()).toBeCloseTo(Date.now(), -2);
+    stop();
   });
 });

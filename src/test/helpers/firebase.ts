@@ -265,7 +265,56 @@ export const resetRtdbMock = (): void => {
   rtdb.nodes.clear();
   rtdb.listeners.clear();
   rtdb.onDisconnects.clear();
+  serverStamped.clear();
 };
+
+/** The wire form of a request for the database's own clock. */
+const SERVER_TIMESTAMP = { ".sv": "timestamp" } as const;
+
+const isServerTimestamp = (value: unknown): boolean =>
+  typeof value === "object" &&
+  value !== null &&
+  (value as Record<string, unknown>)[".sv"] === "timestamp";
+
+/**
+ * Resolves server sentinels the way the database does, on write.
+ *
+ * Storing the sentinel verbatim would make the mock lie: readers would find
+ * `{".sv":"timestamp"}` where production finds a number, and every freshness
+ * assertion would be testing a shape that never reaches a real client.
+ */
+const resolveServerValues = (
+  value: unknown,
+  found: { any: boolean }
+): unknown => {
+  if (isServerTimestamp(value)) {
+    found.any = true;
+
+    return Date.now();
+  }
+
+  if (typeof value !== "object" || value === null) return value;
+
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>).map(([key, entry]) => [
+      key,
+      resolveServerValues(entry, found),
+    ])
+  );
+};
+
+/**
+ * Paths whose last write asked the server for the time.
+ *
+ * The resolved value is an ordinary number, so a test cannot tell from the
+ * stored record whether the client chose it or the database did - and that
+ * difference is the entire point of writing a sentinel. This remembers it.
+ */
+const serverStamped = new Set<string>();
+
+/** Whether the most recent write to `path` let the server set the time. */
+export const wasServerStamped = (path: string): boolean =>
+  serverStamped.has(path);
 
 /** Replacement for the `firebase/database` module. */
 export const firebaseDatabaseMock = () => ({
@@ -273,8 +322,16 @@ export const firebaseDatabaseMock = () => ({
 
   ref: vi.fn((_db: unknown, path: string): RtdbRef => ({ path })),
 
+  serverTimestamp: vi.fn(() => SERVER_TIMESTAMP),
+
   set: vi.fn(async (node: RtdbRef, value: unknown) => {
-    rtdb.nodes.set(node.path, value);
+    const found = { any: false };
+
+    rtdb.nodes.set(node.path, resolveServerValues(value, found));
+
+    if (found.any) serverStamped.add(node.path);
+    else serverStamped.delete(node.path);
+
     notifyRtdb(node.path);
   }),
 

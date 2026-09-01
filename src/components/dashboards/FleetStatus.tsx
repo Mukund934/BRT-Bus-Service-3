@@ -7,6 +7,7 @@ import { destinationOf, getRoute } from "@/domain/transit/routes";
 import type { VehicleTelemetry } from "@/domain/fleet/telemetry";
 import {
   classifyBuses,
+  serverNow,
   subscribeToBuses,
   toBusId,
   type LiveBus,
@@ -71,7 +72,7 @@ const FleetStatus = ({ users, loading }: FleetStatusProps) => {
   const mayView = can(actor, PERMISSIONS.READ_ALL_USERS);
 
   const [buses, setBuses] = useState<LiveBus[]>([]);
-  const [checkedAt, setCheckedAt] = useState(() => Date.now());
+  const [checkedAt, setCheckedAt] = useState(() => serverNow());
   const [trackingFailed, setTrackingFailed] = useState(false);
   const [filter, setFilter] = useState<Filter>("ALL");
 
@@ -86,7 +87,7 @@ const FleetStatus = ({ users, loading }: FleetStatusProps) => {
     return subscribeToBuses(
       (next) => {
         setBuses(next);
-        setCheckedAt(Date.now());
+        setCheckedAt(serverNow());
       },
       () => setTrackingFailed(true)
     );
@@ -96,7 +97,7 @@ const FleetStatus = ({ users, loading }: FleetStatusProps) => {
     if (!mayView) return;
 
     const interval = setInterval(
-      () => setCheckedAt(Date.now()),
+      () => setCheckedAt(serverNow()),
       POLLING.BUS_FRESHNESS_MS
     );
 

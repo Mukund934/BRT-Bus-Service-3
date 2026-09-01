@@ -98,14 +98,39 @@ const busPositionShape = {
 };
 
 /**
+ * The Realtime Database's request to stamp a value with ITS clock.
+ *
+ * Written as `{".sv": "timestamp"}` on the wire. It is never read back - the
+ * database resolves it to a number before anyone sees it - so this appears in
+ * the outbound schema only.
+ */
+export const serverTimestampSchema = z.object({
+  ".sv": z.literal("timestamp"),
+});
+
+/**
  * A live driver position as PUBLISHED by this client.
  *
  * Strict on `routeId`, because we control what we write and must never put an
  * unknown route into a world-readable node. It stays optional only because
  * positions published before drivers declared a route are still in there.
+ *
+ * `updatedAt` accepts the server sentinel as well as a number, and the
+ * sentinel is what the app actually sends. The device's own clock is not
+ * trusted to say when a position was taken: every freshness decision in the
+ * product rests on that timestamp, so a wrong clock - or a hostile one -
+ * could pin a bus permanently fresh on a public map. The rules require the
+ * value to sit inside a narrow window around server time, which the sentinel
+ * satisfies by construction.
+ *
+ * The number stays permitted because a position may legitimately be
+ * constructed and validated before it is sent.
  */
 export const busPositionSchema = z.object({
   ...busPositionShape,
+  updatedAt: z
+    .union([z.number().int().positive(), serverTimestampSchema])
+    .optional(),
   routeId: routeIdSchema.optional(),
 });
 
@@ -129,7 +154,34 @@ export const inboundBusPositionSchema = z.object({
   routeId: z.string().max(16).optional(),
 });
 
-export type ValidatedBusPosition = z.infer<typeof busPositionSchema>;
+/**
+ * A position as it exists once stored, which is what every reader sees.
+ *
+ * Derived from the shape rather than from `busPositionSchema`, because that
+ * one now admits the server-timestamp sentinel on the way out. Nothing reads
+ * a sentinel back, and typing readers as though they might would push a
+ * union into every consumer of `LiveBus` for a case that cannot occur.
+ */
+/**
+ * A position as it exists once STORED, which is what every reader sees.
+ *
+ * The third of three, and the distinctions are load-bearing:
+ *
+ *  - `busPositionSchema` is outbound, and admits the server-timestamp
+ *    sentinel, because that is what this client sends.
+ *  - This one is what the database holds once the sentinel is resolved: an
+ *    ordinary number. Deriving reader types from the outbound schema would
+ *    push a union into every consumer for a case that cannot occur.
+ *  - `inboundBusPositionSchema` is what we are willing to ACCEPT back, and is
+ *    deliberately looser on `routeId` so a build predating a new route still
+ *    shows those buses.
+ */
+export const storedBusPositionSchema = z.object({
+  ...busPositionShape,
+  routeId: routeIdSchema.optional(),
+});
+
+export type ValidatedBusPosition = z.infer<typeof storedBusPositionSchema>;
 
 /**
  * Journeys kept on this device.

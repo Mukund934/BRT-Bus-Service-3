@@ -65,6 +65,35 @@ const database = async () => {
 export const isLiveTrackingAvailable = async (): Promise<boolean> =>
   (await getRtdb()) !== null;
 
+/*
+  The database's clock, as an offset from this device's.
+
+  Positions are stamped by the server now, which removes the PUBLISHING
+  device's clock from the trust model. It does not remove the READING one: a
+  passenger whose phone is ten minutes fast would see every bus as stale, and
+  one running slow would see stale buses as live. The database reports the
+  difference at `/.info/serverTimeOffset`, and applying it makes both ends
+  agree without either trusting a device.
+
+  Module-level because the offset belongs to the connection rather than to any
+  one screen, and every screen judging freshness against a different clock is
+  the problem being solved.
+*/
+let serverTimeOffsetMs = 0;
+
+/**
+ * Now, according to the database rather than this device.
+ *
+ * Falls back to the local clock until the offset is known, which is correct:
+ * an unknown offset is not evidence of a wrong clock.
+ */
+export const serverNow = (): number => Date.now() + serverTimeOffsetMs;
+
+/** Test seam. Never called by the application. */
+export const resetServerTimeOffset = (): void => {
+  serverTimeOffsetMs = 0;
+};
+
 /** Every bus the feed knows about, with its freshness resolved. */
 export const classifyBuses = (
   buses: LiveBus[],
@@ -157,13 +186,25 @@ export const publishLocation = async (
     throw new AuthorizationError(PERMISSIONS.PUBLISH_LOCATION);
   }
 
-  const { onDisconnect, ref, set, rtdb } = await database();
+  const { onDisconnect, ref, serverTimestamp, set, rtdb } = await database();
   if (!rtdb) return;
 
   const payload = {
     lat: coords.latitude,
     lng: coords.longitude,
-    updatedAt: Date.now(),
+    /*
+      The server's clock, not this device's.
+
+      Everything downstream decides whether a bus is LIVE, STALE or OFFLINE by
+      comparing this against now, so whoever sets it decides how fresh the bus
+      appears. A phone with a clock running fast would show itself as
+      permanently current - and would keep a marker on a public map at a place
+      nobody is - without anything on the reading side being able to tell.
+
+      The rules require the value to fall inside a narrow window around server
+      time, which this satisfies by construction and a guessed number does not.
+    */
+    updatedAt: serverTimestamp(),
     busId: toBusId(actor!.uid),
     ...(routeId ? { routeId } : {}),
   };
@@ -303,7 +344,7 @@ export const subscribeToBuses = (
         keeps its per-vehicle history for the life of the subscription, which
         is what makes the ordering and jump checks possible at all.
       */
-      const now = Date.now();
+      const now = serverNow();
       const believable = new Set(
         acceptTelemetry(gate, toTelemetry(buses, now), now).map(
           (telemetry) => telemetry.vehicleId
@@ -319,7 +360,26 @@ export const subscribeToBuses = (
       onBuses([]);
     });
 
-    detach = () => off(node, "value", handleValue);
+    /*
+      Tracked alongside the fleet rather than on its own, so the offset is
+      known for exactly as long as something is reading positions.
+    */
+    const offsetNode = ref(rtdb, ".info/serverTimeOffset");
+
+    const handleOffset = (snapshot: { val: () => unknown }) => {
+      const value = snapshot.val();
+
+      if (typeof value === "number" && Number.isFinite(value)) {
+        serverTimeOffsetMs = value;
+      }
+    };
+
+    onValue(offsetNode, handleOffset);
+
+    detach = () => {
+      off(node, "value", handleValue);
+      off(offsetNode, "value", handleOffset);
+    };
   })();
 
   return () => {
