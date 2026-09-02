@@ -41,9 +41,12 @@ import NotFound from "@/pages/NotFound";
 import MapPage from "@/pages/MapPage";
 import PlaceDetail from "@/pages/PlaceDetail";
 import Dashboard from "@/pages/Dashboard";
+import AdminDashboard from "@/components/dashboards/AdminDashboard";
+import DriverDashboard from "@/components/dashboards/DriverDashboard";
 
 import { act, renderWithProviders } from "../helpers/render";
 import { makeUser, signInAs } from "../helpers/firebase";
+import { setMockRole } from "../helpers/userService";
 
 vi.mock("@/services/userService", async () => {
   const helper = await import("../helpers/userService");
@@ -153,6 +156,43 @@ describe("a page that depends on its route", () => {
   visitor almost nothing, so an audit of that state would pass by describing
   an empty container - the page a passenger actually uses is the signed-in one.
 */
+/*
+  The other two dashboards.
+
+  `/dashboard` renders a different component per role, so auditing it while
+  signed in as a passenger covers exactly one of three - and the two it misses
+  are the ones with the dense tables, the role editor and the administrative
+  record, which is where a heading order or a missing label is most likely to
+  go wrong.
+*/
+describe("a page that depends on which role is looking", () => {
+  const auditRole = async (
+    name: string,
+    role: "admin" | "driver",
+    element: JSX.Element
+  ) => {
+    setMockRole(role);
+
+    const { container } = renderWithProviders(element, { route: "/dashboard" });
+
+    await act(async () => {
+      signInAs(makeUser({ uid: `${role}-1` }));
+    });
+
+    const violations = await auditOf(container);
+
+    expect(violations.join("\n"), `${name}:\n${violations.join("\n")}`).toBe("");
+  };
+
+  it("Administrator dashboard has no accessibility violations", async () => {
+    await auditRole("Administrator dashboard", "admin", <AdminDashboard />);
+  }, 30_000);
+
+  it("Driver dashboard has no accessibility violations", async () => {
+    await auditRole("Driver dashboard", "driver", <DriverDashboard />);
+  }, 30_000);
+});
+
 describe("a page that depends on being signed in", () => {
   it("Dashboard has no accessibility violations", async () => {
     const { container } = renderWithProviders(<Dashboard />, {

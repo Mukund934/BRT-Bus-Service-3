@@ -10,8 +10,8 @@ ticket, and follow buses that drivers are actively sharing.
 ![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)
 ![Vite](https://img.shields.io/badge/Vite-5-646CFF?logo=vite&logoColor=white)
 ![Firebase](https://img.shields.io/badge/Firebase-Auth%20%7C%20Firestore%20%7C%20RTDB-FFCA28?logo=firebase&logoColor=black)
-![Tests](https://img.shields.io/badge/tests-1047%20passing-brightgreen)
-![Coverage](https://img.shields.io/badge/lines-97.6%25-brightgreen)
+![Tests](https://img.shields.io/badge/tests-1215%20passing-brightgreen)
+![Coverage](https://img.shields.io/badge/lines-97.1%25-brightgreen)
 
 **Live:** https://bus-service-lyart.vercel.app/
 
@@ -246,8 +246,8 @@ ticket opens offline, then reconcile with the server.
 
 | | |
 |---|---|
-| Tests | **1,047**, across 72 files |
-| Coverage | **97.6% lines**, 90.2% branches, 92.9% functions |
+| Tests | **1,215**, across 80 files, plus 116 against the Firebase emulator |
+| Coverage | **97.1% lines**, 90.4% branches, 90.8% functions |
 | Thresholds | 95 lines / 86 branches / 83 functions — a ratchet set just below actuals, raised deliberately |
 | Typecheck | clean |
 | Lint | 0 errors |
