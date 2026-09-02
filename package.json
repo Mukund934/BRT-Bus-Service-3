@@ -20,6 +20,7 @@
     "typecheck:domain": "tsc -p tsconfig.domain.json",
     "test:domain": "vitest run --config vitest.domain.config.ts",
     "test:bundle": "vitest run --config vitest.bundle.config.ts",
+    "load:fleet": "firebase emulators:exec --project demo-brt --only database \"node scripts/load/fleet-load.mjs\"",
     "pretest:rules": "node scripts/free-emulator-ports.mjs",
     "test:rules": "firebase emulators:exec --project demo-brt --only firestore,database,auth \"vitest run --config vitest.rules.config.ts\""
   },
