@@ -12,6 +12,7 @@
  */
 
 import { getDb } from "@/firebase";
+import { recordAudit } from "@/services/auditService";
 import { REMOTE_PATHS } from "@/constants/config";
 import { AuthorizationError } from "@/domain/auth/errors";
 import { PERMISSIONS, can } from "@/domain/auth/permissions";
@@ -163,6 +164,21 @@ export const publishAnnouncement = async (
     const written = await addDoc(collection(db, REMOTE_PATHS.ANNOUNCEMENTS), {
       ...stored,
       createdAt,
+    });
+
+    /*
+      Recorded after the write, failure ignored - the notice is already
+      published, and an administrator sent back to retry would publish a
+      second one.
+
+      This collection is the only place in the app where a person's words are
+      shown to passengers as fact, and editing a notice overwrites what it
+      said. Without this, there is no record of who published what.
+    */
+    void recordAudit(actor, {
+      action: "ANNOUNCEMENT_PUBLISHED",
+      subject: written.id,
+      detail: `${parsed.data.severity}: ${parsed.data.title}`.slice(0, 512),
     });
 
     return {

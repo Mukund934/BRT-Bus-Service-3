@@ -139,6 +139,8 @@ export const REMOTE_PATHS = {
   TICKETS: "tickets",
   /** Firestore collection holding operator announcements. */
   ANNOUNCEMENTS: "announcements",
+  /** Append-only record of administrative acts. Admin-readable only. */
+  AUDIT_LOG: "auditLog",
 } as const;
 
 /** How wide a bounding box the embedded map draws around its centre. */

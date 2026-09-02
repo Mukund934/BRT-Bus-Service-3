@@ -282,6 +282,24 @@ export const resetRtdbMock = (): void => {
 /** The wire form of a request for the database's own clock. */
 const SERVER_TIMESTAMP = { ".sv": "timestamp" } as const;
 
+/** Firestore's sentinel, and what the server resolves it to. */
+const FIRESTORE_SERVER_TIME = { __serverTime: true } as const;
+
+const isFirestoreSentinel = (value: unknown): boolean =>
+  typeof value === "object" &&
+  value !== null &&
+  (value as Record<string, unknown>).__serverTime === true;
+
+const resolveFirestoreSentinels = (
+  data: Record<string, unknown>
+): Record<string, unknown> =>
+  Object.fromEntries(
+    Object.entries(data).map(([key, value]) => [
+      key,
+      isFirestoreSentinel(value) ? new Date() : value,
+    ])
+  );
+
 const isServerTimestamp = (value: unknown): boolean =>
   typeof value === "object" &&
   value !== null &&
@@ -476,13 +494,21 @@ export const firestoreMock = () => ({
     async (source: { collection: string }, data: Record<string, unknown>) => {
       const id = `generated-${++generatedDocs}`;
 
-      docs.set(`${source.collection}/${id}`, data);
+      docs.set(`${source.collection}/${id}`, resolveFirestoreSentinels(data));
 
       return { id };
     }
   ),
 
   collection: vi.fn((_db: unknown, name: string) => ({ collection: name })),
+
+  /*
+    Firestore resolves its sentinel server-side too, so the stored value is a
+    Date rather than the marker. A test asserting on the stored record must
+    not be able to tell a client timestamp from a server one - which is the
+    same reason the Realtime Database mock records that a sentinel was used.
+  */
+  serverTimestamp: vi.fn(() => FIRESTORE_SERVER_TIME),
 
   limit: vi.fn((count: number) => ({ kind: "limit" as const, count })),
 

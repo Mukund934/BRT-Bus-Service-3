@@ -30,6 +30,7 @@ import {
   getDocs,
   limit,
   query,
+  serverTimestamp,
   setDoc,
   updateDoc,
   where,
@@ -414,5 +415,112 @@ describe("everything not named in the rules", () => {
 
   it("is closed to a signed-out visitor", async () => {
     await assertFails(getDoc(doc(asVisitor(), "somethingNew", "x")));
+  });
+});
+
+/*
+  The audit log.
+
+  Two administrative acts leave no other trace: changing somebody's role, and
+  publishing words passengers read as fact. `users` keeps only the CURRENT
+  role, and an edited announcement overwrites the one before it - so without
+  this, "who did that, and when?" has no answer anywhere in the system.
+
+  What makes it evidence rather than a diary is that the two fields that
+  matter are not the client's to choose.
+*/
+describe("the audit log", () => {
+  const entry = (over: Record<string, unknown> = {}) => ({
+    actorUid: ADMIN,
+    at: serverTimestamp(),
+    action: "ROLE_CHANGED",
+    subject: RIDER,
+    detail: "user -> driver",
+    ...over,
+  });
+
+  const asAdmin = () => env.authenticatedContext(ADMIN).firestore();
+  const asRider = () => env.authenticatedContext(RIDER).firestore();
+
+  beforeEach(async () => {
+    await env.withSecurityRulesDisabled(async (context) => {
+      await setDoc(
+        doc(context.firestore(), `users/${ADMIN}`),
+        profile({ role: "admin" })
+      );
+    });
+  });
+
+  it("lets an administrator record what they did", async () => {
+    await assertSucceeds(setDoc(doc(asAdmin(), "auditLog/e1"), entry()));
+  });
+
+  it("lets an administrator read the log back", async () => {
+    await assertSucceeds(getDocs(collection(asAdmin(), "auditLog")));
+  });
+
+  /*
+    The log names people and the administrative actions taken against them.
+    A passenger reading it would learn who the drivers are and who was
+    demoted, neither of which is theirs to see.
+  */
+  it("refuses a passenger reading it", async () => {
+    await assertFails(getDocs(collection(asRider(), "auditLog")));
+  });
+
+  it("refuses a passenger writing to it", async () => {
+    await assertFails(setDoc(doc(asRider(), "auditLog/e1"), entry()));
+  });
+
+  it("refuses an unauthenticated write", async () => {
+    await assertFails(
+      setDoc(doc(env.unauthenticatedContext().firestore(), "auditLog/e1"), entry())
+    );
+  });
+
+  /*
+    An entry attributed to somebody else is worse than no entry: it is a
+    record that actively points at the wrong person.
+  */
+  it("refuses an entry attributed to another administrator", async () => {
+    await assertFails(
+      setDoc(doc(asAdmin(), "auditLog/e1"), entry({ actorUid: "admin-2" }))
+    );
+  });
+
+  /*
+    A record that can be backdated can be placed inside a shift nobody was
+    working. Pinning `at` to the server's own clock is what stops that, and
+    it is the same reasoning as the position timestamps in the Realtime
+    Database - whoever picks the time decides what the record means.
+  */
+  it("refuses a time the administrator chose", async () => {
+    await assertFails(
+      setDoc(doc(asAdmin(), "auditLog/e1"), entry({ at: new Date(0) }))
+    );
+  });
+
+  it("refuses a field the contract does not define", async () => {
+    await assertFails(
+      setDoc(doc(asAdmin(), "auditLog/e1"), entry({ note: "extra" }))
+    );
+  });
+
+  /*
+    The whole point. An administrator who can edit the log is an
+    administrator with no log.
+  */
+  it("refuses any edit to an entry that already exists", async () => {
+    await assertSucceeds(setDoc(doc(asAdmin(), "auditLog/e1"), entry()));
+
+    await assertFails(
+      updateDoc(doc(asAdmin(), "auditLog/e1"), { detail: "something else" })
+    );
+  });
+
+  it("refuses deletion, including by the administrator who wrote it", async () => {
+    await assertSucceeds(setDoc(doc(asAdmin(), "auditLog/e1"), entry()));
+
+    await assertFails(deleteDoc(doc(asAdmin(), "auditLog/e1")));
   });
 });
