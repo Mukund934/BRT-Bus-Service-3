@@ -512,6 +512,12 @@ export const firestoreMock = () => ({
 
   limit: vi.fn((count: number) => ({ kind: "limit" as const, count })),
 
+  orderBy: vi.fn((field: string, direction: "asc" | "desc" = "asc") => ({
+    kind: "orderBy" as const,
+    field,
+    direction,
+  })),
+
   where: vi.fn((field: string, _op: string, value: unknown) => ({
     kind: "where" as const,
     field,
@@ -530,6 +536,9 @@ export const firestoreMock = () => ({
     ) => ({
       collection: source.collection,
       limit: constraints.find((c) => c.kind === "limit")?.count ?? Infinity,
+      order: constraints.find((c) => c.kind === "orderBy") as
+        | { field: string; direction: "asc" | "desc" }
+        | undefined,
       wheres: constraints.filter((c) => c.kind === "where") as Array<{
         field: string;
         value: unknown;
@@ -542,19 +551,41 @@ export const firestoreMock = () => ({
       collection: string;
       limit: number;
       wheres?: Array<{ field: string; value: unknown }>;
+      order?: { field: string; direction: "asc" | "desc" };
     }) => {
-      const entries = [...docs.entries()]
+      const matching = [...docs.entries()]
         .filter(([path]) => path.startsWith(`${q.collection}/`))
         .filter(([, data]) =>
           (q.wheres ?? []).every((clause) => data[clause.field] === clause.value)
-        )
-        .slice(0, q.limit);
+        );
+
+      /*
+        Ordering is applied before the limit, as the database does. Slicing
+        first and sorting after would return the OLDEST rows in a newest-first
+        query, which reads as a working screen showing the wrong decade.
+      */
+      if (q.order) {
+        const { field, direction } = q.order;
+
+        matching.sort(([, a], [, b]) => {
+          const left = Number(a[field] ?? 0);
+          const right = Number(b[field] ?? 0);
+
+          return direction === "desc" ? right - left : left - right;
+        });
+      }
+
+      const entries = matching.slice(0, q.limit);
+
+      const snapshotDocs = entries.map(([path, data]) => ({
+        id: path.split("/")[1]!,
+        data: () => data,
+      }));
 
       return {
-        docs: entries.map(([path, data]) => ({
-          id: path.split("/")[1]!,
-          data: () => data,
-        })),
+        docs: snapshotDocs,
+        forEach: (visit: (entry: (typeof snapshotDocs)[number]) => void) =>
+          snapshotDocs.forEach(visit),
       };
     }
   ),

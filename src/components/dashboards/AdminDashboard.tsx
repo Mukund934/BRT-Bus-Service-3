@@ -1,5 +1,11 @@
 import { useCallback, useEffect, useId, useState } from "react";
 import { CheckCircle, Edit2, Loader, Search, Shield, TrendingUp, Users, X } from "lucide-react";
+import {
+  AUDIT_ACTION_LABELS,
+  MAX_AUDIT_RECORDS,
+  fetchAuditLog,
+  type AuditRecord,
+} from "@/services/auditService";
 import { useAuth } from "@/contexts/AuthContext";
 import { toSafeMessage } from "@/domain/auth/errors";
 import { PERMISSIONS, can } from "@/domain/auth/permissions";
@@ -34,6 +40,7 @@ const AdminDashboard = ({ onError }: AdminDashboardProps) => {
   const mayViewPanel = can(actor, PERMISSIONS.VIEW_ADMIN_PANEL);
   const mayAssignRoles = can(actor, PERMISSIONS.ASSIGN_ROLES);
   const [allUsers, setAllUsers] = useState<UserRecord[]>([]);
+  const [auditLog, setAuditLog] = useState<AuditRecord[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<UserRecord[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
@@ -72,6 +79,18 @@ const AdminDashboard = ({ onError }: AdminDashboardProps) => {
 
     void loadUsers();
   }, [mayViewPanel, loadUsers]);
+
+  /*
+    Read once on open rather than subscribed. The log only changes when
+    somebody on this screen does something, and a live listener on an
+    append-only collection would cost a connection to watch for changes this
+    page itself causes.
+  */
+  useEffect(() => {
+    if (!mayViewPanel) return;
+
+    void fetchAuditLog(actor).then(setAuditLog);
+  }, [mayViewPanel, actor]);
 
   // Search functionality
   useEffect(() => {
@@ -520,6 +539,63 @@ const AdminDashboard = ({ onError }: AdminDashboardProps) => {
               Only the first {MAX_USERS_PER_READ} accounts were loaded. Counts and
               search cover this subset only.
             </p>
+          )}
+        </div>
+      )}
+
+      {/*
+        The record of administrative acts, made readable.
+
+        A write-only log is half a feature: it satisfies the rule that says
+        nothing may be rewritten, and answers nobody's question. This is the
+        only place in the app where "who changed this account's access, and
+        when?" can be asked at all.
+      */}
+      {mayViewPanel && (
+        <div className="bg-white rounded-xl shadow-lg overflow-hidden mt-8">
+          <div className="p-6 border-b border-gray-200">
+            <h2 className="text-2xl font-bold text-gray-900">
+              Administrative activity
+            </h2>
+            <p className="text-sm text-gray-500 mt-1">
+              The {MAX_AUDIT_RECORDS} most recent role changes and published
+              notices. Entries cannot be edited or removed, including by an
+              administrator.
+            </p>
+          </div>
+
+          {auditLog.length === 0 ? (
+            /*
+              Distinct from "could not load": nothing has been recorded is a
+              true and ordinary state for a fresh deployment, and showing an
+              error there would send somebody looking for a fault.
+            */
+            <p className="px-6 py-8 text-center text-gray-500">
+              No administrative changes have been recorded yet.
+            </p>
+          ) : (
+            <ul className="divide-y divide-gray-100">
+              {auditLog.map((record) => (
+                <li key={record.id} className="px-6 py-3 text-sm">
+                  <span className="font-medium text-gray-900">
+                    {AUDIT_ACTION_LABELS[record.action] ?? record.action}
+                  </span>{" "}
+                  <span className="text-gray-600">{record.subject}</span>
+                  {record.detail && (
+                    <span className="text-gray-500"> — {record.detail}</span>
+                  )}
+                  <span className="block text-xs text-gray-400 mt-0.5">
+                    by {record.actorUid}
+                    {/*
+                      A record whose timestamp has not resolved yet is real,
+                      not broken. Rendering a missing value as the epoch would
+                      date an administrative act to 1970.
+                    */}
+                    {record.at ? ` · ${record.at.toLocaleString()}` : ""}
+                  </span>
+                </li>
+              ))}
+            </ul>
           )}
         </div>
       )}

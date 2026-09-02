@@ -48,6 +48,12 @@ const firestore = async () => {
 /** The administrative acts worth a permanent record. */
 export type AuditAction = "ROLE_CHANGED" | "ANNOUNCEMENT_PUBLISHED";
 
+/** What each recorded act is called on screen. */
+export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
+  ROLE_CHANGED: "Role changed",
+  ANNOUNCEMENT_PUBLISHED: "Notice published",
+};
+
 export interface AuditEntry {
   /** What happened. */
   action: AuditAction;
@@ -96,5 +102,91 @@ export const recordAudit = async (
     console.error("Could not record an administrative action:", error);
 
     return false;
+  }
+};
+
+/** One recorded act, as read back. */
+export interface AuditRecord extends AuditEntry {
+  id: string;
+  actorUid: string;
+  /** When the server recorded it, or null if the value is unreadable. */
+  at: Date | null;
+}
+
+/**
+ * The most recent administrative acts, newest first.
+ *
+ * Capped rather than paged. The point of this list is "what changed lately?",
+ * which a screen answers in a few dozen rows; an operator investigating
+ * something specific needs a query this collection is not shaped for, and
+ * pretending otherwise with an unbounded read would make one screen able to
+ * pull the entire history on every visit.
+ */
+export const MAX_AUDIT_RECORDS = 50;
+
+const toRecord = (id: string, data: Record<string, unknown>): AuditRecord | null => {
+  const { actorUid, action, subject, detail, at } = data;
+
+  if (
+    typeof actorUid !== "string" ||
+    typeof action !== "string" ||
+    typeof subject !== "string"
+  ) {
+    return null;
+  }
+
+  /*
+    Firestore hands back a Timestamp, but a record written a moment ago and
+    read before the server resolved the sentinel has `null` here. That is a
+    real state, not an error, and rendering it as the epoch would date an act
+    to 1970.
+  */
+  const stamp = at as { toDate?: () => Date } | null | undefined;
+  const when = typeof stamp?.toDate === "function" ? stamp.toDate() : null;
+
+  return {
+    id,
+    actorUid,
+    action: action as AuditAction,
+    subject,
+    detail: typeof detail === "string" ? detail : "",
+    at: when,
+  };
+};
+
+export const fetchAuditLog = async (
+  actor: Actor | null
+): Promise<AuditRecord[]> => {
+  if (!can(actor, PERMISSIONS.ASSIGN_ROLES)) return [];
+
+  try {
+    const { collection, getDocs, limit, orderBy, query, db } = await firestore();
+
+    const snapshot = await getDocs(
+      query(
+        collection(db, REMOTE_PATHS.AUDIT_LOG),
+        orderBy("at", "desc"),
+        limit(MAX_AUDIT_RECORDS)
+      )
+    );
+
+    const records: AuditRecord[] = [];
+
+    snapshot.forEach((entry) => {
+      const record = toRecord(entry.id, entry.data() as Record<string, unknown>);
+
+      /*
+        A malformed row is skipped rather than failing the whole read. One bad
+        record must not be able to hide every good one - the same reasoning as
+        the per-element ticket validation.
+      */
+      if (record) records.push(record);
+    });
+
+    return records;
+  } catch (error) {
+    console.error("Could not read the administrative record:", error);
+
+    return [];
   }
 };

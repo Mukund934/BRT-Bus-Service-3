@@ -16,7 +16,7 @@ import {
   waitFor,
   within,
 } from "../helpers/render";
-import { makeUser, signInAs, timestamp } from "../helpers/firebase";
+import { makeUser, seedDoc, signInAs, timestamp } from "../helpers/firebase";
 import { setMockRole } from "../helpers/userService";
 
 vi.mock("@/services/userService", async () => {
@@ -512,5 +512,82 @@ describe("reaching the panel without a pointer", () => {
         screen.getByRole("button", { name: `Edit role for ${name}` })
       ).toBeInTheDocument();
     }
+  });
+});
+
+/*
+  The administrative record, made readable.
+
+  A write-only log satisfies the rule that nothing may be rewritten and
+  answers nobody's question. This is the only place in the app where "who
+  changed this account's access, and when?" can be asked.
+*/
+describe("the record of administrative acts", () => {
+  const seedEntry = (id: string, over: Record<string, unknown> = {}) =>
+    seedDoc("auditLog", id, {
+      actorUid: "admin-1",
+      at: { toDate: () => new Date("2026-09-01T10:00:00.000Z") },
+      action: "ROLE_CHANGED",
+      subject: "rider-1",
+      detail: "user -> driver",
+      ...over,
+    });
+
+  it("shows what changed, who changed it and when", async () => {
+    seedEntry("a1");
+
+    await showPanel();
+
+    expect(await screen.findByText(/Role changed/)).toBeInTheDocument();
+    expect(screen.getByText("rider-1")).toBeInTheDocument();
+    expect(screen.getByText(/user -> driver/)).toBeInTheDocument();
+  });
+
+  it("names a published notice as its own kind of act", async () => {
+    seedEntry("a1", {
+      action: "ANNOUNCEMENT_PUBLISHED",
+      subject: "notice-7",
+      detail: "CRITICAL: Services suspended",
+    });
+
+    await showPanel();
+
+    expect(await screen.findByText(/Notice published/)).toBeInTheDocument();
+  });
+
+  /*
+    Nothing recorded is an ordinary state for a fresh deployment, and showing
+    an error there would send an administrator looking for a fault that does
+    not exist.
+  */
+  it("says nothing has been recorded rather than reporting a fault", async () => {
+    await showPanel();
+
+    expect(
+      await screen.findByText(/No administrative changes have been recorded/i)
+    ).toBeInTheDocument();
+  });
+
+  it("promises that entries cannot be edited or removed", async () => {
+    await showPanel();
+
+    expect(
+      await screen.findByText(/cannot be edited or removed/i)
+    ).toBeInTheDocument();
+  });
+
+  /*
+    A record whose server timestamp has not resolved yet is real, not broken.
+    Rendering the missing value as a date would put an administrative act in
+    1970.
+  */
+  it("omits the time rather than inventing one when it is missing", async () => {
+    seedEntry("a1", { at: null });
+
+    await showPanel();
+
+    await screen.findByText(/Role changed/);
+
+    expect(screen.queryByText(/1970/)).not.toBeInTheDocument();
   });
 });
