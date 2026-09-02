@@ -20,13 +20,23 @@ export type VehicleState = "LIVE" | "RECENT" | "STALE" | "OFFLINE" | "UNKNOWN";
  *
  * Each boundary is a number with a reason, not a round figure:
  *
- * - LIVE at 15 s is five telemetry intervals at the recommended 15 s cadence,
- *   and it equals `POLLING.BUS_FRESHNESS_MS` - so the UI's own re-tick can
- *   never be what pushes a vehicle across the boundary.
+ * - LIVE at 45 s is one and a half publish intervals at the 30 s cadence in
+ *   `POLLING.DRIVER_LOCATION_MS`. THE RELATIONSHIP IS THE POINT, not the
+ *   figure: a bus reporting exactly on schedule is up to a full interval old
+ *   at any instant, so a LIVE bound at or below the cadence would mean a
+ *   perfectly healthy vehicle was never once classified LIVE. The half
+ *   interval on top absorbs network latency and clock jitter without
+ *   absorbing a MISSED report - one skipped position drops to RECENT, which
+ *   is a signal worth keeping.
  * - RECENT ends at 90 s, the bound beyond which GTFS-Realtime considers a
- *   position no longer publishable.
+ *   position no longer publishable. That is three intervals, so it also means
+ *   two consecutive misses.
  * - STALE ends at 300 s, which is under the corridor's average inter-stop leg,
  *   so a position at the edge of STALE is still within one stop of the truth.
+ *   Independent of cadence - it is a fact about the road, not the radio.
+ *
+ * `POLLING.BUS_FRESHNESS_MS` must stay at or below `liveMs`, or the UI's own
+ * re-tick could let a vehicle appear to skip a state between renders.
  *
  * Configurable because a certified AIS-140 device may report as slowly as two
  * minutes, and a fleet running at that cadence needs a different ladder rather
@@ -39,7 +49,7 @@ export interface FreshnessThresholds {
 }
 
 export const DEFAULT_FRESHNESS: FreshnessThresholds = {
-  liveMs: 15_000,
+  liveMs: 45_000,
   recentMs: 90_000,
   staleMs: 300_000,
 };

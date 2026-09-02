@@ -8,6 +8,8 @@ import {
 } from "@/services/locationService";
 import { act, renderWithProviders, screen, waitFor } from "../helpers/render";
 import { ROUTE_IDS, getRoute } from "@/domain/transit/routes";
+import { POLLING } from "@/constants/config";
+import { INTERRUPTION_TOLERANCE } from "@/domain/fleet/sharing";
 import { makeUser, signInAs } from "../helpers/firebase";
 import { setMockRole } from "../helpers/userService";
 
@@ -30,6 +32,14 @@ const stop = vi.mocked(stopPublishing);
 const assignment = vi.mocked(subscribeToAssignment);
 
 const VEHICLE = "fixture-a";
+
+/*
+  Long enough past a due publish to count as interrupted, derived rather than
+  restated. A hardcoded 60 s silently stopped tripping the check when the
+  cadence moved to 30 s: the threshold moved with it and the test did not.
+*/
+const OVERDUE_MS =
+  POLLING.DRIVER_LOCATION_MS * INTERRUPTION_TOLERANCE + 5_000;
 
 /*
   Reports an assignment to whatever the page subscribed with. Called before
@@ -292,7 +302,7 @@ describe("when the driver's tab goes into the background", () => {
     suspendGeolocation();
     act(() => setVisibility("hidden"));
     act(() => {
-      vi.advanceTimersByTime(60_000);
+      vi.advanceTimersByTime(OVERDUE_MS);
     });
 
     expect(
@@ -317,7 +327,7 @@ describe("when the driver's tab goes into the background", () => {
     suspendGeolocation();
     act(() => setVisibility("hidden"));
     act(() => {
-      vi.advanceTimersByTime(60_000);
+      vi.advanceTimersByTime(OVERDUE_MS);
     });
 
     // Scoped deliberately: LiveAnnouncer mounts a permanent assertive region,
@@ -362,7 +372,7 @@ describe("when the driver's tab goes into the background", () => {
     suspendGeolocation();
     act(() => setVisibility("hidden"));
     act(() => {
-      vi.advanceTimersByTime(60_000);
+      vi.advanceTimersByTime(OVERDUE_MS);
     });
 
     await screen.findByText("Your position is not reaching passengers.");

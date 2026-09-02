@@ -40,21 +40,39 @@ export const POLLING = {
   /**
    * How often a sharing driver publishes their position.
    *
-   * 15 s, not 3. Faster is not better here: position error is roughly fixed
-   * while the measurement baseline grows with the interval, so a 3 s gap
-   * yields a speed estimate with about 34% noise against 6.8% at 15 s.
-   * Sampling ten times more often buys a few seconds of accuracy at a
-   * five-minute horizon and costs ten times the writes, the egress, the
-   * driver's battery and the driver's mobile data.
+   * 30 s, and the reason is measured rather than assumed. Egress is
+   * `listeners x writes x payload`, so the cadence is multiplied by every
+   * passenger watching at that moment - it is the only lever in the system
+   * that reduces cost for all of them at once. The fanout harness put one
+   * continuously-open listener at 0.45 GB/month against a 10 GB free
+   * allowance at 15 s; halving the rate halves that, and every viewer's share
+   * of it, for nothing.
    *
-   * It is also what the ecosystem does. No certified AIS-140 device will ever
-   * emit at 3 s - the standard permits 5 s to ten minutes and real state
-   * defaults run to two minutes - and GTFS-Realtime's own guidance is "at
-   * least once every 30 seconds". Arrival logic has to be correct at those
-   * cadences, not merely tolerant of ours.
+   * Nothing is given up to get it. GTFS-Realtime's own guidance is "at least
+   * once every 30 seconds", so this sits exactly on what the ecosystem treats
+   * as current; no certified AIS-140 device will ever beat it - the standard
+   * permits 5 s to ten minutes and real state backends default to two - and
+   * at BRT headways a passenger cannot perceive the difference between a
+   * marker 15 s old and one 30 s old.
+   *
+   * Faster was never better anyway. Position error is roughly fixed while the
+   * measurement baseline grows with the interval, so a short gap yields a
+   * NOISIER speed estimate, not a sharper one: about 34% at 3 s against 6.8%
+   * at 15 s, and better still here.
+   *
+   * `DEFAULT_FRESHNESS.liveMs` is tied to this. Raising the cadence without
+   * raising that would mean a bus reporting perfectly on schedule was never
+   * once classified LIVE.
    */
-  DRIVER_LOCATION_MS: 15_000,
-  /** How often live bus positions are re-checked against the clock. */
+  DRIVER_LOCATION_MS: 30_000,
+  /**
+   * How often live bus positions are re-checked against the clock.
+   *
+   * Deliberately shorter than the publish cadence. This is a local re-render
+   * with no network cost, and it has to be no longer than the smallest
+   * freshness boundary or a vehicle could appear to skip a state between
+   * ticks - the age a passenger reads would jump rather than count.
+   */
   BUS_FRESHNESS_MS: 15_000,
   /** How often the virtual ticket countdown re-renders. */
   TICKET_COUNTDOWN_MS: 1_000,

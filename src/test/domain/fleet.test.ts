@@ -8,6 +8,7 @@
  */
 
 import { describe, expect, it } from "vitest";
+import { POLLING } from "@/constants/config";
 import {
   emptyTelemetry,
   effectiveTimestamp,
@@ -592,7 +593,13 @@ describe("the noise floor, once the window is short enough to need it", () => {
  * explanation.
  */
 describe("whether sharing is actually happening", () => {
-  const INTERVAL = 15_000;
+  /*
+    The cadence the app actually runs at, not a sample of one. `sharingHealth`
+    is interval-agnostic by design - the test below proves that separately -
+    but the tolerance is only meaningful against the real configured value,
+    and a local constant is how these comments drift out of step with it.
+  */
+  const INTERVAL = POLLING.DRIVER_LOCATION_MS;
 
   it("says nothing is happening when nothing was asked for", () => {
     expect(sharingHealth(false, NOW, NOW, INTERVAL)).toBe("idle");
@@ -606,21 +613,39 @@ describe("whether sharing is actually happening", () => {
     expect(sharingHealth(true, null, NOW, INTERVAL)).toBe("sharing");
   });
 
-  it("believes a publish that landed within tolerance", () => {
+  it("believes a publish that landed on schedule", () => {
     expect(sharingHealth(true, NOW - INTERVAL, NOW, INTERVAL)).toBe("sharing");
-    expect(sharingHealth(true, NOW - INTERVAL * 2, NOW, INTERVAL)).toBe("sharing");
   });
 
   /*
-    THE DEFECT. A throttled background tab stretches a 15 s timer to a minute
-    or more, so the first missed publish is what has to be caught.
+    A whole missed publish is an interruption, and saying so is not crying
+    wolf: the position really has stopped reaching passengers by then. At the
+    30 s cadence the tolerance is 45 s, the same as the LIVE boundary, so the
+    driver is told at the moment passengers stop seeing them as live.
   */
-  it("reports an interruption once a publish is overdue", () => {
-    expect(sharingHealth(true, NOW - INTERVAL * 3, NOW, INTERVAL)).toBe("interrupted");
-    expect(sharingHealth(true, NOW - 60_000, NOW, INTERVAL)).toBe("interrupted");
+  it("calls a missed publish what it is", () => {
+    expect(sharingHealth(true, NOW - INTERVAL * 2, NOW, INTERVAL)).toBe(
+      "interrupted"
+    );
   });
 
-  it("tolerates one slow fix without crying wolf", () => {
+  /*
+    THE DEFECT this exists for. Browsers clamp a background tab's timers to
+    roughly a minute, so a driver who switches apps keeps publishing - just
+    far too slowly - and the old indicator went on showing a green light.
+
+    It is also why the tolerance is 1.5 intervals rather than 2.5. At a 15 s
+    cadence 2.5 intervals was 37.5 s and caught this; at 30 s it would have
+    been 75 s, and a tab publishing once a minute would have looked healthy.
+  */
+  it("catches a tab throttled to once a minute", () => {
+    expect(sharingHealth(true, NOW - 60_000, NOW, INTERVAL)).toBe("interrupted");
+    expect(sharingHealth(true, NOW - INTERVAL * 3, NOW, INTERVAL)).toBe(
+      "interrupted"
+    );
+  });
+
+  it("tolerates a fix that is merely late", () => {
     const justInside = NOW - INTERVAL * INTERRUPTION_TOLERANCE;
 
     expect(sharingHealth(true, justInside, NOW, INTERVAL)).toBe("sharing");

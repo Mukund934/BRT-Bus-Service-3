@@ -41,13 +41,13 @@ const viewerCeiling = (fleet: number, cadenceMs: number) =>
 
 describe("the load the fleet actually generates", () => {
   it("publishes at the cadence the code sets, not the one the plan assumed", () => {
-    expect(writesPerSecond(FLEET_TODAY, POLLING.DRIVER_LOCATION_MS)).toBe(2);
+    expect(writesPerSecond(FLEET_TODAY, POLLING.DRIVER_LOCATION_MS)).toBe(1);
   });
 
   it("leaves room for far more viewers than the service can have", () => {
     const ceiling = viewerCeiling(FLEET_TODAY, POLLING.DRIVER_LOCATION_MS);
 
-    expect(ceiling).toBe(50_000);
+    expect(ceiling).toBe(100_000);
     expect(ceiling / PEAK_CONCURRENT_WITH_BURST).toBeGreaterThan(100);
   });
 
@@ -95,15 +95,30 @@ describe("the cadence is bounded by the ecosystem, not by taste", () => {
 
 describe("what would have to change for the ceiling to matter", () => {
   /*
-    Kept as arithmetic rather than prose so the trade is checkable: returning
-    to the 3 s cadence the architecture document still assumes costs five times
-    the writes and five sixths of the headroom.
+    Kept as arithmetic rather than prose so the trade stays checkable:
+    returning to the 3 s cadence the architecture document once assumed costs
+    ten times the writes and nine tenths of the headroom.
   */
   it("shows what the abandoned 3-second cadence would cost", () => {
     const atThree = viewerCeiling(FLEET_TODAY, 3_000);
     const today = viewerCeiling(FLEET_TODAY, POLLING.DRIVER_LOCATION_MS);
 
     expect(atThree).toBe(10_000);
-    expect(today / atThree).toBe(5);
+    expect(today / atThree).toBe(10);
+  });
+
+  /*
+    The move from 15 s to 30 s, stated as the thing it actually bought.
+
+    Ingest headroom was never the constraint - the measured fanout put egress
+    there first. But the same halving applies to every byte leaving for every
+    viewer at once, which is why this was the largest free lever available and
+    why it is worth a test that fails if somebody quietly moves it back.
+  */
+  it("halves what every viewer costs, against the previous cadence", () => {
+    const atFifteen = viewerCeiling(FLEET_TODAY, 15_000);
+    const today = viewerCeiling(FLEET_TODAY, POLLING.DRIVER_LOCATION_MS);
+
+    expect(today / atFifteen).toBe(2);
   });
 });

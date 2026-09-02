@@ -45,6 +45,28 @@ const arg = (name, envName, fallback) => {
   return fallback;
 };
 
+/**
+ * The publish cadence the application actually runs at.
+ *
+ * Read out of the source rather than restated here. The projection below is
+ * entirely a function of this number, and a copy of it silently reported the
+ * old cadence's cost for one commit after the app moved to a new one - the
+ * label said 15 s while the app published every 30.
+ */
+const CADENCE_MS = (() => {
+  const source = readFileSync("src/constants/config.ts", "utf8");
+  const found = /DRIVER_LOCATION_MS:\s*([\d_]+)/.exec(source);
+
+  if (!found) {
+    throw new Error(
+      "Could not read DRIVER_LOCATION_MS from src/constants/config.ts - the " +
+        "projection would be a guess, so it is not going to be printed."
+    );
+  }
+
+  return Number(found[1].replace(/_/g, ""));
+})();
+
 const LISTENERS = arg("listeners", "LOAD_LISTENERS", 25);
 const VEHICLES = arg("vehicles", "LOAD_VEHICLES", 20);
 const ROUNDS = arg("rounds", "LOAD_ROUNDS", 3);
@@ -241,10 +263,10 @@ const main = async () => {
   */
   if (writes > 0 && deltaBytes > 0) {
     const perWritePerListener = deltaBytes / writes / LISTENERS;
-    const writesPerDay = (VEHICLES * 24 * 60 * 60) / 15;
+    const writesPerDay = (VEHICLES * 24 * 60 * 60) / (CADENCE_MS / 1000);
     const gbPerMonth = (perWritePerListener * writesPerDay * 30) / 1024 ** 3;
 
-    console.log(`\nprojection at ${VEHICLES} vehicles on a 15 s cadence:`);
+    console.log(`\nprojection at ${VEHICLES} vehicles on a ${CADENCE_MS / 1000} s cadence:`);
     console.log(
       `  held open all month : ${gbPerMonth.toFixed(2)} GB per listener` +
         `  (~${Math.floor(10 / gbPerMonth)} exhaust the 10 GB free tier)`
