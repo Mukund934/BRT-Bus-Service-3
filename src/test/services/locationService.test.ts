@@ -34,6 +34,7 @@ import {
   readRtdb,
   rtdbListenerCount,
   seedRtdb,
+  disconnectWrite,
   wasServerStamped,
 } from "../helpers/firebase";
 
@@ -614,5 +615,71 @@ describe("the clock a position is judged by", () => {
 
     expect(serverNow()).toBeCloseTo(Date.now(), -2);
     stop();
+  });
+});
+
+/*
+  What the server records when nobody is watching.
+
+  Rules fire on writes, so a device that simply goes quiet produces nothing for
+  anything to notice. A dropped socket is the exception the free tier does
+  handle: the database runs a write registered in advance. That is the only
+  reason an operator opening the dashboard hours later can tell "stopped
+  reporting at 14:32" from "never started".
+*/
+describe("recording that a vehicle went quiet", () => {
+  const position = `${REMOTE_PATHS.BUS_LOCATIONS}/${VEHICLE}`;
+  const status = `${REMOTE_PATHS.VEHICLE_STATUS}/${VEHICLE}`;
+
+  beforeEach(() => {
+    enableRtdb();
+  });
+
+  it("asks the server to record the sighting if the connection drops", async () => {
+    await publishLocation(driver, { latitude: 21.25, longitude: 81.62 }, VEHICLE);
+
+    expect(disconnectWrite(status)).toBeDefined();
+  });
+
+  it("still clears the position, so no ghost is left on the map", async () => {
+    await publishLocation(driver, { latitude: 21.25, longitude: 81.62 }, VEHICLE);
+
+    expect(hasDisconnectCleanup(position)).toBe(true);
+  });
+
+  /*
+    The behaviour, run rather than inspected: what the database would actually
+    do to these nodes if the driver's phone lost signal mid-shift.
+  */
+  it("leaves a time behind after the connection is lost", async () => {
+    await publishLocation(driver, { latitude: 21.25, longitude: 81.62 }, VEHICLE);
+
+    dropRtdbConnection();
+
+    expect(readRtdb(position)).toBeUndefined();
+    expect(readRtdb(status)).toMatchObject({
+      lastSeenAt: expect.any(Number) as unknown as number,
+    });
+  });
+
+  it("records the sighting when a driver stops deliberately", async () => {
+    await publishLocation(driver, { latitude: 21.25, longitude: 81.62 }, VEHICLE);
+    await stopPublishing(driver, VEHICLE);
+
+    expect(readRtdb(position)).toBeUndefined();
+    expect(readRtdb(status)).toMatchObject({
+      lastSeenAt: expect.any(Number) as unknown as number,
+    });
+  });
+
+  /*
+    Not written on every publish, deliberately. A reporting bus already
+    carries its own timestamp; a second write would say the same thing and
+    double the write rate the whole fleet is sized against.
+  */
+  it("does not write a second record while the bus is reporting", async () => {
+    await publishLocation(driver, { latitude: 21.25, longitude: 81.62 }, VEHICLE);
+
+    expect(readRtdb(status)).toBeUndefined();
   });
 });

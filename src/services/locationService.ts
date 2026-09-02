@@ -235,8 +235,39 @@ export const publishLocation = async (
 
   await set(node, payload);
 
+  const statusNode = ref(
+    rtdb,
+    `${REMOTE_PATHS.VEHICLE_STATUS}/${vehicleId}`
+  );
+
   try {
     await onDisconnect(node).remove();
+
+    /*
+      The free half of absence detection, and the only half a client can do.
+
+      Rules fire on writes, so a device that simply goes quiet produces
+      nothing for anything to notice - which is why unattended absence
+      detection is the first thing here that genuinely needs a server. But a
+      dropped SOCKET is different: the database itself notices that, and will
+      run a write we registered in advance. So we register one.
+
+      The position is still removed, because a stale marker on a public map is
+      worse than no marker. What survives is the time it went, stamped by the
+      server, so an operator looking hours later can tell "stopped reporting
+      at 14:32" from "never started" - which the empty row alone cannot say.
+
+      What this does NOT cover is a device that keeps its socket open and
+      stops publishing anyway - a frozen app, or GPS permission withdrawn
+      mid-shift. That case still needs something server-side on a timer.
+
+      Deliberately NOT written on every publish. While a bus is reporting, its
+      position already carries the time of the last report; a second write
+      would say the same thing, double the write rate, and halve the capacity
+      ceiling the whole fleet is sized against. This node only has to be right
+      once the position is gone.
+    */
+    await onDisconnect(statusNode).set({ lastSeenAt: serverTimestamp() });
   } catch (error) {
     console.error("Could not arm automatic cleanup for this vehicle:", error);
   }
@@ -372,6 +403,64 @@ export const subscribeToAssignments = (
   };
 };
 
+/**
+ * When each vehicle was last heard from, by vehicle id.
+ *
+ * Only meaningful for a vehicle that is NOT currently reporting - while it is,
+ * its position carries a fresher timestamp. This is what lets an operator
+ * looking at a quiet fleet hours later tell "stopped at 14:32" from "never
+ * started", which an empty row cannot say on its own.
+ */
+export const subscribeToVehicleStatus = (
+  onStatus: (lastSeenByVehicle: Record<string, number>) => void
+): (() => void) => {
+  let cancelled = false;
+  let detach: () => void = () => {};
+
+  void (async () => {
+    const { ref, onValue, off, rtdb } = await database();
+
+    if (cancelled) return;
+
+    if (!rtdb) {
+      onStatus({});
+      return;
+    }
+
+    const node = ref(rtdb, REMOTE_PATHS.VEHICLE_STATUS);
+
+    const handle = (snapshot: { val: () => unknown }) => {
+      const raw: unknown = snapshot.val();
+
+      if (typeof raw !== "object" || raw === null) {
+        onStatus({});
+        return;
+      }
+
+      const lastSeen: Record<string, number> = {};
+
+      for (const [vehicleId, value] of Object.entries(raw)) {
+        const at = (value as { lastSeenAt?: unknown })?.lastSeenAt;
+
+        if (typeof at === "number" && Number.isFinite(at)) {
+          lastSeen[vehicleId] = at;
+        }
+      }
+
+      onStatus(lastSeen);
+    };
+
+    onValue(node, handle, () => onStatus({}));
+
+    detach = () => off(node, "value", handle);
+  })();
+
+  return () => {
+    cancelled = true;
+    detach();
+  };
+};
+
 /** Removes the driver's position when they stop sharing. */
 export const stopPublishing = async (
   actor: Actor | null,
@@ -379,10 +468,23 @@ export const stopPublishing = async (
 ): Promise<void> => {
   if (!actor || !isVehicleId(vehicleId)) return;
 
-  const { ref, remove, rtdb } = await database();
+  const { ref, remove, serverTimestamp, set, rtdb } = await database();
   if (!rtdb) return;
 
   await remove(ref(rtdb, `${REMOTE_PATHS.BUS_LOCATIONS}/${vehicleId}`));
+
+  /*
+    A deliberate stop is also a last sighting, and unlike the disconnect
+    registration this one is certain to run. One write per shift end.
+  */
+  try {
+    await set(
+      ref(rtdb, `${REMOTE_PATHS.VEHICLE_STATUS}/${vehicleId}`),
+      { lastSeenAt: serverTimestamp() }
+    );
+  } catch (error) {
+    console.error("Could not record this vehicle's last report:", error);
+  }
 };
 
 /**

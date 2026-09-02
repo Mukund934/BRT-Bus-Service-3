@@ -131,6 +131,8 @@ export const REMOTE_PATHS = {
   BUS_LOCATIONS: "busLocations",
   /** Who may publish as which vehicle, and until when. Operator-written. */
   ASSIGNMENTS: "assignments",
+  /** When each vehicle was last heard from. Written by the server on disconnect. */
+  VEHICLE_STATUS: "vehicleStatus",
   /** Firestore collection holding user profiles and roles. */
   USERS: "users",
   /** Firestore collection holding booked tickets. */

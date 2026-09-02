@@ -10,10 +10,12 @@ import {
   serverNow,
   subscribeToAssignments,
   subscribeToBuses,
+  subscribeToVehicleStatus,
   type LiveBus,
 } from "@/services/locationService";
 import {
   countByState,
+  describeLastSeen,
   STATE_DESCRIPTIONS,
   STATE_LABELS,
   type VehicleState,
@@ -75,6 +77,7 @@ const FleetStatus = ({ users, loading }: FleetStatusProps) => {
   const [checkedAt, setCheckedAt] = useState(() => serverNow());
   const [trackingFailed, setTrackingFailed] = useState(false);
   const [assignments, setAssignments] = useState<Record<string, string>>({});
+  const [lastSeenAt, setLastSeenAt] = useState<Record<string, number>>({});
   const [filter, setFilter] = useState<Filter>("ALL");
 
   const drivers = useMemo(
@@ -105,6 +108,16 @@ const FleetStatus = ({ users, loading }: FleetStatusProps) => {
     if (!mayView) return;
 
     return subscribeToAssignments(setAssignments);
+  }, [mayView]);
+
+  /*
+    Written by the database on disconnect rather than by any client, which is
+    the only reason it is trustworthy when nobody was watching.
+  */
+  useEffect(() => {
+    if (!mayView) return;
+
+    return subscribeToVehicleStatus(setLastSeenAt);
   }, [mayView]);
 
   useEffect(() => {
@@ -155,9 +168,12 @@ const FleetStatus = ({ users, loading }: FleetStatusProps) => {
           driver,
           vehicleId,
           bus: vehicleId ? (byBusId.get(vehicleId) ?? null) : null,
+          lastReported: vehicleId
+            ? describeLastSeen(lastSeenAt[vehicleId], checkedAt)
+            : null,
         };
       }),
-    [drivers, byBusId, assignments]
+    [drivers, byBusId, assignments, lastSeenAt, checkedAt]
   );
 
   const visible = useMemo(() => {
@@ -289,7 +305,7 @@ const FleetStatus = ({ users, loading }: FleetStatusProps) => {
               </tr>
             </thead>
             <tbody>
-              {visible.map(({ driver, vehicleId, bus }) => {
+              {visible.map(({ driver, vehicleId, bus, lastReported }) => {
                 return (
                   <tr key={driver.uid} className="border-b">
                     <td className="py-2">
@@ -328,6 +344,7 @@ const FleetStatus = ({ users, loading }: FleetStatusProps) => {
                         <Bus className="w-3 h-3" aria-hidden="true" />
                         {bus ? STATE_LABELS[bus.state] : "No shift started"}
                       </span>
+
                     </td>
 
                     <td>
@@ -343,7 +360,19 @@ const FleetStatus = ({ users, loading }: FleetStatusProps) => {
                         : "—"}
                     </td>
 
-                    <td>{bus ? lastSeen(bus.telemetry) : "—"}</td>
+                    {/*
+                      A live bus reports its own observation time. A quiet one
+                      has none - and "—" answers a question the operator did
+                      not ask, leaving the one they did ("since when?")
+                      unanswered. The fallback is recorded by the database
+                      itself when the socket drops, so it survives nobody
+                      being logged in to see it happen.
+                    */}
+                    <td>
+                      {bus
+                        ? lastSeen(bus.telemetry)
+                        : (lastReported ?? "—")}
+                    </td>
                   </tr>
                 );
               })}

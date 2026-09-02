@@ -200,7 +200,7 @@ const rtdb = {
   failNextSubscription: false,
   nodes: new Map<string, unknown>(),
   listeners: new Map<string, Set<(snapshot: unknown) => void>>(),
-  onDisconnects: new Map<string, "remove">(),
+  onDisconnects: new Map<string, DisconnectAction>(),
 };
 
 /** Switches the in-memory database on for the current test. */
@@ -218,16 +218,27 @@ export const readRtdb = (path: string): unknown => rtdb.nodes.get(path);
 
 /** Whether the server has been asked to clear a node if the driver drops. */
 export const hasDisconnectCleanup = (path: string): boolean =>
-  rtdb.onDisconnects.get(path) === "remove";
+  rtdb.onDisconnects.get(path)?.op === "remove";
+
+/** The value the server would write to `path` if the connection dropped now. */
+export const disconnectWrite = (path: string): unknown => {
+  const action = rtdb.onDisconnects.get(path);
+
+  return action?.op === "set" ? action.value : undefined;
+};
 
 /** Runs what the server would run when a connection is lost. */
 export const dropRtdbConnection = (): void => {
-  for (const path of [...rtdb.onDisconnects.keys()]) {
-    rtdb.nodes.delete(path);
+  for (const [path, action] of [...rtdb.onDisconnects]) {
+    if (action.op === "remove") rtdb.nodes.delete(path);
+    else rtdb.nodes.set(path, resolveServerValues(action.value, { any: false }));
+
     rtdb.onDisconnects.delete(path);
     notifyRtdb(path);
   }
 };
+
+type DisconnectAction = { op: "remove" } | { op: "set"; value: unknown };
 
 const childrenOf = (path: string): Record<string, unknown> => {
   const prefix = `${path}/`;
@@ -340,9 +351,18 @@ export const firebaseDatabaseMock = () => ({
     notifyRtdb(node.path);
   }),
 
+  /*
+    The registration, not the effect. These record what the server WOULD do if
+    this connection dropped; `dropRtdbConnection` is what runs them - which is
+    the only way a test can exercise a path whose whole point is that no
+    client is around to take it.
+  */
   onDisconnect: vi.fn((node: RtdbRef) => ({
     remove: vi.fn(async () => {
-      rtdb.onDisconnects.set(node.path, "remove");
+      rtdb.onDisconnects.set(node.path, { op: "remove" });
+    }),
+    set: vi.fn(async (value: unknown) => {
+      rtdb.onDisconnects.set(node.path, { op: "set", value });
     }),
   })),
 

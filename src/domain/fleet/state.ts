@@ -165,3 +165,42 @@ export const countByState = (
 
   return counts;
 };
+
+/**
+ * How long ago a vehicle was last heard from, in words.
+ *
+ * The operator's question about a bus that is not reporting is never "is it
+ * absent?" - the empty row already says that - it is "since when?". Absence
+ * with a time attached is actionable; absence without one is indistinguishable
+ * from a bus that never started.
+ *
+ * Returns null when nothing has ever been recorded, which is a different fact
+ * again and must not be rendered as "just now".
+ */
+export const describeLastSeen = (
+  lastSeenAt: number | null | undefined,
+  now: number
+): string | null => {
+  if (typeof lastSeenAt !== "number" || !Number.isFinite(lastSeenAt)) return null;
+
+  const ageMs = now - lastSeenAt;
+
+  /*
+    A clock disagreement can put "last seen" slightly in the future. Reporting
+    that as a negative age would be worse than rounding it to the present, and
+    the server stamps this value so the disagreement is the reader's.
+  */
+  if (ageMs < 60_000) return "in the last minute";
+
+  const minutes = Math.floor(ageMs / 60_000);
+
+  if (minutes < 60) return `${minutes} minute${minutes === 1 ? "" : "s"} ago`;
+
+  const hours = Math.floor(minutes / 60);
+
+  if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"} ago`;
+
+  const days = Math.floor(hours / 24);
+
+  return `${days} day${days === 1 ? "" : "s"} ago`;
+};

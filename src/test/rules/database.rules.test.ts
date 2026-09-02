@@ -271,6 +271,93 @@ describe("which bus a driver may publish as", () => {
   });
 });
 
+/*
+  When a vehicle was last heard from.
+
+  Rules fire on writes, so a device that goes quiet produces nothing for
+  anything to notice - unattended absence detection is the one thing here that
+  genuinely needs a server. A dropped SOCKET is different: the database itself
+  notices that and runs a write registered in advance. This node is what that
+  write lands in, which is why an operator can tell "stopped at 14:32" from
+  "never started" hours later with nobody having watched it happen.
+
+  Public to read, because it is a fact about a bus. Written under exactly the
+  same gate as a position, because a false "last seen" is a lie about the same
+  vehicle.
+*/
+describe("recording when a vehicle went quiet", () => {
+  const statusRef = (db: unknown, vehicleId: string) =>
+    ref(db as Parameters<typeof ref>[0], `vehicleStatus/${vehicleId}`);
+
+  it("lets the assigned driver record it", async () => {
+    const db = env.authenticatedContext(DRIVER).database();
+
+    await assertSucceeds(
+      set(statusRef(db, VEHICLE), { lastSeenAt: serverTimestamp() })
+    );
+  });
+
+  it("is readable by anyone, including a signed-out visitor", async () => {
+    const db = env.unauthenticatedContext().database();
+
+    await assertSucceeds(get(statusRef(db, VEHICLE)));
+  });
+
+  /*
+    The same gate as a position. Without it, any allowlisted driver could
+    backdate another bus into looking recently seen - or freshly seen when it
+    has been silent for hours, which is worse than no record at all.
+  */
+  it("refuses a driver recording it for a bus they were not given", async () => {
+    const db = env.authenticatedContext(DRIVER).database();
+
+    await assertFails(
+      set(statusRef(db, OTHER_VEHICLE), { lastSeenAt: serverTimestamp() })
+    );
+  });
+
+  it("refuses an unauthenticated write", async () => {
+    const db = env.unauthenticatedContext().database();
+
+    await assertFails(
+      set(statusRef(db, VEHICLE), { lastSeenAt: serverTimestamp() })
+    );
+  });
+
+  it("refuses a driver whose shift has ended", async () => {
+    await assign(DRIVER, {
+      vehicleId: VEHICLE,
+      validFrom: Date.now() - 9 * HOUR,
+      validTo: Date.now() - HOUR,
+    });
+
+    const db = env.authenticatedContext(DRIVER).database();
+
+    await assertFails(
+      set(statusRef(db, VEHICLE), { lastSeenAt: serverTimestamp() })
+    );
+  });
+
+  it("refuses a time the driver chose rather than the server", async () => {
+    const db = env.authenticatedContext(DRIVER).database();
+
+    await assertFails(
+      set(statusRef(db, VEHICLE), { lastSeenAt: Date.now() - 60 * 60 * 1000 })
+    );
+  });
+
+  it("refuses any field the contract does not define", async () => {
+    const db = env.authenticatedContext(DRIVER).database();
+
+    await assertFails(
+      set(statusRef(db, VEHICLE), {
+        lastSeenAt: serverTimestamp(),
+        driverName: "Asha Verma",
+      })
+    );
+  });
+});
+
 describe("who may see an assignment", () => {
   it("lets a driver read their own", async () => {
     const db = env.authenticatedContext(DRIVER).database();
