@@ -83,13 +83,22 @@ const assign = (uid: string, over: Record<string, unknown> = {}) =>
 const broadcast = (uid: string, over: Record<string, unknown> = {}) => {
   assign(uid);
 
-  return seedRtdb(`${REMOTE_PATHS.BUS_LOCATIONS}/${vehicleFor(uid)}`, {
-    lat: STOP_COORDS["CBD"]!.lat,
-    lng: STOP_COORDS["CBD"]!.lng,
-    updatedAt: Date.now(),
-    routeId: "101",
-    ...over,
-  });
+  /*
+    Positions are sharded by route, so the path carries the route and the
+    record does not. `over.routeId` therefore chooses the shard rather than a
+    field - which is what the operator's table reads back.
+  */
+  const { routeId = "101", ...position } = over as { routeId?: string };
+
+  return seedRtdb(
+    `${REMOTE_PATHS.BUS_LOCATIONS}/${routeId}/${vehicleFor(uid)}`,
+    {
+      lat: STOP_COORDS["CBD"]!.lat,
+      lng: STOP_COORDS["CBD"]!.lng,
+      updatedAt: Date.now(),
+      ...position,
+    }
+  );
 };
 
 beforeEach(() => {
@@ -223,16 +232,28 @@ describe("what the vehicle is doing", () => {
     );
   });
 
-  it("says nothing it cannot know when no route was declared", async () => {
+  /*
+    A bus with no route at all can no longer exist - the route is the path a
+    position is published to, and publishing refuses without one. What CAN
+    still happen is a route this build has never heard of, opened after the
+    app was last deployed. The bus keeps its place in the table and loses only
+    its label, because dropping it would show an operator fewer vehicles than
+    are running.
+  */
+  it("says nothing it cannot know about an unrecognised route", async () => {
     seedDriver("driver-1", "Asha Verma");
-    broadcast("driver-1", { routeId: undefined });
+    broadcast("driver-1", { routeId: "999" });
 
     renderFleet();
     asAdmin();
 
     await screen.findByText("Asha Verma");
 
-    expect(within(rowFor("Asha Verma")).getAllByText("—").length).toBeGreaterThanOrEqual(2);
+    await waitFor(() =>
+      expect(
+        within(rowFor("Asha Verma")).getAllByText("—").length
+      ).toBeGreaterThanOrEqual(1)
+    );
   });
 });
 

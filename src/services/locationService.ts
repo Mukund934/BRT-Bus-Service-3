@@ -195,6 +195,15 @@ export const publishLocation = async (
   const { onDisconnect, ref, serverTimestamp, set, rtdb } = await database();
   if (!rtdb) return;
 
+  /*
+    The route is required now, because it is the path. A bus with no declared
+    route has no shard to live in - which is stricter than before and matches
+    what the driver screen already enforces by making the choice up front.
+  */
+  if (!routeId) {
+    throw new Error("A route must be declared before publishing a position.");
+  }
+
   const payload = {
     lat: coords.latitude,
     lng: coords.longitude,
@@ -211,7 +220,6 @@ export const publishLocation = async (
       time, which this satisfies by construction and a guessed number does not.
     */
     updatedAt: serverTimestamp(),
-    ...(routeId ? { routeId } : {}),
   };
 
   // Validated before the write so an impossible coordinate is caught here
@@ -231,7 +239,10 @@ export const publishLocation = async (
     follow one driver across days, even with names and emails long since
     stripped out. A bus is not a person.
   */
-  const node = ref(rtdb, `${REMOTE_PATHS.BUS_LOCATIONS}/${vehicleId}`);
+  const node = ref(
+    rtdb,
+    `${REMOTE_PATHS.BUS_LOCATIONS}/${routeId}/${vehicleId}`
+  );
 
   await set(node, payload);
 
@@ -464,14 +475,17 @@ export const subscribeToVehicleStatus = (
 /** Removes the driver's position when they stop sharing. */
 export const stopPublishing = async (
   actor: Actor | null,
-  vehicleId: string
+  vehicleId: string,
+  routeId: RouteId
 ): Promise<void> => {
   if (!actor || !isVehicleId(vehicleId)) return;
 
   const { ref, remove, serverTimestamp, set, rtdb } = await database();
   if (!rtdb) return;
 
-  await remove(ref(rtdb, `${REMOTE_PATHS.BUS_LOCATIONS}/${vehicleId}`));
+  await remove(
+    ref(rtdb, `${REMOTE_PATHS.BUS_LOCATIONS}/${routeId}/${vehicleId}`)
+  );
 
   /*
     A deliberate stop is also a last sighting, and unlike the disconnect
@@ -520,7 +534,17 @@ export const subscribeToBuses = (
       return;
     }
 
-    const node = ref(rtdb, REMOTE_PATHS.BUS_LOCATIONS);
+    /*
+      Subscribing to the shard rather than filtering after the fact. This is
+      the whole point: a route-scoped viewer never receives the other routes'
+      buses, so the bytes are not spent and then thrown away.
+    */
+    const node = ref(
+      rtdb,
+      options.routeId
+        ? `${REMOTE_PATHS.BUS_LOCATIONS}/${options.routeId}`
+        : REMOTE_PATHS.BUS_LOCATIONS
+    );
 
     const handleValue = (snapshot: DataSnapshot) => {
       if (!snapshot.exists()) {
@@ -539,40 +563,54 @@ export const subscribeToBuses = (
       let unreadable = 0;
       let unknownRoutes = 0;
 
-      for (const [vehicleId, value] of Object.entries(raw)) {
-        const parsed = inboundBusPositionSchema.safeParse(value);
+      /*
+        One shard or all of them, and the difference is what makes sharding
+        worth anything. Subscribed to a single route, the snapshot is already
+        just that route's buses - nothing is fetched and discarded. Subscribed
+        to the parent, it is a route-keyed map of them, and a whole-fleet view
+        still costs exactly one listener rather than one per route.
+      */
+      const shards: Array<[string | undefined, unknown]> = options.routeId
+        ? [[options.routeId, raw]]
+        : Object.entries(raw as Record<string, unknown>);
 
-        if (!parsed.success) {
+      for (const [shardRoute, contents] of shards) {
+        if (typeof contents !== "object" || contents === null) {
           unreadable += 1;
           continue;
         }
 
         /*
-          An unrecognised route costs the bus its label, never its place on
-          the map. A build that predates a new route must still show the
-          buses running on it.
+          The route is the path. A build that predates a new route still shows
+          those buses on the map - they simply arrive without a label, which
+          costs the bus its route name and never its position.
         */
-        const routeId = isRouteId(parsed.data.routeId)
-          ? parsed.data.routeId
-          : undefined;
+        const routeId = isRouteId(shardRoute) ? shardRoute : undefined;
 
-        if (parsed.data.routeId !== undefined && routeId === undefined) {
-          unknownRoutes += 1;
+        if (shardRoute !== undefined && routeId === undefined) unknownRoutes += 1;
+
+        for (const [vehicleId, value] of Object.entries(
+          contents as Record<string, unknown>
+        )) {
+          const parsed = inboundBusPositionSchema.safeParse(value);
+
+          if (!parsed.success) {
+            unreadable += 1;
+            continue;
+          }
+
+          buses.push({
+            ...parsed.data,
+            routeId,
+            /*
+              The key, not a field. A published `busId` disagreeing with the
+              node it lives under would be a second, contradictory answer to
+              "which bus is this?", and only one of them is the one the rules
+              authorised.
+            */
+            busId: vehicleId,
+          });
         }
-
-        if (options.routeId && routeId !== options.routeId) continue;
-
-        buses.push({
-          ...parsed.data,
-          routeId,
-          /*
-            The key, not a field. A published `busId` disagreeing with the
-            node it lives under would be a second, contradictory answer to
-            "which bus is this?", and only one of them is the one the rules
-            authorised.
-          */
-          busId: vehicleId,
-        });
       }
 
       /*

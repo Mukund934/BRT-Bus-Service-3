@@ -156,17 +156,17 @@ const Driver = () => {
     setWasHidden(false);
 
     try {
-      if (vehicleId) await stopPublishing(actor, vehicleId);
+      if (vehicleId) await stopPublishing(actor, vehicleId, routeId);
     } catch (err) {
       console.error("Could not clear published location:", err);
     }
-  }, [actor, vehicleId]);
+  }, [actor, vehicleId, routeId]);
 
   useEffect(() => {
     return () => {
-      if (vehicleId) void stopPublishing(actor, vehicleId);
+      if (vehicleId) void stopPublishing(actor, vehicleId, routeId);
     };
-  }, [actor, vehicleId]);
+  }, [actor, vehicleId, routeId]);
 
   const health = sharingHealth(
     isSharing,

@@ -25,16 +25,27 @@ const rules = JSON.parse(
   readFileSync("database.rules.json", "utf8")
 ) as Record<string, unknown>;
 
-/** Walks to the position node's per-field validators. */
-const positionRules = (() => {
+/*
+  Positions are sharded by route, so the route is a PATH SEGMENT rather than a
+  field. That is what lets a passenger watching one route receive only that
+  route's buses - and it means the route is validated on the shard key, one
+  level above the per-field validators.
+*/
+const routeShard = (() => {
   const root = (rules.rules ?? {}) as Record<string, never>;
   const locations = (root[REMOTE_PATHS.BUS_LOCATIONS] ?? {}) as Record<string, never>;
 
-  return (locations["$vehicleId"] ?? {}) as Record<string, Record<string, string>>;
+  return (locations["$routeId"] ?? {}) as Record<string, never>;
 })();
 
+/** Walks to the position node's per-field validators, inside its shard. */
+const positionRules = (routeShard["$vehicleId"] ?? {}) as Record<
+  string,
+  Record<string, string>
+>;
+
 const routePattern = (() => {
-  const validate = positionRules.routeId?.[".validate"] ?? "";
+  const validate = (routeShard[".validate"] ?? "") as unknown as string;
   const match = /matches\(\/(.+?)\/\)/.exec(validate);
 
   return match ? new RegExp(match[1]!) : null;

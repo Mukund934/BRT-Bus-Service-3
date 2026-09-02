@@ -146,7 +146,16 @@ export const STORAGE_KEYS = {
 /** Remote data locations. */
 export const REMOTE_PATHS = {
   /** Realtime Database node holding live driver positions. */
-  BUS_LOCATIONS: "busLocations",
+  /**
+   * Live positions, sharded by the route the bus is running.
+   *
+   * The route is the PATH, not a field. A passenger watching one route
+   * subscribes to one shard and receives only those buses; a whole-fleet
+   * view subscribes to the parent and still spends a single listener. A
+   * `routeId` in the payload as well would be a second answer that could
+   * disagree with the first.
+   */
+  BUS_LOCATIONS: "busLocationsByRoute",
   /** Who may publish as which vehicle, and until when. Operator-written. */
   ASSIGNMENTS: "assignments",
   /** When each vehicle was last heard from. Written by the server on disconnect. */

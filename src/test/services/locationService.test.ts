@@ -43,6 +43,7 @@ const passenger: Actor = { uid: "user-1", role: "user" };
 const admin: Actor = { uid: "admin-1", role: "admin" };
 
 const VEHICLE = "fixture-a";
+const ROUTE = "101" as const;
 
 const NOW = 1_770_000_000_000;
 
@@ -68,23 +69,23 @@ describe("what the public node is keyed by", () => {
   });
 
   it("stores a position under the vehicle, not the driver", async () => {
-    await publishLocation(driver, { latitude: 21.25, longitude: 81.62 }, VEHICLE);
+    await publishLocation(driver, { latitude: 21.25, longitude: 81.62 }, VEHICLE, ROUTE);
 
-    expect(readRtdb(`${REMOTE_PATHS.BUS_LOCATIONS}/${VEHICLE}`)).toBeDefined();
+    expect(readRtdb(`${REMOTE_PATHS.BUS_LOCATIONS}/${ROUTE}/${VEHICLE}`)).toBeDefined();
     expect(
-      readRtdb(`${REMOTE_PATHS.BUS_LOCATIONS}/${driver.uid}`)
+      readRtdb(`${REMOTE_PATHS.BUS_LOCATIONS}/${ROUTE}/${driver.uid}`)
     ).toBeUndefined();
   });
 
   it("refuses to publish without a vehicle", async () => {
     await expect(
-      publishLocation(driver, { latitude: 21.25, longitude: 81.62 }, "")
+      publishLocation(driver, { latitude: 21.25, longitude: 81.62 }, "", ROUTE)
     ).rejects.toThrow(/vehicle/i);
   });
 
   it("refuses a vehicle id a database key cannot hold", async () => {
     await expect(
-      publishLocation(driver, { latitude: 21.25, longitude: 81.62 }, "a/b")
+      publishLocation(driver, { latitude: 21.25, longitude: 81.62 }, "a/b", ROUTE)
     ).rejects.toThrow(/vehicle/i);
   });
 });
@@ -92,19 +93,19 @@ describe("what the public node is keyed by", () => {
 describe("who may publish a position", () => {
   it("refuses a passenger", async () => {
     await expect(
-      publishLocation(passenger, { latitude: 21.25, longitude: 81.62 }, VEHICLE)
+      publishLocation(passenger, { latitude: 21.25, longitude: 81.62 }, VEHICLE, ROUTE)
     ).rejects.toBeInstanceOf(AuthorizationError);
   });
 
   it("refuses an admin, who does not hold this capability", async () => {
     await expect(
-      publishLocation(admin, { latitude: 21.25, longitude: 81.62 }, VEHICLE)
+      publishLocation(admin, { latitude: 21.25, longitude: 81.62 }, VEHICLE, ROUTE)
     ).rejects.toBeInstanceOf(AuthorizationError);
   });
 
   it("refuses a signed-out caller", async () => {
     await expect(
-      publishLocation(null, { latitude: 21.25, longitude: 81.62 }, VEHICLE)
+      publishLocation(null, { latitude: 21.25, longitude: 81.62 }, VEHICLE, ROUTE)
     ).rejects.toBeInstanceOf(AuthorizationError);
   });
 
@@ -112,7 +113,7 @@ describe("who may publish a position", () => {
     // The permission check passes; the write is skipped because the mocked
     // environment has no Realtime Database.
     await expect(
-      publishLocation(driver, { latitude: 21.25, longitude: 81.62 }, VEHICLE)
+      publishLocation(driver, { latitude: 21.25, longitude: 81.62 }, VEHICLE, ROUTE)
     ).resolves.toBeUndefined();
   });
 });
@@ -141,11 +142,11 @@ describe("when live tracking is unavailable", () => {
   });
 
   it("stops publishing without error", async () => {
-    await expect(stopPublishing(driver, VEHICLE)).resolves.toBeUndefined();
+    await expect(stopPublishing(driver, VEHICLE, ROUTE)).resolves.toBeUndefined();
   });
 
   it("ignores a stop request from a signed-out caller", async () => {
-    await expect(stopPublishing(null, VEHICLE)).resolves.toBeUndefined();
+    await expect(stopPublishing(null, VEHICLE, ROUTE)).resolves.toBeUndefined();
   });
 });
 
@@ -215,20 +216,20 @@ describe("which positions still count as live", () => {
 });
 
 describe("publishing to a database that is reachable", () => {
-  const node = `${REMOTE_PATHS.BUS_LOCATIONS}/${VEHICLE}`;
+  const node = `${REMOTE_PATHS.BUS_LOCATIONS}/${ROUTE}/${VEHICLE}`;
 
   beforeEach(() => {
     enableRtdb();
   });
 
   it("writes the position to the driver's own node", async () => {
-    await publishLocation(driver, { latitude: 21.25, longitude: 81.62 }, VEHICLE);
+    await publishLocation(driver, { latitude: 21.25, longitude: 81.62 }, VEHICLE, ROUTE);
 
     expect(readRtdb(node)).toMatchObject({ lat: 21.25, lng: 81.62 });
   });
 
   it("puts nothing about the account into public data", async () => {
-    await publishLocation(driver, { latitude: 21.25, longitude: 81.62 }, VEHICLE);
+    await publishLocation(driver, { latitude: 21.25, longitude: 81.62 }, VEHICLE, ROUTE);
 
     const published = readRtdb(node) as Record<string, unknown>;
 
@@ -244,48 +245,72 @@ describe("publishing to a database that is reachable", () => {
   it("refuses a coordinate that could not exist", async () => {
     const refused = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
-    await publishLocation(driver, { latitude: 91, longitude: 81.62 }, VEHICLE);
+    await publishLocation(driver, { latitude: 91, longitude: 81.62 }, VEHICLE, ROUTE);
 
     expect(readRtdb(node)).toBeUndefined();
 
     refused.mockRestore();
   });
 
-  it("publishes the route the driver declared", async () => {
+  /*
+    The route is the path, not a field. That is what lets a passenger watching
+    one route receive only that route's buses, and it removes the possibility
+    of a payload claiming a route different from the shard it sits in.
+  */
+  it("files the position under the route the driver declared", async () => {
     await publishLocation(driver, { latitude: 21.25, longitude: 81.62 }, VEHICLE, "102");
 
-    expect(readRtdb(node)).toMatchObject({ routeId: "102" });
+    expect(
+      readRtdb(`${REMOTE_PATHS.BUS_LOCATIONS}/102/${VEHICLE}`)
+    ).toMatchObject({ lat: 21.25 });
+    expect(readRtdb(`${REMOTE_PATHS.BUS_LOCATIONS}/${ROUTE}/${VEHICLE}`)).toBeUndefined();
   });
 
-  it("omits the route rather than guessing one", async () => {
-    await publishLocation(driver, { latitude: 21.25, longitude: 81.62 }, VEHICLE);
+  it("carries no route inside the record to contradict the path", async () => {
+    await publishLocation(driver, { latitude: 21.25, longitude: 81.62 }, VEHICLE, ROUTE);
 
     expect(readRtdb(node)).not.toHaveProperty("routeId");
   });
 
+  /*
+    A bus with no declared route has no shard to live in. The driver screen
+    already makes the choice up front, so this refuses rather than inventing
+    a default that would file the bus under somebody else's route.
+  */
+  it("refuses to publish without a route", async () => {
+    await expect(
+      publishLocation(
+        driver,
+        { latitude: 21.25, longitude: 81.62 },
+        VEHICLE,
+        undefined as unknown as typeof ROUTE
+      )
+    ).rejects.toThrow(/route/i);
+  });
+
   it("clears the position when the driver stops", async () => {
-    await publishLocation(driver, { latitude: 21.25, longitude: 81.62 }, VEHICLE);
-    await stopPublishing(driver, VEHICLE);
+    await publishLocation(driver, { latitude: 21.25, longitude: 81.62 }, VEHICLE, ROUTE);
+    await stopPublishing(driver, VEHICLE, ROUTE);
 
     expect(readRtdb(node)).toBeUndefined();
   });
 });
 
 describe("a driver who drops off the network", () => {
-  const node = `${REMOTE_PATHS.BUS_LOCATIONS}/${VEHICLE}`;
+  const node = `${REMOTE_PATHS.BUS_LOCATIONS}/${ROUTE}/${VEHICLE}`;
 
   beforeEach(() => {
     enableRtdb();
   });
 
   it("asks the server to clear the position if the connection dies", async () => {
-    await publishLocation(driver, { latitude: 21.25, longitude: 81.62 }, VEHICLE);
+    await publishLocation(driver, { latitude: 21.25, longitude: 81.62 }, VEHICLE, ROUTE);
 
     expect(hasDisconnectCleanup(node)).toBe(true);
   });
 
   it("is taken off the map without anyone stopping deliberately", async () => {
-    await publishLocation(driver, { latitude: 21.25, longitude: 81.62 }, VEHICLE);
+    await publishLocation(driver, { latitude: 21.25, longitude: 81.62 }, VEHICLE, ROUTE);
 
     expect(readRtdb(node)).toBeDefined();
 
@@ -295,7 +320,7 @@ describe("a driver who drops off the network", () => {
   });
 
   it("leaves nothing behind in a world-readable database", async () => {
-    await publishLocation(driver, { latitude: 21.25, longitude: 81.62 }, VEHICLE);
+    await publishLocation(driver, { latitude: 21.25, longitude: 81.62 }, VEHICLE, ROUTE);
 
     dropRtdbConnection();
 
@@ -320,7 +345,7 @@ describe("watching the fleet", () => {
   });
 
   it("reports every position that is reporting", async () => {
-    seedRtdb(`${REMOTE_PATHS.BUS_LOCATIONS}/driver-9`, {
+    seedRtdb(`${REMOTE_PATHS.BUS_LOCATIONS}/${ROUTE}/driver-9`, {
       lat: 21.25,
       lng: 81.62,
       updatedAt: NOW,
@@ -331,17 +356,16 @@ describe("watching the fleet", () => {
 
     await vi.waitFor(() =>
       expect(onBuses).toHaveBeenCalledWith([
-        { lat: 21.25, lng: 81.62, updatedAt: NOW, busId: "driver-9" },
+        { lat: 21.25, lng: 81.62, updatedAt: NOW, busId: "driver-9", routeId: ROUTE },
       ])
     );
   });
 
   it("carries the route through to the subscriber", async () => {
-    seedRtdb(`${REMOTE_PATHS.BUS_LOCATIONS}/driver-9`, {
+    seedRtdb(`${REMOTE_PATHS.BUS_LOCATIONS}/102/driver-9`, {
       lat: 21.25,
       lng: 81.62,
       updatedAt: NOW,
-            routeId: "102",
     });
 
     const onBuses = vi.fn();
@@ -366,12 +390,18 @@ describe("watching the fleet", () => {
     So an unrecognised route costs the bus its label, never its place on the
     map. Contract changes have to be additive and tolerant.
   */
+  /*
+    A shard this build has never heard of - a route opened after the app was
+    last deployed. The buses still reach the map; they simply arrive without a
+    label. Dropping them would mean an installed app silently showing fewer
+    buses than exist, which is the version-skew failure the inbound schema was
+    made tolerant for.
+  */
   it("keeps a bus on a route this build does not know, without its label", async () => {
-    seedRtdb(`${REMOTE_PATHS.BUS_LOCATIONS}/driver-9`, {
+    seedRtdb(`${REMOTE_PATHS.BUS_LOCATIONS}/999/driver-9`, {
       lat: 21.25,
       lng: 81.62,
       updatedAt: NOW,
-      routeId: "999",
     });
 
     const onBuses = vi.fn();
@@ -384,12 +414,17 @@ describe("watching the fleet", () => {
     );
   });
 
-  it("still keeps it out of a listing filtered to a known route", async () => {
-    seedRtdb(`${REMOTE_PATHS.BUS_LOCATIONS}/driver-9`, {
+  /*
+    The saving, stated as behaviour. A viewer scoped to one route is
+    subscribed to that route's shard, so another route's buses are not
+    filtered out after arriving - they never arrive, and their bytes are
+    never spent.
+  */
+  it("never receives a bus from a route it is not watching", async () => {
+    seedRtdb(`${REMOTE_PATHS.BUS_LOCATIONS}/999/driver-9`, {
       lat: 21.25,
       lng: 81.62,
       updatedAt: NOW,
-      routeId: "999",
     });
 
     const onBuses = vi.fn();
@@ -398,8 +433,30 @@ describe("watching the fleet", () => {
     await vi.waitFor(() => expect(onBuses).toHaveBeenCalledWith([]));
   });
 
+  it("receives the buses on the route it is watching", async () => {
+    seedRtdb(`${REMOTE_PATHS.BUS_LOCATIONS}/101/bus-a`, {
+      lat: 21.25,
+      lng: 81.62,
+      updatedAt: NOW,
+    });
+    seedRtdb(`${REMOTE_PATHS.BUS_LOCATIONS}/205/bus-b`, {
+      lat: 21.26,
+      lng: 81.64,
+      updatedAt: NOW,
+    });
+
+    const onBuses = vi.fn();
+    subscribeToBuses(onBuses, undefined, { routeId: "101" });
+
+    await vi.waitFor(() =>
+      expect(onBuses).toHaveBeenCalledWith([
+        expect.objectContaining({ busId: "bus-a", routeId: "101" }),
+      ])
+    );
+  });
+
   it("labels a vehicle that never published one", async () => {
-    seedRtdb(`${REMOTE_PATHS.BUS_LOCATIONS}/driver-9`, {
+    seedRtdb(`${REMOTE_PATHS.BUS_LOCATIONS}/${ROUTE}/driver-9`, {
       lat: 21.25,
       lng: 81.62,
       updatedAt: NOW,
@@ -416,12 +473,12 @@ describe("watching the fleet", () => {
   });
 
   it("drops a hostile entry without losing the rest of the fleet", async () => {
-    seedRtdb(`${REMOTE_PATHS.BUS_LOCATIONS}/good`, {
+    seedRtdb(`${REMOTE_PATHS.BUS_LOCATIONS}/${ROUTE}/good`, {
       lat: 21.25,
       lng: 81.62,
       updatedAt: NOW,
           });
-    seedRtdb(`${REMOTE_PATHS.BUS_LOCATIONS}/bad`, {
+    seedRtdb(`${REMOTE_PATHS.BUS_LOCATIONS}/${ROUTE}/bad`, {
       lat: "not a latitude",
       lng: 81.62,
     });
@@ -449,7 +506,7 @@ describe("watching the fleet", () => {
 
     await vi.waitFor(() => expect(onBuses).toHaveBeenCalledWith([]));
 
-    seedRtdb(`${REMOTE_PATHS.BUS_LOCATIONS}/driver-9`, {
+    seedRtdb(`${REMOTE_PATHS.BUS_LOCATIONS}/${ROUTE}/driver-9`, {
       lat: 21.25,
       lng: 81.62,
       updatedAt: NOW,
@@ -512,7 +569,12 @@ describe("what a hostile record cannot do", () => {
     await Promise.resolve();
     await Promise.resolve();
 
-    seedRtdb(REMOTE_PATHS.BUS_LOCATIONS, records);
+    /*
+      Seeded inside a route shard, because that is where positions live now.
+      Writing them at the fleet root would make each vehicle id look like a
+      route, and the subscription would correctly find no buses at all.
+    */
+    seedRtdb(`${REMOTE_PATHS.BUS_LOCATIONS}/${ROUTE}`, records);
 
     await vi.waitFor(() => expect(onBuses).toHaveBeenCalled());
 
@@ -552,7 +614,7 @@ describe("what a hostile record cannot do", () => {
   the passenger's, which reads it.
 */
 describe("the clock a position is judged by", () => {
-  const node = `${REMOTE_PATHS.BUS_LOCATIONS}/${VEHICLE}`;
+  const node = `${REMOTE_PATHS.BUS_LOCATIONS}/${ROUTE}/${VEHICLE}`;
 
   beforeEach(() => {
     enableRtdb();
@@ -566,7 +628,7 @@ describe("the clock a position is judged by", () => {
     side able to tell.
   */
   it("asks the database to stamp the time rather than sending our own", async () => {
-    await publishLocation(driver, { latitude: 21.25, longitude: 81.62 }, VEHICLE);
+    await publishLocation(driver, { latitude: 21.25, longitude: 81.62 }, VEHICLE, ROUTE);
 
     /*
       Asserted on the sentinel, not on the resolved value. The database turns
@@ -578,7 +640,7 @@ describe("the clock a position is judged by", () => {
   });
 
   it("still stores a plain number, as every reader expects", async () => {
-    await publishLocation(driver, { latitude: 21.25, longitude: 81.62 }, VEHICLE);
+    await publishLocation(driver, { latitude: 21.25, longitude: 81.62 }, VEHICLE, ROUTE);
 
     expect(typeof (readRtdb(node) as { updatedAt: unknown }).updatedAt).toBe(
       "number"
@@ -628,7 +690,7 @@ describe("the clock a position is judged by", () => {
   reporting at 14:32" from "never started".
 */
 describe("recording that a vehicle went quiet", () => {
-  const position = `${REMOTE_PATHS.BUS_LOCATIONS}/${VEHICLE}`;
+  const position = `${REMOTE_PATHS.BUS_LOCATIONS}/${ROUTE}/${VEHICLE}`;
   const status = `${REMOTE_PATHS.VEHICLE_STATUS}/${VEHICLE}`;
 
   beforeEach(() => {
@@ -636,13 +698,13 @@ describe("recording that a vehicle went quiet", () => {
   });
 
   it("asks the server to record the sighting if the connection drops", async () => {
-    await publishLocation(driver, { latitude: 21.25, longitude: 81.62 }, VEHICLE);
+    await publishLocation(driver, { latitude: 21.25, longitude: 81.62 }, VEHICLE, ROUTE);
 
     expect(disconnectWrite(status)).toBeDefined();
   });
 
   it("still clears the position, so no ghost is left on the map", async () => {
-    await publishLocation(driver, { latitude: 21.25, longitude: 81.62 }, VEHICLE);
+    await publishLocation(driver, { latitude: 21.25, longitude: 81.62 }, VEHICLE, ROUTE);
 
     expect(hasDisconnectCleanup(position)).toBe(true);
   });
@@ -652,7 +714,7 @@ describe("recording that a vehicle went quiet", () => {
     do to these nodes if the driver's phone lost signal mid-shift.
   */
   it("leaves a time behind after the connection is lost", async () => {
-    await publishLocation(driver, { latitude: 21.25, longitude: 81.62 }, VEHICLE);
+    await publishLocation(driver, { latitude: 21.25, longitude: 81.62 }, VEHICLE, ROUTE);
 
     dropRtdbConnection();
 
@@ -663,8 +725,8 @@ describe("recording that a vehicle went quiet", () => {
   });
 
   it("records the sighting when a driver stops deliberately", async () => {
-    await publishLocation(driver, { latitude: 21.25, longitude: 81.62 }, VEHICLE);
-    await stopPublishing(driver, VEHICLE);
+    await publishLocation(driver, { latitude: 21.25, longitude: 81.62 }, VEHICLE, ROUTE);
+    await stopPublishing(driver, VEHICLE, ROUTE);
 
     expect(readRtdb(position)).toBeUndefined();
     expect(readRtdb(status)).toMatchObject({
@@ -678,7 +740,7 @@ describe("recording that a vehicle went quiet", () => {
     double the write rate the whole fleet is sized against.
   */
   it("does not write a second record while the bus is reporting", async () => {
-    await publishLocation(driver, { latitude: 21.25, longitude: 81.62 }, VEHICLE);
+    await publishLocation(driver, { latitude: 21.25, longitude: 81.62 }, VEHICLE, ROUTE);
 
     expect(readRtdb(status)).toBeUndefined();
   });

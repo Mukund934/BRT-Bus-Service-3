@@ -47,13 +47,21 @@ const validPosition = (over: Record<string, unknown> = {}) => ({
   lat: 21.25,
   lng: 81.63,
   updatedAt: Date.now(),
-  busId: "BUS-01",
-  routeId: "101",
   ...over,
 });
 
-const positionRef = (db: unknown, vehicleId: string) =>
-  ref(db as Parameters<typeof ref>[0], `busLocations/${vehicleId}`);
+/*
+  Positions are sharded by route, so the route is part of the path. A bus
+  filed under the wrong shard would appear on a route it is not running,
+  which is why the write gate has to hold per shard rather than per node.
+*/
+const ROUTE = "101";
+
+const positionRef = (db: unknown, vehicleId: string, routeId = ROUTE) =>
+  ref(
+    db as Parameters<typeof ref>[0],
+    `busLocationsByRoute/${routeId}/${vehicleId}`
+  );
 
 beforeAll(async () => {
   env = await initializeTestEnvironment({
@@ -445,7 +453,7 @@ describe("the routes a position may claim", () => {
     const db = env.authenticatedContext(DRIVER).database();
 
     await assertSucceeds(
-      set(positionRef(db, VEHICLE), validPosition({ routeId }))
+      set(positionRef(db, VEHICLE, routeId), validPosition())
     );
   });
 
@@ -455,7 +463,7 @@ describe("the routes a position may claim", () => {
       const db = env.authenticatedContext(DRIVER).database();
 
       await assertFails(
-        set(positionRef(db, VEHICLE), validPosition({ routeId }))
+        set(positionRef(db, VEHICLE, routeId), validPosition())
       );
     }
   );
@@ -564,6 +572,53 @@ describe("how often a bus may report", () => {
   });
 });
 
+/*
+  The shard a bus is filed under.
+
+  Sharding is what makes a route-scoped subscription cheaper than a filtered
+  one - the other routes' buses are never sent. That only holds if a bus
+  cannot file itself under a route it is not running, so the write gate has to
+  be enforced per shard rather than once per vehicle.
+*/
+describe("which route shard a bus may write into", () => {
+  it("accepts the driver's own vehicle in a published route", async () => {
+    const db = env.authenticatedContext(DRIVER).database();
+
+    await assertSucceeds(set(positionRef(db, VEHICLE, "205"), validPosition()));
+  });
+
+  it("still refuses a vehicle the driver was not assigned, in any shard", async () => {
+    const db = env.authenticatedContext(DRIVER).database();
+
+    await assertFails(
+      set(positionRef(db, OTHER_VEHICLE, "205"), validPosition())
+    );
+  });
+
+  it("refuses a shard that is not a published route", async () => {
+    const db = env.authenticatedContext(DRIVER).database();
+
+    await assertFails(set(positionRef(db, VEHICLE, "999"), validPosition()));
+  });
+
+  /*
+    The whole fleet in one read is still one listener, so a map showing every
+    bus costs no more connections than before - only a route-scoped viewer
+    gets the saving, and nobody pays for it.
+  */
+  it("lets anyone read the whole sharded tree", async () => {
+    const db = env.unauthenticatedContext().database();
+
+    await assertSucceeds(get(ref(db, "busLocationsByRoute")));
+  });
+
+  it("lets anyone read a single route's shard", async () => {
+    const db = env.unauthenticatedContext().database();
+
+    await assertSucceeds(get(ref(db, `busLocationsByRoute/${ROUTE}`)));
+  });
+});
+
 describe("what a position must look like", () => {
   const rejects = async (over: Record<string, unknown>) => {
     const db = env.authenticatedContext(DRIVER).database();
@@ -622,7 +677,7 @@ describe("who may read what", () => {
   it("lets a signed-out passenger read bus positions", async () => {
     const db = env.unauthenticatedContext().database();
 
-    await assertSucceeds(get(ref(db, "busLocations")));
+    await assertSucceeds(get(ref(db, "busLocationsByRoute")));
   });
 
   it("keeps the driver allowlist unreadable, even to a driver on it", async () => {
@@ -668,6 +723,6 @@ describe("the rules file these tests ran against", () => {
     const rules = readFileSync("database.rules.json", "utf8");
 
     expect(rules).toContain("driverAllowlist");
-    expect(JSON.parse(rules)).toHaveProperty("rules.busLocations");
+    expect(JSON.parse(rules)).toHaveProperty("rules.busLocationsByRoute");
   });
 });

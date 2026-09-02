@@ -240,12 +240,33 @@ export const dropRtdbConnection = (): void => {
 
 type DisconnectAction = { op: "remove" } | { op: "set"; value: unknown };
 
+/**
+ * The subtree under `path`, nested the way the database returns it.
+ *
+ * This used to build a FLAT map keyed by the remaining path, so a two-level
+ * node came back as `{"101/bus-1": {...}}` where Firebase returns
+ * `{"101": {"bus-1": {...}}}`. Nothing noticed while every node was one level
+ * deep; the day positions were sharded by route, the subscription simply
+ * delivered nothing and the mock was the only thing lying.
+ */
 const childrenOf = (path: string): Record<string, unknown> => {
   const prefix = `${path}/`;
   const children: Record<string, unknown> = {};
 
   for (const [key, value] of rtdb.nodes) {
-    if (key.startsWith(prefix)) children[key.slice(prefix.length)] = value;
+    if (!key.startsWith(prefix)) continue;
+
+    const segments = key.slice(prefix.length).split("/");
+    const leaf = segments.pop()!;
+
+    let level = children;
+
+    for (const segment of segments) {
+      level[segment] ??= {};
+      level = level[segment] as Record<string, unknown>;
+    }
+
+    level[leaf] = value;
   }
 
   return children;
