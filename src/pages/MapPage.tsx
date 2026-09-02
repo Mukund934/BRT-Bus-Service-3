@@ -6,7 +6,7 @@ import { MAP_CONFIG, POLLING } from "@/constants/config";
 import { serviceClockLabel } from "@/domain/transit/calendar";
 import { useAnnounce } from "@/components/a11y/LiveAnnouncer";
 import { DEFAULT_MAP_CENTER } from "@/domain/transit/stops";
-import { destinationOf, getRoute } from "@/domain/transit/routes";
+import { ROUTE_IDS, destinationOf, getRoute, type RouteId } from "@/domain/transit/routes";
 import { STATE_DESCRIPTIONS, STATE_LABELS } from "@/domain/fleet/state";
 import { hasPosition } from "@/domain/fleet/telemetry";
 import {
@@ -26,6 +26,8 @@ import {
  */
 const MapPage = () => {
   const [buses, setBuses] = useState<LiveBus[]>([]);
+  /* Empty means the whole fleet, which stays the default. */
+  const [routeId, setRouteId] = useState<RouteId | "">("");
   const [checkedAt, setCheckedAt] = useState(() => serverNow());
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
@@ -76,21 +78,29 @@ const MapPage = () => {
     up front, because the Realtime Database SDK is now loaded on demand and
     an effect must return its cleanup synchronously.
   */
-  useEffect(
-    () =>
-      subscribeToBuses(
-        (next) => {
-          setBuses(next);
-          setCheckedAt(serverNow());
-          setLoading(false);
-        },
-        () => {
-          setFailed(true);
-          setLoading(false);
-        }
-      ),
-    []
-  );
+  /*
+    Re-subscribed when the chosen route changes, and that is the point.
+    Positions are sharded by route, so narrowing here narrows what the
+    database SENDS - the other routes' buses are never delivered rather than
+    delivered and filtered away. On a corridor with eight routes that is most
+    of the traffic a passenger watching one of them would otherwise pay for.
+  */
+  useEffect(() => {
+    setLoading(true);
+
+    return subscribeToBuses(
+      (next) => {
+        setBuses(next);
+        setCheckedAt(serverNow());
+        setLoading(false);
+      },
+      () => {
+        setFailed(true);
+        setLoading(false);
+      },
+      routeId ? { routeId } : {}
+    );
+  }, [routeId]);
 
   /*
     A bus that stops reporting produces no further snapshot, so nothing would
@@ -181,6 +191,31 @@ const MapPage = () => {
               )}
               {paused ? "Resume live updates" : "Pause live updates"}
             </button>
+
+            {/*
+              Narrowing this does more than filter the list. Positions are
+              sharded by route in the database, so choosing one changes what
+              is SENT - the other routes' buses never arrive. On a corridor
+              with eight routes, a passenger watching one of them stops paying
+              for the other seven.
+            */}
+            <label className="inline-flex items-center gap-2 text-sm text-gray-700">
+              <span>Show</span>
+              <select
+                value={routeId}
+                onChange={(event) =>
+                  setRouteId(event.target.value as RouteId | "")
+                }
+                className="px-3 py-2 border border-input rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-ring"
+              >
+                <option value="">Every route</option>
+                {ROUTE_IDS.map((id) => (
+                  <option key={id} value={id}>
+                    {getRoute(id).name}
+                  </option>
+                ))}
+              </select>
+            </label>
 
             {/*
               Deliberately NOT its own live region. The app already mounts one

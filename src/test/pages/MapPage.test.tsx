@@ -222,7 +222,14 @@ describe("telling a passenger where a bus is going", () => {
 
     report(onRoute());
 
-    expect(screen.getByText("Route 101")).toBeInTheDocument();
+    /*
+      Scoped to the table. The route selector lists every route by name, so an
+      unscoped query now matches an <option> as well as the bus's own row -
+      and would keep passing if the row stopped naming the route at all.
+    */
+    expect(
+      within(screen.getByRole("table")).getByText("Route 101")
+    ).toBeInTheDocument();
   });
 
   /*
@@ -404,5 +411,81 @@ describe("stopping the updates", () => {
     });
 
     expect(screen.getByText("BUS-0001")).toBeInTheDocument();
+  });
+});
+
+/*
+  Choosing a route is not a filter over data already received.
+
+  Positions are sharded by route, so the choice changes what the database
+  sends. That is the whole saving: on an eight-route corridor, a passenger
+  watching one route stops paying for the other seven. A test that only
+  checked the rendered list would pass just as happily against a client-side
+  filter, which costs exactly as much as showing everything.
+*/
+describe("watching one route instead of the whole fleet", () => {
+  const selectRoute = async (
+    user: ReturnType<typeof renderWithProviders>["user"],
+    name: RegExp
+  ) => {
+    await user.selectOptions(screen.getByRole("combobox", { name: /show/i }), [
+      screen.getByRole("option", { name }),
+    ]);
+  };
+
+  it("watches every route until one is chosen", () => {
+    renderWithProviders(<MapPage />, { route: "/map" });
+
+    expect(subscribe.mock.calls[0]![2]).toEqual({});
+  });
+
+  it("asks the database for one route, rather than filtering afterwards", async () => {
+    const { user } = renderWithProviders(<MapPage />, { route: "/map" });
+
+    await selectRoute(user, /^Route 102/);
+
+    await waitFor(() =>
+      expect(subscribe.mock.calls.at(-1)![2]).toEqual({ routeId: "102" })
+    );
+  });
+
+  it("goes back to the whole fleet when the choice is cleared", async () => {
+    const { user } = renderWithProviders(<MapPage />, { route: "/map" });
+
+    await selectRoute(user, /^Route 102/);
+    await waitFor(() => expect(subscribe.mock.calls.length).toBeGreaterThan(1));
+
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: /show/i }),
+      [screen.getByRole("option", { name: "Every route" })]
+    );
+
+    await waitFor(() => expect(subscribe.mock.calls.at(-1)![2]).toEqual({}));
+  });
+
+  /*
+    A narrowed subscription starts empty and fills, so the map must not go on
+    showing the previous route's buses while the new shard arrives.
+  */
+  it("drops the previous route's buses while the new one loads", async () => {
+    const { user } = renderWithProviders(<MapPage />, { route: "/map" });
+
+    report([
+      {
+        busId: "bus-1",
+        lat: STOP_COORDS["CBD"]!.lat,
+        lng: STOP_COORDS["CBD"]!.lng,
+        updatedAt: Date.now(),
+        routeId: "101",
+      },
+    ]);
+
+    await screen.findByText(/bus-1/);
+
+    await selectRoute(user, /^Route 102/);
+
+    await waitFor(() =>
+      expect(screen.queryByText(/bus-1/)).not.toBeInTheDocument()
+    );
   });
 });
