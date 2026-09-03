@@ -1,5 +1,8 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useTranslation } from "@/contexts/LocaleContext";
+import { LOCALES, LOCALE_NAMES, type TranslationKey } from "@/domain/i18n/strings";
+import type { LucideIcon } from "lucide-react";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import {
 	Clock,
@@ -17,17 +20,26 @@ import {
 	X,
 } from "lucide-react";
 
+/*
+  Nav entries carry a translation KEY rather than a label. The label is looked
+  up at render, because this list is module-level and a language chosen after
+  it was evaluated would otherwise never reach it.
+*/
 const navLinks = [
-	{ to: "/", label: "Home", icon: Home },
-	{ to: "/plan", label: "Plan Journey", icon: Route },
-	{ to: "/routes", label: "Routes", icon: Map },
-	{ to: "/nearby", label: "Nearby", icon: Compass },
-	{ to: "/map", label: "Live Map", icon: MapPin },
-	{ to: "/timetable", label: "Timetable", icon: Clock },
-	{ to: "/fares", label: "Fares", icon: IndianRupee },
-	{ to: "/contact", label: "Contact", icon: Phone },
-	{ to: "/help", label: "Help", icon: HelpCircle },
-];
+	{ to: "/", labelKey: "nav.home", icon: Home },
+	{ to: "/plan", labelKey: "nav.plan", icon: Route },
+	{ to: "/routes", labelKey: "nav.routes", icon: Map },
+	{ to: "/nearby", labelKey: "nav.nearby", icon: Compass },
+	{ to: "/map", labelKey: "nav.map", icon: MapPin },
+	{ to: "/timetable", labelKey: "nav.timetable", icon: Clock },
+	{ to: "/fares", labelKey: "nav.fares", icon: IndianRupee },
+	{ to: "/contact", labelKey: "nav.contact", icon: Phone },
+	{ to: "/help", labelKey: "nav.help", icon: HelpCircle },
+] as const satisfies readonly {
+	to: string;
+	labelKey: TranslationKey;
+	icon: LucideIcon;
+}[];
 
 const getInitials = (name: string): string => {
 	if (!name) return "U";
@@ -47,6 +59,7 @@ const Header = () => {
 	const location = useLocation();
 	const navigate = useNavigate();
 	const { user, logout } = useAuth();
+	const { locale, setLocale, t } = useTranslation();
 
 	const [isMenuOpen, setIsMenuOpen] = useState(false);
 	const [isScrolled, setIsScrolled] = useState(false);
@@ -208,7 +221,9 @@ const Header = () => {
 					</Link>
 
 					<nav aria-label="Main" className="hidden xl:flex items-center gap-1">
-						{navLinks.map(({ to, label, icon: Icon }) => {
+						{navLinks.map(({ to, labelKey, icon: Icon }) => {
+							const label = t(labelKey);
+
 							const active = isActive(to);
 
 							return (
@@ -234,13 +249,56 @@ const Header = () => {
 					</nav>
 
 					<div className="flex items-center gap-4">
+						{/*
+							A native select rather than a custom menu.
+
+							It is one control, it is keyboard and screen-reader
+							correct without any work, and on a phone it opens the
+							platform picker - which is what somebody switching to
+							Hindi on an unfamiliar app expects to see. A styled
+							dropdown here would be a worse control that looked
+							better.
+
+							Each language is written in itself: somebody looking
+							for Hindi is looking for "हिन्दी", not for the word
+							"Hindi" spelled in English.
+						*/}
+						<label className="flex items-center">
+							<span className="sr-only">{t("language.change")}</span>
+							<select
+								value={locale}
+								onChange={(event) =>
+									setLocale(event.target.value as (typeof LOCALES)[number])
+								}
+								className="bg-white/10 text-white text-sm rounded-lg px-2 py-1.5 border border-white/25 focus:outline-none focus:ring-2 focus:ring-white/70 touch-target"
+							>
+								{LOCALES.map((code) => (
+									/*
+										The option list is rendered by the browser's
+										own widget, which does not inherit the page's
+										colours - so the text needs one that works on
+										the platform's own background rather than on
+										the header's red.
+									*/
+									<option key={code} value={code} className="text-gray-900">
+										{LOCALE_NAMES[code]}
+									</option>
+								))}
+							</select>
+						</label>
+
 						<div className="hidden xl:block">
 							{!user ? (
 								<Link
 									to="/login"
-									className="px-6 py-2.5 rounded-xl bg-white text-primary font-semibold shadow-[0_8px_25px_rgba(255,255,255,0.25)] transition-[transform,box-shadow] duration-state hover:-translate-y-[2px] hover:shadow-[0_12px_35px_rgba(255,255,255,0.35)]"
+									/*
+										`whitespace-nowrap` because a translated label
+										is not guaranteed to be one word, and this
+										button has no room to become two lines.
+									*/
+									className="px-6 py-2.5 rounded-xl bg-white text-primary font-semibold whitespace-nowrap shadow-[0_8px_25px_rgba(255,255,255,0.25)] transition-[transform,box-shadow] duration-state hover:-translate-y-[2px] hover:shadow-[0_12px_35px_rgba(255,255,255,0.35)]"
 								>
-									Login
+									{t("nav.login")}
 								</Link>
 							) : (
 								<div className="relative flex flex-col items-center gap-2" ref={profileRef}>
@@ -359,7 +417,7 @@ const Header = () => {
 				<div className="flex flex-col h-full pt-20 pb-6 px-4 overflow-y-auto">
 
 					<nav aria-label="Mobile" className="space-y-1">
-						{navLinks.map(({ to, label, icon: Icon }) => (
+						{navLinks.map(({ to, labelKey, icon: Icon }) => (
 							<Link
 								key={to}
 								to={to}
@@ -372,7 +430,7 @@ const Header = () => {
 								aria-current={isActive(to) ? "page" : undefined}
 							>
 								<Icon className="w-5 h-5" aria-hidden="true" />
-								{label}
+								{t(labelKey)}
 							</Link>
 						))}
 					</nav>

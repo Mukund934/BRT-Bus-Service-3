@@ -139,6 +139,8 @@ export const STORAGE_KEYS = {
    * account: saving a journey must not require an account, because a
    * passenger who has to sign in to keep one will simply retype it.
    */
+  /** The interface language, chosen per device rather than per account. */
+  LOCALE: "brt.locale",
   SAVED_JOURNEYS: "brt.journeys.saved",
   RECENT_JOURNEYS: "brt.journeys.recent",
 } as const;

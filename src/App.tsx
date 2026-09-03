@@ -6,6 +6,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { LocaleProvider } from "@/contexts/LocaleContext";
 import { TicketProvider } from "@/contexts/TicketContext";
 import { NotificationProvider } from "@/components/NotificationPopup";
 import ArrivalMonitor from "@/components/ArrivalMonitor";
@@ -64,84 +65,88 @@ const RouteFallback = () => (
 
 const App = () => (
   <TooltipProvider>
-    <AuthProvider>
-      <TicketProvider>
-        <LiveAnnouncer>
-          <NotificationProvider>
-            <Toaster />
-            <Sonner />
+    <LocaleProvider>
+      <AuthProvider>
+        <TicketProvider>
+          <LiveAnnouncer>
+            <NotificationProvider>
+              <Toaster />
+              <Sonner />
 
-            <BrowserRouter>
-              <RouteChangeHandler />
+              <BrowserRouter>
+                <RouteChangeHandler />
 
-              {/*
+                {/*
                 First focusable element on every page, so a keyboard user
                 can jump straight past the navigation.
               */}
-              <a href="#main-content" className="skip-link">
-                Skip to main content
-              </a>
+                <a href="#main-content" className="skip-link">
+                  Skip to main content
+                </a>
 
-              <ArrivalMonitor />
+                <ArrivalMonitor />
 
-              <ServiceAlerts />
+                <ServiceAlerts />
 
-              <Suspense fallback={<RouteFallback />}>
-                <Routes>
-                  {/* Public */}
-                  <Route path="/" element={<Home />} />
-                  <Route path="/plan" element={<Plan />} />
-                  <Route path="/routes" element={<RouteExplorer />} />
-                  <Route path="/nearby" element={<NearbyPlaces />} />
-                  <Route path="/nearby/:placeId" element={<PlaceDetail />} />
-                  <Route path="/fares" element={<Fares />} />
-                  <Route path="/timetable" element={<Timetable />} />
-                  <Route path="/contact" element={<Contact />} />
-                  <Route path="/help" element={<Help />} />
-                  <Route path="/about" element={<About />} />
-                  <Route path="/search" element={<Search />} />
-                  <Route path="/map" element={<MapPage />} />
+                <Suspense fallback={<RouteFallback />}>
+                  <Routes>
+                    {/* Public */}
+                    <Route path="/" element={<Home />} />
+                    <Route path="/plan" element={<Plan />} />
+                    <Route path="/routes" element={<RouteExplorer />} />
+                    <Route path="/nearby" element={<NearbyPlaces />} />
+                    <Route path="/nearby/:placeId" element={<PlaceDetail />} />
+                    <Route path="/fares" element={<Fares />} />
+                    <Route path="/timetable" element={<Timetable />} />
+                    <Route path="/contact" element={<Contact />} />
+                    <Route path="/help" element={<Help />} />
+                    <Route path="/about" element={<About />} />
+                    <Route path="/search" element={<Search />} />
+                    <Route path="/map" element={<MapPage />} />
 
-                  <Route
-                    path="/login"
-                    element={
-                      <RedirectIfAuthenticated>
-                        <Login />
-                      </RedirectIfAuthenticated>
-                    }
-                  />
+                    <Route
+                      path="/login"
+                      element={
+                        <RedirectIfAuthenticated>
+                          <Login />
+                        </RedirectIfAuthenticated>
+                      }
+                    />
 
-                  {/*
+                    {/*
                     Previously any signed-in user could reach /driver and the
                     page policed itself. The capability is now checked before
                     the page is ever rendered.
                   */}
-                  <Route
-                    path="/driver"
-                    element={
-                      <RequirePermission permission={PERMISSIONS.PUBLISH_LOCATION}>
-                        <Driver />
-                      </RequirePermission>
-                    }
-                  />
+                    <Route
+                      path="/driver"
+                      element={
+                        <RequirePermission
+                          permission={PERMISSIONS.PUBLISH_LOCATION}
+                        >
+                          <Driver />
+                        </RequirePermission>
+                      }
+                    />
 
-                  <Route
-                    path="/dashboard"
-                    element={
-                      <RequireAuth>
-                        <Dashboard />
-                      </RequireAuth>
-                    }
-                  />
+                    <Route
+                      path="/dashboard"
+                      element={
+                        <RequireAuth>
+                          <Dashboard />
+                        </RequireAuth>
+                      }
+                    />
 
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </Suspense>
-            </BrowserRouter>
-          </NotificationProvider>
-        </LiveAnnouncer>
-      </TicketProvider>
-    </AuthProvider>
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                </Suspense>
+              </BrowserRouter>
+            </NotificationProvider>
+          </LiveAnnouncer>
+        </TicketProvider>
+      </AuthProvider>
+    </LocaleProvider>
   </TooltipProvider>
 );
 

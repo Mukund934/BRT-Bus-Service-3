@@ -1,27 +1,36 @@
 import { MapPin } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useTranslation } from "@/contexts/LocaleContext";
+import type { TranslationKey } from "@/domain/i18n/strings";
 
 interface FooterProps {
 	text?: string;
 }
 
 const FOOTER_LINKS = [
-	{ to: "/", label: "Home" },
-	{ to: "/plan", label: "Plan Journey" },
-	{ to: "/routes", label: "Routes" },
-	{ to: "/nearby", label: "Nearby Places" },
-	{ to: "/map", label: "Live Map" },
-	{ to: "/timetable", label: "Timetable" },
-	{ to: "/fares", label: "Fares" },
-	{ to: "/search", label: "Search" },
-	{ to: "/about", label: "About" },
-	{ to: "/contact", label: "Contact" },
-	{ to: "/help", label: "Help" },
-];
+	{ to: "/", labelKey: "nav.home" },
+	{ to: "/plan", labelKey: "nav.plan" },
+	{ to: "/routes", labelKey: "nav.routes" },
+	{ to: "/nearby", labelKey: "nav.nearbyPlaces" },
+	{ to: "/map", labelKey: "nav.map" },
+	{ to: "/timetable", labelKey: "nav.timetable" },
+	{ to: "/fares", labelKey: "nav.fares" },
+	{ to: "/search", labelKey: "nav.search" },
+	{ to: "/about", labelKey: "nav.about" },
+	{ to: "/contact", labelKey: "nav.contact" },
+	{ to: "/help", labelKey: "nav.help" },
+] as const satisfies readonly { to: string; labelKey: TranslationKey }[];
 
-const Footer = ({
-	text = "© BRT Bus Services. All Rights Reserved.",
-}: FooterProps) => {
+const Footer = ({ text }: FooterProps) => {
+	const { t } = useTranslation();
+
+	/*
+		Defaulted here rather than in the signature, because the default is now
+		translated and a parameter default is evaluated before the hook runs.
+		A caller that passes its own text still wins.
+	*/
+	const rights = text ?? t("footer.rights");
+
 	return (
 		<footer className="bg-gradient-to-br from-primary to-primary-deep text-primary-foreground mt-auto">
 			<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -67,13 +76,13 @@ const Footer = ({
 							Quick Links
 						</h2>
 						<ul className="space-y-2 text-sm">
-							{FOOTER_LINKS.map(({ to, label }) => (
+							{FOOTER_LINKS.map(({ to, labelKey }) => (
 								<li key={to}>
 									<Link
 										to={to}
 										className="text-primary-foreground/90 hover:text-white transition-colors duration-enter"
 									>
-										{label}
+										{t(labelKey)}
 									</Link>
 								</li>
 							))}
@@ -81,7 +90,7 @@ const Footer = ({
 					</nav>
 
 					<div>
-						<h2 className="font-semibold text-lg mb-4">Location</h2>
+						<h2 className="font-semibold text-lg mb-4">{t("footer.location")}</h2>
 						<address className="flex items-start gap-2 text-primary-foreground/90 text-sm mt-4 not-italic">
 							<MapPin className="w-4 h-4 mt-0.5 flex-shrink-0" aria-hidden="true" />
 							<span>Sector 24, IIIT Naya Raipur, Chhattisgarh</span>
@@ -92,7 +101,7 @@ const Footer = ({
 				{/* Bottom Bar */}
 				<div className="border-t border-white/10 pt-6">
 					<p className="text-center text-primary-foreground/90 text-sm">
-						{text}
+						{rights}
 					</p>
 				</div>
 			</div>
