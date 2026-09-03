@@ -67,9 +67,30 @@ const CADENCE_MS = (() => {
   return Number(found[1].replace(/_/g, ""));
 })();
 
+/*
+  How many route shards the simulated fleet is spread across.
+
+  This is what sharding is FOR: a listener watching one route receives one
+  shard's traffic rather than the whole corridor's. With every vehicle in one
+  shard the two modes cost the same, which is exactly what the first version
+  of the route-sharded transport did before anything asked for a route.
+*/
+const SHARDS = arg("shards", "LOAD_SHARDS", 8);
+
+/** Watch a single route instead of the whole fleet. */
+const SCOPED = process.env.LOAD_SCOPED === "1";
+
 const LISTENERS = arg("listeners", "LOAD_LISTENERS", 25);
 const VEHICLES = arg("vehicles", "LOAD_VEHICLES", 20);
 const ROUNDS = arg("rounds", "LOAD_ROUNDS", 3);
+
+/* The published routes, so a shard key is never one the rules would refuse. */
+const ROUTES = ["101", "102", "105", "201", "202", "203", "204", "205"];
+
+const routeOf = (n) => ROUTES[n % Math.min(SHARDS, ROUTES.length)];
+
+/** The shard a scoped listener watches. Vehicle 0 lives here. */
+const WATCHED_ROUTE = ROUTES[0];
 
 const vehicleId = (n) => `load-${String(n).padStart(4, "0")}`;
 const driverUid = (n) => `load-driver-${String(n).padStart(4, "0")}`;
@@ -159,8 +180,12 @@ const seed = async () => {
 const openListener = async (stats) => {
   const controller = new AbortController();
 
+  const path = SCOPED
+    ? `busLocationsByRoute/${WATCHED_ROUTE}`
+    : "busLocationsByRoute";
+
   const response = await fetch(
-    `${BASE}/busLocations.json?ns=${PROJECT}`,
+    `${BASE}/${path}.json?ns=${PROJECT}`,
     { headers: { Accept: "text/event-stream" }, signal: controller.signal }
   );
 
@@ -194,7 +219,13 @@ const openListener = async (stats) => {
 
 const main = async () => {
   console.log(
-    `passenger fanout: ${LISTENERS} listeners, ${VEHICLES} vehicles, ${ROUNDS} rounds`
+    `passenger fanout: ${LISTENERS} listeners, ${VEHICLES} vehicles across ` +
+      `${Math.min(SHARDS, ROUTES.length)} route(s), ${ROUNDS} rounds`
+  );
+  console.log(
+    SCOPED
+      ? `mode: scoped to route ${WATCHED_ROUTE}`
+      : "mode: whole fleet (set LOAD_SCOPED=1 to watch one route)"
   );
   console.log(`target: ${BASE} (ns=${PROJECT})\n`);
 
@@ -218,12 +249,11 @@ const main = async () => {
   for (let round = 0; round < ROUNDS; round += 1) {
     for (let n = 0; n < VEHICLES; n += 1) {
       const ok = await put(
-        `busLocations/${vehicleId(n)}`,
+        `busLocationsByRoute/${routeOf(n)}/${vehicleId(n)}`,
         {
           lat: 21.25 + Math.random() * 0.01,
           lng: 81.63 + Math.random() * 0.01,
           updatedAt: { ".sv": "timestamp" },
-          routeId: "101",
         },
         driverUid(n)
       );

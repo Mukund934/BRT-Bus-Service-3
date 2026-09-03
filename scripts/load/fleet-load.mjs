@@ -127,6 +127,13 @@ const put = async (path, body, uid) => {
   };
 };
 
+/*
+  Positions are sharded by route, so the route is part of the path and no
+  longer a field in the record. One shard is enough to measure the ingest
+  path; the passenger harness is where the shard count actually matters.
+*/
+const ROUTE = "101";
+
 const vehicleId = (n) => `load-${String(n).padStart(4, "0")}`;
 const driverUid = (n) => `load-driver-${String(n).padStart(4, "0")}`;
 
@@ -171,9 +178,10 @@ const installRules = async () => {
  * asserts a write the rules must refuse is in fact refused.
  */
 const assertRulesEnforced = async () => {
+  /* Route 999 is not published, and this account is on no allowlist. */
   const probe = await put(
-    "busLocations/rules-probe",
-    { lat: 1, lng: 1, updatedAt: { ".sv": "timestamp" }, routeId: "999" },
+    "busLocationsByRoute/999/rules-probe",
+    { lat: 1, lng: 1, updatedAt: { ".sv": "timestamp" } },
     "not-a-driver"
   );
 
@@ -245,12 +253,11 @@ const main = async () => {
 
     while (Date.now() < endsAt) {
       const result = await put(
-        `busLocations/${vehicleId(n)}`,
+        `busLocationsByRoute/${ROUTE}/${vehicleId(n)}`,
         {
           lat: ORIGIN.lat + (Math.random() - 0.5) * 0.05,
           lng: ORIGIN.lng + (Math.random() - 0.5) * 0.05,
           updatedAt: { ".sv": "timestamp" },
-          routeId: "101",
         },
         driverUid(n)
       );
