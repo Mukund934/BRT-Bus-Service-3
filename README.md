@@ -290,6 +290,13 @@ Then open http://localhost:8080.
 | `npm test` | test suite |
 | `npm run test:coverage` | suite with coverage report |
 | `npm run test:rules` | security rules against the Firebase emulator (needs JDK 21+) |
+| `npm run test:rules:db` | just the Realtime Database rules, one emulator at a time |
+| `npm run test:rules:firestore` | just the Firestore rules, one emulator at a time |
+
+`test:rules` starts three emulators at once, each a JVM. On a machine short of
+memory that fails to start rather than failing a test — the exit says
+`3221225786`, which is a process killed on startup, not a rule that broke. The
+two split commands run one emulator at a time and cover the same ground.
 | `npm run verify` | everything CI runs, in the same order |
 
 ---

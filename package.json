@@ -24,7 +24,9 @@
     "load:fleet": "firebase emulators:exec --project demo-brt --only database \"node scripts/load/fleet-load.mjs\"",
     "load:passengers": "firebase emulators:exec --project demo-brt --only database \"node scripts/load/passenger-load.mjs\"",
     "pretest:rules": "node scripts/free-emulator-ports.mjs",
-    "test:rules": "firebase emulators:exec --project demo-brt --only firestore,database,auth \"vitest run --config vitest.rules.config.ts\""
+    "test:rules": "firebase emulators:exec --project demo-brt --only firestore,database,auth \"vitest run --config vitest.rules.config.ts\"",
+    "test:rules:db": "firebase emulators:exec --project demo-brt --only database \"npx vitest run --config vitest.rules.config.ts --pool=forks --poolOptions.forks.singleFork=true --poolOptions.forks.maxForks=1 src/test/rules/database.rules.test.ts\"",
+    "test:rules:firestore": "firebase emulators:exec --project demo-brt --only firestore \"npx vitest run --config vitest.rules.config.ts --pool=forks --poolOptions.forks.singleFork=true --poolOptions.forks.maxForks=1 src/test/rules/firestore.rules.test.ts\""
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.14",
