@@ -20,6 +20,7 @@
     "typecheck:domain": "tsc -p tsconfig.domain.json",
     "test:domain": "vitest run --config vitest.domain.config.ts",
     "test:bundle": "vitest run --config vitest.bundle.config.ts",
+    "gtfs:export": "node scripts/gtfs/export.mjs",
     "load:fleet": "firebase emulators:exec --project demo-brt --only database \"node scripts/load/fleet-load.mjs\"",
     "load:passengers": "firebase emulators:exec --project demo-brt --only database \"node scripts/load/passenger-load.mjs\"",
     "pretest:rules": "node scripts/free-emulator-ports.mjs",
