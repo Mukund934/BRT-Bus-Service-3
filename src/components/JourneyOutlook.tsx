@@ -1,6 +1,8 @@
 import { useMemo } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight, Star } from "lucide-react";
+import type { TranslationKey } from "@/domain/i18n/en";
+import { useTranslation } from "@/contexts/LocaleContext";
 import { useNow } from "@/hooks/use-now";
 import {
   journeyOutlookFor,
@@ -18,11 +20,17 @@ const SHOWN = 3;
 const planHref = (journey: JourneyPair) =>
   `/plan?from=${encodeURIComponent(journey.from)}&to=${encodeURIComponent(journey.to)}`;
 
-const describe = (outlook: Outlook): string => {
-  if (outlook.kind === "upcoming") return `Next at ${outlook.next.time}`;
-  if (outlook.kind === "ended") return `Nothing more today — last was ${outlook.last.time}`;
+const describe = (
+  outlook: Outlook
+): { key: TranslationKey; values?: Record<string, string> } => {
+  if (outlook.kind === "upcoming") {
+    return { key: "outlook.next", values: { time: outlook.next.time } };
+  }
+  if (outlook.kind === "ended") {
+    return { key: "outlook.ended", values: { time: outlook.last.time } };
+  }
 
-  return "No bus runs this way today";
+  return { key: "outlook.none" };
 };
 
 /**
@@ -42,6 +50,16 @@ const describe = (outlook: Outlook): string => {
  * bus that goes the other way.
  */
 const JourneyOutlook = () => {
+  const { t } = useTranslation();
+
+  /* `describe` names a key and its values; this turns the pair into words. */
+  const say = ({
+    key,
+    values,
+  }: {
+    key: TranslationKey;
+    values?: Record<string, string>;
+  }) => t(key, values);
   const now = useNow(60_000);
 
   const journeys = useMemo(() => {
@@ -68,10 +86,10 @@ const JourneyOutlook = () => {
           id="your-journeys-heading"
           className="text-[26px] md:text-[32px] font-semibold text-primary tracking-tight mb-2"
         >
-          Your journeys
+          {t("outlook.title")}
         </h2>
         <p className="text-muted-foreground text-[15px] mb-6">
-          Kept on this device from what you have planned here.
+          {t("outlook.body")}
         </p>
 
         <ul className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -106,7 +124,7 @@ const JourneyOutlook = () => {
                         : "text-muted-foreground"
                     }`}
                   >
-                    {describe(outlook)}
+                    {say(describe(outlook))}
                   </p>
                 </Link>
               </li>

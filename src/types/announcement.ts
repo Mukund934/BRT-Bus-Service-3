@@ -1,4 +1,5 @@
 import type { TimestampLike } from "./user";
+import type { TranslationKey } from "@/domain/i18n/en";
 import type { InformedEntity } from "@/domain/alerts/targeting";
 
 export const ANNOUNCEMENT_SEVERITIES = ["INFO", "WARNING", "CRITICAL"] as const;
@@ -6,10 +7,10 @@ export const ANNOUNCEMENT_SEVERITIES = ["INFO", "WARNING", "CRITICAL"] as const;
 export type AnnouncementSeverity = (typeof ANNOUNCEMENT_SEVERITIES)[number];
 
 /** How each severity is described to a passenger. */
-export const SEVERITY_LABELS: Record<AnnouncementSeverity, string> = {
-  INFO: "Notice",
-  WARNING: "Service change",
-  CRITICAL: "Major disruption",
+export const SEVERITY_LABELS: Record<AnnouncementSeverity, TranslationKey> = {
+  INFO: "alerts.severity.info",
+  WARNING: "alerts.severity.warning",
+  CRITICAL: "alerts.severity.critical",
 };
 
 /**

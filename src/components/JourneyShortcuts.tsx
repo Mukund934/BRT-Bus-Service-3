@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Star, X } from "lucide-react";
 import { JOURNEY_RULES } from "@/constants/config";
+import { useTranslation } from "@/contexts/LocaleContext";
 import {
   clearRecentJourneys,
   forgetRecentJourney,
@@ -38,6 +39,7 @@ const pairOf = (journey: JourneyPair): JourneyPair => ({
  * sees the planner they came for and not an empty shelf.
  */
 const JourneyShortcuts = ({ from, to, onPick }: JourneyShortcutsProps) => {
+  const { t } = useTranslation();
   const [saved, setSaved] = useState<JourneyPair[]>(readSavedJourneys);
   const [recent, setRecent] = useState(readRecentJourneys);
   const [full, setFull] = useState(false);
@@ -87,7 +89,7 @@ const JourneyShortcuts = ({ from, to, onPick }: JourneyShortcutsProps) => {
   return (
     <section aria-labelledby="journey-shortcuts-heading" className="mt-6">
       <h2 id="journey-shortcuts-heading" className="sr-only">
-        Saved and recent journeys
+        {t("journeys.title")}
       </h2>
 
       {current && (
@@ -102,15 +104,14 @@ const JourneyShortcuts = ({ from, to, onPick }: JourneyShortcutsProps) => {
               className={`w-4 h-4 ${currentIsSaved ? "fill-current" : ""}`}
               aria-hidden="true"
             />
-            {currentIsSaved
-              ? `Saved — remove ${label(current)}`
-              : `Save ${label(current)}`}
+            {t(currentIsSaved ? "journeys.remove" : "journeys.save", {
+              journey: label(current),
+            })}
           </button>
 
           {full && (
             <p role="alert" className="text-xs text-destructive mt-1">
-              You already have {JOURNEY_RULES.SAVED_LIMIT} saved journeys.
-              Remove one before saving another.
+              {t("journeys.full", { limit: JOURNEY_RULES.SAVED_LIMIT })}
             </p>
           )}
         </div>
@@ -145,7 +146,7 @@ const JourneyShortcuts = ({ from, to, onPick }: JourneyShortcutsProps) => {
               onClick={clearAll}
               className="text-xs text-muted-foreground underline underline-offset-2 touch-target"
             >
-              Clear recent journeys
+              {t("journeys.clearRecent")}
             </button>
           </div>
 
@@ -162,7 +163,7 @@ const JourneyShortcuts = ({ from, to, onPick }: JourneyShortcutsProps) => {
                 <button
                   type="button"
                   onClick={() => forget(journey)}
-                  aria-label={`Forget ${label(journey)}`}
+                  aria-label={t("journeys.forget", { journey: label(journey) })}
                   className="inline-flex items-center rounded-r-full border border-border bg-white px-2 py-1.5 text-muted-foreground hover:text-destructive hover:border-primary transition-colors touch-target"
                 >
                   <X className="w-3.5 h-3.5" aria-hidden="true" />

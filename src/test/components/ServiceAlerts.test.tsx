@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import ServiceAlerts from "@/components/ServiceAlerts";
+import { SEVERITY_LABELS } from "@/types/announcement";
+import { en } from "@/domain/i18n/en";
 import { renderWithProviders, screen, waitFor, within } from "../helpers/render";
 import { seedDoc } from "../helpers/firebase";
 
@@ -99,7 +101,9 @@ describe("what a visitor is told", () => {
 
     renderWithProviders(<ServiceAlerts />);
 
-    expect(await screen.findByText(/Major disruption/)).toBeInTheDocument();
+    expect(
+      await screen.findByText(new RegExp(en[SEVERITY_LABELS.CRITICAL]))
+    ).toBeInTheDocument();
   });
 
   it("shows every current notice, not just the first", async () => {

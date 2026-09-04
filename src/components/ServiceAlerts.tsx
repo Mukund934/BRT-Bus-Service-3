@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { AlertTriangle, Info, OctagonAlert } from "lucide-react";
+import type { TranslationKey } from "@/domain/i18n/en";
+import { useTranslation } from "@/contexts/LocaleContext";
 import { fetchActiveAnnouncements } from "@/services/announcementService";
 import { useAnnounce } from "@/components/a11y/LiveAnnouncer";
 import {
@@ -40,7 +42,7 @@ const SEVERITY_ICONS: Record<AnnouncementSeverity, typeof Info> = {
  */
 const readScope = (
   params: URLSearchParams
-): { scope: AlertScope; matchLabel: string | null } => {
+): { scope: AlertScope; matchLabel: TranslationKey | null } => {
   const stopIds = [params.get("from"), params.get("to")].filter(
     (value): value is string => value !== null && value !== ""
   );
@@ -49,11 +51,11 @@ const readScope = (
   const routeIds = route ? [route] : [];
 
   if (stopIds.length > 0) {
-    return { scope: { stopIds, routeIds }, matchLabel: "Affects your journey" };
+    return { scope: { stopIds, routeIds }, matchLabel: "alerts.affectsJourney" };
   }
 
   if (routeIds.length > 0) {
-    return { scope: { routeIds }, matchLabel: "Affects this route" };
+    return { scope: { routeIds }, matchLabel: "alerts.affectsRoute" };
   }
 
   return { scope: {}, matchLabel: null };
@@ -73,6 +75,7 @@ const readScope = (
  * to prevent.
  */
 const ServiceAlerts = () => {
+  const { t } = useTranslation();
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const announce = useAnnounce();
   const [params] = useSearchParams();
@@ -130,7 +133,7 @@ const ServiceAlerts = () => {
     const spoken = (critical.length > 0 ? critical : announcements)
       .map(
         (announcement) =>
-          `${SEVERITY_LABELS[announcement.severity]}: ${announcement.title}. ${
+          `${t(SEVERITY_LABELS[announcement.severity])}: ${announcement.title}. ${
             announcement.body
           }`
       )
@@ -144,7 +147,7 @@ const ServiceAlerts = () => {
   return (
     <section aria-labelledby="service-alerts-heading" className="px-4 pt-6">
       <h2 id="service-alerts-heading" className="sr-only">
-        Service announcements
+        {t("alerts.title")}
       </h2>
 
       <div className="max-w-5xl mx-auto space-y-3">
@@ -164,7 +167,7 @@ const ServiceAlerts = () => {
               <div className="min-w-0">
                 <p className="font-semibold">
                   <span className="sr-only">
-                    {SEVERITY_LABELS[announcement.severity]}:{" "}
+                    {t(SEVERITY_LABELS[announcement.severity])}:{" "}
                   </span>
                   {announcement.title}
                 </p>
@@ -173,7 +176,7 @@ const ServiceAlerts = () => {
                 {affected.length > 0 && (
                   <p className="text-xs mt-2 opacity-90">
                     Affects {affected.join("; ")}
-                    {targeted && matchLabel ? ` — ${matchLabel.toLowerCase()}` : ""}
+                    {targeted && matchLabel ? ` — ${t(matchLabel)}` : ""}
                   </p>
                 )}
               </div>

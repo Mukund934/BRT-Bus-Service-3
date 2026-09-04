@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import type { NetworkGrid } from "@/domain/transit/network-diagram";
 import { getNetworkRoute } from "@/domain/transit/routes";
+import { useTranslation } from "@/contexts/LocaleContext";
 import { SCHEDULED_STOPS } from "@/domain/transit/schedule";
 
 /**
@@ -11,12 +12,14 @@ import { SCHEDULED_STOPS } from "@/domain/transit/schedule";
  * call there says the same thing in a form somebody can actually get through,
  * and it stays copy-pasteable.
  */
-const NetworkTable = ({ grid }: { grid: NetworkGrid }) => (
+const NetworkTable = ({ grid }: { grid: NetworkGrid }) => {
+  const { t } = useTranslation();
+
+  return (
   <div className="overflow-auto max-h-[70vh] rounded-2xl border border-border bg-card">
     <table className="w-full border-separate border-spacing-0 text-sm">
       <caption className="sr-only">
-        Every stop in the network and the routes calling at it. Stops are listed
-        in the order the routes serve them.
+        {t("network.caption")}
       </caption>
       <thead>
         <tr>
@@ -24,13 +27,13 @@ const NetworkTable = ({ grid }: { grid: NetworkGrid }) => (
             scope="col"
             className="sticky top-0 z-10 bg-primary text-primary-foreground text-left px-3 py-2 font-semibold"
           >
-            Stop
+            {t("network.col.stop")}
           </th>
           <th
             scope="col"
             className="sticky top-0 z-10 bg-primary text-primary-foreground text-left px-3 py-2 font-semibold"
           >
-            Routes calling here
+            {t("network.col.routes")}
           </th>
         </tr>
       </thead>
@@ -55,7 +58,7 @@ const NetworkTable = ({ grid }: { grid: NetworkGrid }) => (
 
               {row.interchange && (
                 <span className="ml-2 rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary">
-                  Interchange
+                  {t("network.interchange")}
                 </span>
               )}
             </th>
@@ -68,6 +71,7 @@ const NetworkTable = ({ grid }: { grid: NetworkGrid }) => (
       </tbody>
     </table>
   </div>
-);
+  );
+};
 
 export default NetworkTable;

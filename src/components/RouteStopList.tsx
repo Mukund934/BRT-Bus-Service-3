@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { getConnectedRoutes, isInterchange, type NetworkRouteId } from "@/domain/transit/routes";
 import type { StopName } from "@/domain/transit/stops";
+import { useTranslation } from "@/contexts/LocaleContext";
 
 interface RouteStopListProps {
   routeId: NetworkRouteId;
@@ -8,7 +9,10 @@ interface RouteStopListProps {
   scheduled: ReadonlySet<StopName>;
 }
 
-const RouteStopList = ({ routeId, stops, scheduled }: RouteStopListProps) => (
+const RouteStopList = ({ routeId, stops, scheduled }: RouteStopListProps) => {
+  const { t } = useTranslation();
+
+  return (
   <ol className="relative">
     {stops.map((stop, index) => {
       const terminus = index === 0 || index === stops.length - 1;
@@ -50,19 +54,19 @@ const RouteStopList = ({ routeId, stops, scheduled }: RouteStopListProps) => (
 
               {terminus && (
                 <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary">
-                  {index === 0 ? "Start" : "End"}
+                  {t(index === 0 ? "stopList.start" : "stopList.end")}
                 </span>
               )}
 
               {connections.length > 0 && (
                 <span className="rounded-full bg-secondary px-2 py-0.5 text-[11px] font-semibold text-secondary-foreground">
-                  Interchange
+                  {t("stopList.interchange")}
                 </span>
               )}
 
               {!scheduled.has(stop) && (
                 <span className="rounded-full border border-border px-2 py-0.5 text-[11px] text-muted-foreground">
-                  No departures yet
+                  {t("stopList.noDepartures")}
                 </span>
               )}
             </div>
@@ -78,6 +82,7 @@ const RouteStopList = ({ routeId, stops, scheduled }: RouteStopListProps) => (
       );
     })}
   </ol>
-);
+  );
+};
 
 export default RouteStopList;

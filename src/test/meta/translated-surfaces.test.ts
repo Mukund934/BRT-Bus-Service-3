@@ -37,6 +37,11 @@ const SURFACES = [
   "src/pages/Login.tsx",
   "src/pages/Timetable.tsx",
   "src/pages/Driver.tsx",
+  "src/components/NetworkTable.tsx",
+  "src/components/JourneyOutlook.tsx",
+  "src/components/JourneyShortcuts.tsx",
+  "src/components/ServiceAlerts.tsx",
+  "src/components/RouteStopList.tsx",
   "src/components/BookingModal.tsx",
   "src/components/PaymentModal.tsx",
   "src/components/VirtualTicket.tsx",
@@ -76,6 +81,8 @@ const CODE = /[{}<>=[\];"`]/;
 const isProse = (line: string): boolean => {
   if (CODE.test(line)) return false;
   if (!/^[A-Z]/.test(line)) return false;
+  /* `INFO: Info,` is a map entry, not a sentence. */
+  if (/^[A-Za-z_][A-Za-z_0-9]*:[ \t]/.test(line)) return false;
 
   return line.split(/\s+/).filter((word) => /^[A-Za-z]{2,}/.test(word)).length >= 2;
 };
