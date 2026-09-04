@@ -157,3 +157,74 @@ describe("looking a string up", () => {
     ).toBe("Timetable");
   });
 });
+
+/*
+  Interpolation, which exists because word order is not a constant.
+
+  "Next from HNLU" is "HNLU से अगली बस": the stop leads in one language and
+  trails in the other. A prefix-plus-value approach cannot express that, which
+  is why the placeholder lives inside the sentence.
+*/
+describe("putting a value into a sentence", () => {
+  it("substitutes wherever the sentence puts the placeholder", () => {
+    expect(translate("en", "timetable.nextFrom", { stop: "HNLU" })).toBe(
+      "Next from HNLU"
+    );
+    expect(translate("hi", "timetable.nextFrom", { stop: "HNLU" })).toContain(
+      "HNLU"
+    );
+  });
+
+  /*
+    The stop leads in Hindi and trails in English. If both put it in the same
+    place, the Hindi is a transliterated English sentence rather than a Hindi
+    one.
+  */
+  it("does not assume the value sits in the same place in both", () => {
+    const english = translate("en", "timetable.nextFrom", { stop: "CBD" });
+    const hindi = translate("hi", "timetable.nextFrom", { stop: "CBD" });
+
+    expect(english.indexOf("CBD")).toBeGreaterThan(0);
+    expect(hindi.indexOf("CBD")).toBe(0);
+  });
+
+  it("substitutes every placeholder in a sentence with several", () => {
+    const shown = translate("en", "timetable.showing", {
+      shown: "Weekend service",
+      today: "Weekday service",
+    });
+
+    expect(shown).toContain("Weekend service");
+    expect(shown).toContain("Weekday service");
+    expect(shown).not.toContain("{");
+  });
+
+  /*
+    A missing value is left visible. "Next from {stop}" is a bug somebody
+    reports; "Next from " is a bug that ships.
+  */
+  it("leaves an unfilled placeholder visible rather than blank", () => {
+    expect(translate("en", "timetable.nextFrom", {})).toBe("Next from {stop}");
+  });
+
+  it("leaves a plain string alone when given no values", () => {
+    expect(translate("en", "timetable.finished")).toBe(
+      "Service has finished for today"
+    );
+  });
+
+  /*
+    Every placeholder an English string declares must exist in the Hindi one,
+    or a translated sentence silently drops the value it was written around.
+  */
+  it("declares the same placeholders in both languages", () => {
+    const names = (value: string) =>
+      [...value.matchAll(/\{(\w+)\}/g)].map((match) => match[1]).sort();
+
+    for (const key of Object.keys(STRINGS.en) as (keyof typeof STRINGS.en)[]) {
+      expect(names(STRINGS.hi[key]), `${key} placeholders differ`).toEqual(
+        names(STRINGS.en[key])
+      );
+    }
+  });
+});

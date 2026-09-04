@@ -52,6 +52,11 @@ const dateFormatter = new Intl.DateTimeFormat("en-CA", {
   day: "2-digit",
 });
 
+/*
+  Pinned to en-US on purpose: its output keys `WEEKDAY_INDEX` below. This is
+  not a display formatter and must never follow the interface language - see
+  `serviceWeekdayName` for the one that does.
+*/
 const weekdayFormatter = new Intl.DateTimeFormat("en-US", {
   timeZone: SERVICE_TIMEZONE,
   weekday: "short",
@@ -96,9 +101,17 @@ export const SERVICE_LABELS: Record<ServiceDay, string> = {
   weekend: "Weekend service",
 };
 
-/** The corridor-local weekday name, for showing which day is being displayed. */
-export const serviceWeekdayName = (at: Date): string =>
-  new Intl.DateTimeFormat("en-GB", {
+/**
+ * The corridor-local weekday name, for showing which day is being displayed.
+ *
+ * DISPLAY ONLY, and the distinction is load-bearing. `weekdayFormatter` above
+ * is pinned to `en-US` because its output is a KEY into `WEEKDAY_INDEX` -
+ * localising that one would return Sunday for every day of the week, and a
+ * Hindi reader would be shown weekend service on a Tuesday. This one is read
+ * by a person, so it follows their language.
+ */
+export const serviceWeekdayName = (at: Date, locale = "en-GB"): string =>
+  new Intl.DateTimeFormat(locale, {
     timeZone: SERVICE_TIMEZONE,
     weekday: "long",
   }).format(at);

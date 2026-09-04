@@ -32,13 +32,13 @@ import {
 interface LocaleValue {
   locale: Locale;
   setLocale: (next: Locale) => void;
-  t: (key: TranslationKey) => string;
+  t: (key: TranslationKey, values?: Readonly<Record<string, string | number>>) => string;
 }
 
 const LocaleContext = createContext<LocaleValue>({
   locale: "en",
   setLocale: () => {},
-  t: (key) => translate("en", key),
+  t: (key, values) => translate("en", key, values),
 });
 
 /**
@@ -86,7 +86,7 @@ export const LocaleProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const value = useMemo<LocaleValue>(
-    () => ({ locale, setLocale, t: (key) => translate(locale, key) }),
+    () => ({ locale, setLocale, t: (key, values) => translate(locale, key, values) }),
     [locale, setLocale]
   );
 

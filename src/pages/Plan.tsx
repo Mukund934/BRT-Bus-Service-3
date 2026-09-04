@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate, useSearchParams } from "react-router-do
 import { toast } from "sonner";
 import { ArrowRight, Clock, Repeat, Search } from "lucide-react";
 import Header from "@/components/Header";
+import { useTranslation } from "@/contexts/LocaleContext";
 import Footer from "@/components/Footer";
 import StopField from "@/components/StopField";
 import BookingModal from "@/components/BookingModal";
@@ -70,6 +71,8 @@ const formatDuration = (minutes: number): string => {
 };
 
 const Plan = () => {
+  const { t } = useTranslation();
+
   const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -170,32 +173,31 @@ const Plan = () => {
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-10 animate-fade-in-up">
             <h1 className="text-3xl md:text-4xl font-bold text-primary tracking-tight">
-              Plan your journey
+              {t("plan.title")}
             </h1>
             <p className="mt-3 text-muted-foreground">
-              Choose where you are boarding and where you are going. Fares come
-              from the official BRTS fare chart.
+{t("plan.intro")}
             </p>
 
             <Link
               to="/nearby"
               className="inline-block mt-3 text-primary font-medium underline underline-offset-2 touch-target"
             >
-              Not sure where to go? Browse nearby places
+              {t("plan.browseNearby")}
             </Link>
           </div>
 
           <div className="brt-search-card animate-fade-in-up animate-stagger-1">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <StopField
-                label="From"
+                label={t("plan.from")}
                 value={from}
                 onChange={setFrom}
                 exclude={resolveStop(to) ?? ""}
               />
 
               <StopField
-                label="To"
+                label={t("plan.to")}
                 value={to}
                 onChange={setTo}
                 exclude={resolveStop(from) ?? ""}
@@ -206,7 +208,7 @@ const Plan = () => {
                   htmlFor="plan-date"
                   className="block text-sm font-medium text-foreground mb-1"
                 >
-                  Travel date
+                  {t("plan.date")}
                 </label>
                 <input
                   id="plan-date"
@@ -223,7 +225,7 @@ const Plan = () => {
                   htmlFor="plan-time"
                   className="block text-sm font-medium text-foreground mb-1"
                 >
-                  Leaving after
+                  {t("plan.leavingAfter")}
                 </label>
                 <input
                   id="plan-time"
@@ -242,7 +244,7 @@ const Plan = () => {
                 className="brt-button flex-1 flex items-center justify-center gap-2 touch-target"
               >
                 <Search className="w-4 h-4" aria-hidden="true" />
-                Search journeys
+                {t("plan.search")}
               </button>
 
               <button
@@ -251,7 +253,7 @@ const Plan = () => {
                 className="px-6 py-3 rounded-xl border border-border text-foreground font-medium transition-colors duration-state hover:bg-secondary flex items-center justify-center gap-2 touch-target"
               >
                 <Repeat className="w-4 h-4" aria-hidden="true" />
-                Swap
+                {t("plan.swap")}
               </button>
             </div>
           </div>
@@ -266,7 +268,7 @@ const Plan = () => {
             {sameStop && (
               <div className="rounded-xl bg-destructive/10 border border-destructive/30 px-4 py-3">
                 <p className="text-sm text-destructive font-medium">
-                  Choose two different stops.
+                  {t("plan.sameStop")}
                 </p>
               </div>
             )}
@@ -274,8 +276,7 @@ const Plan = () => {
             {unresolved && !sameStop && (
               <div className="rounded-xl bg-destructive/10 border border-destructive/30 px-4 py-3">
                 <p className="text-sm text-destructive font-medium">
-                  Pick both stops from the suggestions so we can price the
-                  journey.
+{t("plan.unresolved")}
                 </p>
               </div>
             )}
@@ -298,7 +299,7 @@ const Plan = () => {
                         Official fare
                       </p>
                       <p className="text-2xl font-bold text-primary">
-                        {fare === null ? "Not published" : `₹${fare}/-`}
+                        {fare === null ? t("plan.notPublished") : `₹${fare}/-`}
                       </p>
                     </div>
                   </div>
@@ -307,8 +308,7 @@ const Plan = () => {
                 {fare === null && (
                   <div className="rounded-xl bg-destructive/10 border border-destructive/30 px-4 py-3 mb-6">
                     <p className="text-sm text-destructive font-medium">
-                      The official fare chart does not price this journey, so it
-                      cannot be booked yet.
+{t("plan.noFare")}
                     </p>
                   </div>
                 )}
@@ -316,13 +316,11 @@ const Plan = () => {
                 {options.length === 0 ? (
                   <div className="brt-card text-center">
                     <p className="font-semibold text-foreground mb-1">
-                      No scheduled service for this journey
+                      {t("plan.noService")}
                     </p>
                     {unserved ? (
                       <p className="text-sm text-muted-foreground">
-                        {unserved} is on the published network but has no
-                        departures yet. Browse the routes to see which stops
-                        the timetable covers.
+{t("plan.unservedStop", { stop: unserved })}
                       </p>
                     ) : (
                       <p className="text-sm text-muted-foreground">

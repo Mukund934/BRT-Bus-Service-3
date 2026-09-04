@@ -2,6 +2,14 @@ import { Fragment, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import Header from "@/components/Header";
+import { useTranslation } from "@/contexts/LocaleContext";
+import { DATE_LOCALES, type TranslationKey } from "@/domain/i18n/strings";
+
+/** Service days, as interface copy rather than as the domain's English labels. */
+const SERVICE_KEYS = {
+  weekday: "service.weekday",
+  weekend: "service.weekend",
+} as const satisfies Record<string, TranslationKey>;
 import Footer from "@/components/Footer";
 import BookingModal from "@/components/BookingModal";
 import PaymentModal from "@/components/PaymentModal";
@@ -9,7 +17,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import type { JourneySelection } from "@/domain/ticket/types";
 import { useNow } from "@/hooks/use-now";
 import {
-  SERVICE_LABELS,
   serviceClockLabel,
   serviceMinutesOf,
   serviceOn,
@@ -26,9 +33,9 @@ import {
 import { DIRECTION_LABELS, type Direction } from "@/domain/transit/timetable";
 import { type StopName } from "@/domain/transit/stops";
 
-const SERVICES: Array<{ day: ServiceDay; label: string }> = [
-  { day: "weekday", label: "Weekday" },
-  { day: "weekend", label: "Weekend" },
+const SERVICES: Array<{ day: ServiceDay; labelKey: TranslationKey }> = [
+  { day: "weekday", labelKey: "service.weekday.short" },
+  { day: "weekend", labelKey: "service.weekend.short" },
 ];
 
 const DIRECTIONS: readonly Direction[] = ["outbound", "inbound"];
@@ -79,6 +86,8 @@ const NextBusCard = ({
   origin: StopName;
   direction: Direction;
 }) => {
+  const { t } = useTranslation();
+
   const outlook = outlookFor(origin, now, direction);
 
   if (outlook.kind === "no-service") return null;
@@ -89,19 +98,19 @@ const NextBusCard = ({
       className="max-w-5xl mx-auto mb-6 rounded-2xl border border-border bg-card p-5"
     >
       <h2 id="next-bus-heading" className="text-sm text-muted-foreground">
-        Next from {origin}
+        {t("timetable.nextFrom", { stop: origin })}
       </h2>
 
       {outlook.kind === "upcoming" ? (
         <>
           <p className="text-3xl font-bold tabular-nums mt-1">{outlook.next.time}</p>
           <p className="text-sm text-muted-foreground mt-1">
-            Scheduled &middot; Route {outlook.next.trip.routeId}
+            {t("timetable.scheduled", { route: outlook.next.trip.routeId })}
           </p>
 
           {outlook.following.length > 0 && (
             <p className="text-sm mt-3">
-              <span className="text-muted-foreground">Then </span>
+              <span className="text-muted-foreground">{t("timetable.then")} </span>
               <span className="tabular-nums">
                 {outlook.following.map((departure) => departure.time).join(", ")}
               </span>
@@ -110,11 +119,11 @@ const NextBusCard = ({
         </>
       ) : (
         <>
-          <p className="text-xl font-semibold mt-1">Service has finished for today</p>
+          <p className="text-xl font-semibold mt-1">{t("timetable.finished")}</p>
           <p className="text-sm text-muted-foreground mt-1">
-            Resumes {outlook.resumesWeekday} at{" "}
-            <span className="tabular-nums">{outlook.first.time}</span> on the{" "}
-            {SERVICE_LABELS[outlook.resumesOn].toLowerCase()}.
+            {t("timetable.resumes", { weekday: outlook.resumesWeekday })}{" "}
+            <span className="tabular-nums">{outlook.first.time}</span>{" "}
+            {t("timetable.onThe", { service: t(SERVICE_KEYS[outlook.resumesOn]) })}
           </p>
         </>
       )}
@@ -367,6 +376,9 @@ const TimetableTable = ({
 };
 
 const Timetable = () => {
+  const { locale, t } = useTranslation();
+  const dateLocale = DATE_LOCALES[locale];
+
   const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -414,11 +426,11 @@ const Timetable = () => {
       <Header />
 
       <main id="main-content" tabIndex={-1} className="py-10 px-4">
-        <h1 className="sr-only">Bus timetable</h1>
+        <h1 className="sr-only">{t("timetable.title")}</h1>
 
         <div className="max-w-5xl mx-auto mb-4">
           <p className="text-sm text-muted-foreground">
-            {serviceWeekdayName(now)} &middot; {SERVICE_LABELS[today]}
+            {serviceWeekdayName(now, dateLocale)} &middot; {t(SERVICE_KEYS[today])}
           </p>
 
           <div
@@ -448,7 +460,7 @@ const Timetable = () => {
             aria-label="Service day"
             className="inline-flex mt-3 rounded-full border border-border overflow-hidden"
           >
-            {SERVICES.map(({ day, label }) => (
+            {SERVICES.map(({ day, labelKey }) => (
               <button
                 key={day}
                 type="button"
@@ -460,16 +472,18 @@ const Timetable = () => {
                     : "bg-card text-foreground hover:bg-secondary"
                 }`}
               >
-                {label}
-                {day === today && <span className="sr-only"> (today)</span>}
+                {t(labelKey)}
+                {day === today && <span className="sr-only">{t("timetable.today")}</span>}
               </button>
             ))}
           </div>
 
           {shown !== today && (
             <p role="status" className="text-sm mt-3">
-              Showing the {SERVICE_LABELS[shown].toLowerCase()}. Booking stays on
-              today&rsquo;s {SERVICE_LABELS[today].toLowerCase()}.
+              {t("timetable.showing", {
+                shown: t(SERVICE_KEYS[shown]),
+                today: t(SERVICE_KEYS[today]),
+              })}
             </p>
           )}
         </div>
@@ -490,14 +504,14 @@ const Timetable = () => {
             <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 rounded-xl border border-border bg-card/95 backdrop-blur px-4 py-2.5">
               {terminus && (
                 <p className="text-sm font-semibold text-foreground">
-                  Towards {terminus}
+                  {t("timetable.towards", { terminus })}
                 </p>
               )}
 
               <p className="text-xs text-muted-foreground">
-                {origin && `from ${origin} · `}
-                {SERVICE_LABELS[shown]}
-                {isToday ? " · today" : ""}
+                {origin && t("timetable.fromStop", { stop: origin })}
+                {t(SERVICE_KEYS[shown])}
+                {isToday ? t("timetable.alsoToday") : ""}
               </p>
 
               {/*
@@ -507,7 +521,7 @@ const Timetable = () => {
               */}
               {isToday && (
                 <p className="hidden sm:block ml-auto text-xs text-muted-foreground tabular-nums">
-                  Now {serviceClockLabel(now)}
+                  {t("timetable.now", { time: serviceClockLabel(now) })}
                 </p>
               )}
             </div>
@@ -531,8 +545,7 @@ const Timetable = () => {
               otherwise render a grid of column headings above no rows.
             */
             <p className="rounded-2xl border border-border bg-card p-5 text-sm text-muted-foreground">
-              No services are published for this direction on the{" "}
-              {SERVICE_LABELS[shown].toLowerCase()}.
+{t("timetable.noneForDirection", { service: t(SERVICE_KEYS[shown]) })}
             </p>
           ) : (
             <TimetableTable
