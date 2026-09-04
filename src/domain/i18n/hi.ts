@@ -432,6 +432,11 @@ export const hi: Catalogue = {
   "page.dashboard": "डैशबोर्ड",
   "page.driver": "चालक लाइव ट्रैकिंग",
 
+  /* Says no more than the English does about what lies behind the refusal. */
+  "guard.checking": "आपकी पहुँच जाँची जा रही है…",
+  "guard.deniedTitle": "पहुँच नहीं है",
+  "guard.deniedBody": "आपको यह पेज देखने की अनुमति नहीं है।",
+
   "error.generic": "कुछ गड़बड़ हो गई। कृपया फिर कोशिश कीजिए।",
   "error.noPermission": "आपके पास यह काम करने की अनुमति नहीं है।",
   "error.signInRequired": "जारी रखने के लिए साइन इन कीजिए।",

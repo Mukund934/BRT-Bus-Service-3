@@ -546,6 +546,15 @@ export const en = {
   "page.dashboard": "Dashboard",
   "page.driver": "Driver live tracking",
 
+  /*
+    The route guards. "Access denied" deliberately says nothing about what the
+    page contains or which role would grant it - a refusal should not double
+    as a map of the app, in any language.
+  */
+  "guard.checking": "Checking your access…",
+  "guard.deniedTitle": "Access denied",
+  "guard.deniedBody": "You do not have permission to view this page.",
+
   "error.generic": "Something went wrong. Please try again.",
   "error.noPermission": "You do not have permission to perform this action.",
   "error.signInRequired": "Please sign in to continue.",

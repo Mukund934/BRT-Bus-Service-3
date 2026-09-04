@@ -32,6 +32,8 @@ const SURFACES = [
   "src/components/PaymentModal.tsx",
   "src/components/VirtualTicket.tsx",
   "src/components/StopField.tsx",
+  "src/components/routing/RouteGuards.tsx",
+  "src/components/a11y/RouteChangeHandler.tsx",
   "src/components/ErrorBoundary.tsx",
   "src/components/NotificationPopup.tsx",
   "src/components/dashboards/UserDashboard.tsx",
