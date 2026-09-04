@@ -39,7 +39,7 @@ const Field = ({ id, label, error, children }: FieldProps) => {
 				{" "}
 				*
 			</span>
-			<span className="sr-only">{t("login.required")}</span>
+			<span className="sr-only">{t("field.required")}</span>
 		</label>
 
 		{children}

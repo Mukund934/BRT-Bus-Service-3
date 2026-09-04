@@ -194,6 +194,31 @@ export const en = {
     a button in somebody else's product, and a translated form of it would be
     a button nobody recognises.
   */
+
+  /*
+    Booking. The route NUMBER and the times are published data substituted
+    into the sentence, never translated - as are the two stop names in the
+    clash warning.
+  */
+  "booking.title": "Book your ticket",
+  "booking.description":
+    "Route {route}, departing {time}. Choose where you are boarding and where you are travelling to.",
+  "booking.fromStop": "From stop",
+  "booking.toStop": "To stop",
+  "booking.selectDestination": "Select destination",
+  "booking.from": "From",
+  "booking.to": "To",
+  "booking.departure": "Departure",
+  "booking.arrival": "Arrival",
+  "booking.fare": "Fare",
+  "booking.departed":
+    "This bus has already departed. Please choose a later service.",
+  "booking.unpriced":
+    "No fare is published for this journey yet, so it cannot be booked. Please choose a different destination.",
+  "booking.conflict":
+    "You already have a ticket from {from} to {to} that overlaps this journey.",
+  "booking.proceed": "Proceed to pay",
+
   "login.signIn.title": "Sign in",
   "login.signUp.title": "Create account",
   "login.reset.title": "Reset password",
@@ -201,7 +226,7 @@ export const en = {
   "login.email": "Email",
   "login.password": "Password",
   "login.name": "Full name",
-  "login.required": " (required)",
+  "field.required": " (required)",
 
   "login.signIn.action": "Sign in",
   "login.signIn.pending": "Signing in…",

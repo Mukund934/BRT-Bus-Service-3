@@ -161,6 +161,25 @@ export const hi: Catalogue = {
   "stopField.placeholder": "स्टॉप खोजने के लिए लिखिए",
 
 
+
+  "booking.title": "अपना टिकट बुक कीजिए",
+  "booking.description":
+    "मार्ग {route}, प्रस्थान {time}। चुनिए कि आप कहाँ से चढ़ेंगे और कहाँ तक जाएँगे।",
+  "booking.fromStop": "किस स्टॉप से",
+  "booking.toStop": "किस स्टॉप तक",
+  "booking.selectDestination": "गंतव्य चुनिए",
+  "booking.from": "कहाँ से",
+  "booking.to": "कहाँ तक",
+  "booking.departure": "प्रस्थान",
+  "booking.arrival": "आगमन",
+  "booking.fare": "किराया",
+  "booking.departed": "यह बस जा चुकी है। कृपया बाद की कोई सेवा चुनिए।",
+  "booking.unpriced":
+    "इस यात्रा के लिए अभी कोई किराया प्रकाशित नहीं है, इसलिए इसे बुक नहीं किया जा सकता। कृपया कोई दूसरा गंतव्य चुनिए।",
+  "booking.conflict":
+    "आपके पास पहले से {from} से {to} तक का टिकट है, जो इस यात्रा से टकराता है।",
+  "booking.proceed": "भुगतान के लिए आगे बढ़ें",
+
   "login.signIn.title": "साइन इन करें",
   "login.signUp.title": "खाता बनाएँ",
   "login.reset.title": "पासवर्ड रीसेट करें",
@@ -168,7 +187,7 @@ export const hi: Catalogue = {
   "login.email": "ईमेल",
   "login.password": "पासवर्ड",
   "login.name": "पूरा नाम",
-  "login.required": " (ज़रूरी)",
+  "field.required": " (ज़रूरी)",
 
   "login.signIn.action": "साइन इन",
   "login.signIn.pending": "साइन इन हो रहा है…",
