@@ -168,10 +168,10 @@ export const hi: Catalogue = {
   "booking.fromStop": "किस स्टॉप से",
   "booking.toStop": "किस स्टॉप तक",
   "booking.selectDestination": "गंतव्य चुनिए",
-  "booking.from": "कहाँ से",
-  "booking.to": "कहाँ तक",
-  "booking.departure": "प्रस्थान",
-  "booking.arrival": "आगमन",
+  "journey.from": "कहाँ से",
+  "journey.to": "कहाँ तक",
+  "journey.departure": "प्रस्थान",
+  "journey.arrival": "आगमन",
   "booking.fare": "किराया",
   "booking.departed": "यह बस जा चुकी है। कृपया बाद की कोई सेवा चुनिए।",
   "booking.unpriced":
@@ -236,6 +236,28 @@ export const hi: Catalogue = {
     "भुगतान सफल। {from} से {to} तक का आपका टिकट पक्का हो गया है।",
   "payment.announce.retry": "भुगतान असफल। कृपया फिर कोशिश कीजिए।",
 
+
+
+  "ticket.expired": "समाप्त",
+  "ticket.heading": "मार्ग {route} · {from} से {to}",
+  "ticket.statusPrefix": "टिकट की स्थिति: ",
+  "ticket.farePaid": "चुकाया किराया",
+  "ticket.validFor": "इतनी देर मान्य",
+  "ticket.qrLabel": "बुकिंग {id} के लिए बोर्डिंग QR कोड",
+  "ticket.qrLabelExpired": "बुकिंग {id} के लिए समाप्त हो चुका बोर्डिंग QR कोड",
+  "ticket.copied": "बुकिंग संदर्भ कॉपी हो गया",
+  "ticket.copy": "बुकिंग संदर्भ {id} कॉपी करें",
+  "ticket.saveQr": "QR सहेजें",
+  "ticket.cancel": "टिकट रद्द करें",
+  "ticket.cancelFor": " {from} से {to} के लिए",
+
+  /* Hindi does not inflect "मिनट" for number, so both read the same. */
+  "ticket.announce.validForOne": "आपका टिकट लगभग {minutes} मिनट और मान्य है।",
+  "ticket.announce.validForMany": "आपका टिकट लगभग {minutes} मिनट और मान्य है।",
+  "ticket.announce.copied": "बुकिंग संदर्भ क्लिपबोर्ड पर कॉपी हो गया।",
+  "ticket.announce.copyFailed": "बुकिंग संदर्भ कॉपी नहीं हो सका।",
+  "ticket.announce.qrFailed": "QR कोड डाउनलोड के लिए तैयार नहीं हो सका।",
+  "ticket.announce.qrDownloaded": "QR कोड डाउनलोड हो गया।",
 
   "ticket.status.pending": "बाकी",
   "ticket.status.active": "चालू",

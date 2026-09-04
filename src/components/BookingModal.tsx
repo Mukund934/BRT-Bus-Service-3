@@ -158,19 +158,19 @@ const BookingModal = ({
             <div className="bg-secondary rounded-xl p-4">
               <dl className="text-sm">
                 <div className="flex justify-between mb-1">
-                  <dt className="text-muted-foreground">{t("booking.from")}</dt>
+                  <dt className="text-muted-foreground">{t("journey.from")}</dt>
                   <dd className="font-medium text-foreground">{fromStop}</dd>
                 </div>
                 <div className="flex justify-between mb-1">
-                  <dt className="text-muted-foreground">{t("booking.to")}</dt>
+                  <dt className="text-muted-foreground">{t("journey.to")}</dt>
                   <dd className="font-medium text-foreground">{toStop}</dd>
                 </div>
                 <div className="flex justify-between mb-1">
-                  <dt className="text-muted-foreground">{t("booking.departure")}</dt>
+                  <dt className="text-muted-foreground">{t("journey.departure")}</dt>
                   <dd className="font-medium text-foreground">{departureTime}</dd>
                 </div>
                 <div className="flex justify-between mb-1">
-                  <dt className="text-muted-foreground">{t("booking.arrival")}</dt>
+                  <dt className="text-muted-foreground">{t("journey.arrival")}</dt>
                   <dd className="font-medium text-foreground">{arrivalTime}</dd>
                 </div>
                 <div className="flex justify-between pt-2 border-t border-border mt-2">

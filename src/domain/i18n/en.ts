@@ -206,10 +206,10 @@ export const en = {
   "booking.fromStop": "From stop",
   "booking.toStop": "To stop",
   "booking.selectDestination": "Select destination",
-  "booking.from": "From",
-  "booking.to": "To",
-  "booking.departure": "Departure",
-  "booking.arrival": "Arrival",
+  "journey.from": "From",
+  "journey.to": "To",
+  "journey.departure": "Departure",
+  "journey.arrival": "Arrival",
   "booking.fare": "Fare",
   "booking.departed":
     "This bus has already departed. Please choose a later service.",
@@ -294,6 +294,40 @@ export const en = {
     and explained on /help - three surfaces that have to agree, which is why
     the status engine names a key rather than each screen writing its own.
   */
+
+  /*
+    The ticket a passenger shows a conductor.
+
+    "BRT Bus Service" is NOT here: it is the operator's name printed on the
+    ticket, and it stays as published in both languages.
+
+    Two keys for the countdown rather than one with a plural rule. English
+    needs "1 more minute" and "5 more minutes"; a rule engine for one string
+    is more machinery than the string is worth, and Hindi does not inflect it
+    at all.
+  */
+  "ticket.expired": "Expired",
+  "ticket.heading": "Route {route} · {from} to {to}",
+  "ticket.statusPrefix": "Ticket status: ",
+  "ticket.farePaid": "Fare paid",
+  "ticket.validFor": "Valid for",
+  "ticket.qrLabel": "Boarding QR code for booking {id}",
+  "ticket.qrLabelExpired": "Expired boarding QR code for booking {id}",
+  "ticket.copied": "Booking reference copied",
+  "ticket.copy": "Copy booking reference {id}",
+  "ticket.saveQr": "Save QR",
+  "ticket.cancel": "Cancel ticket",
+  "ticket.cancelFor": " for {from} to {to}",
+
+  "ticket.announce.validForOne":
+    "Your ticket is valid for about {minutes} more minute.",
+  "ticket.announce.validForMany":
+    "Your ticket is valid for about {minutes} more minutes.",
+  "ticket.announce.copied": "Booking reference copied to clipboard.",
+  "ticket.announce.copyFailed": "Could not copy the booking reference.",
+  "ticket.announce.qrFailed": "Could not prepare the QR code for download.",
+  "ticket.announce.qrDownloaded": "QR code downloaded.",
+
   "ticket.status.pending": "Pending",
   "ticket.status.active": "Active",
   "ticket.status.boardingSoon": "Boarding Soon",
