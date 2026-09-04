@@ -20,6 +20,7 @@ import {
   PUBLISHED_STOPS,
 } from "@/domain/transit/operator";
 import { STOPS } from "@/domain/transit/stops";
+import { TIMETABLE_SOURCE } from "@/domain/transit/timetable";
 import { SCHEDULED_STOPS } from "@/domain/transit/schedule";
 import {
   DEFAULT_FRESHNESS,
@@ -204,6 +205,22 @@ describe("what it refuses to promise", () => {
 
     expect(screen.queryByText(/no money changes hands/i)).not.toBeInTheDocument();
     expect(screen.getByText(/Payment is taken through Some Gateway/)).toBeInTheDocument();
+  });
+
+  /*
+    The timetable is a second quoted source with its own document and its own
+    date, and /about exists to say which facts came from where. Naming the
+    operator's figures and not the timetable's would leave the larger of the
+    two unattributed.
+  */
+  it("attributes the timetable to the document it was read from", () => {
+    renderAbout();
+
+    const shown = document.body.textContent ?? "";
+
+    expect(shown).toContain(TIMETABLE_SOURCE.title);
+    expect(shown).toContain(TIMETABLE_SOURCE.publisher);
+    expect(shown).toContain(TIMETABLE_SOURCE.document);
   });
 
   it("marks what is planned as not built", () => {

@@ -10,6 +10,9 @@ import {
   type OperatorFact,
 } from "@/domain/transit/operator";
 import { STOPS } from "@/domain/transit/stops";
+import { TIMETABLE_SOURCE } from "@/domain/transit/timetable";
+import { DATE_LOCALES } from "@/domain/i18n/strings";
+import { formatDate } from "@/domain/time";
 import { SCHEDULED_STOPS } from "@/domain/transit/schedule";
 import { ROUTE_IDS, NETWORK_ROUTE_IDS, INTERCHANGES } from "@/domain/transit/routes";
 import { FARE_TABLE } from "@/domain/transit/fares";
@@ -70,7 +73,7 @@ const FactList = ({ facts }: { facts: readonly OperatorFact[] }) => (
 );
 
 const About = () => {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const payments = activePaymentProvider();
 
   return (
@@ -116,6 +119,21 @@ const About = () => {
                   abbreviation: OPERATOR.abbreviation,
                 })}
               </p>
+            </Section>
+
+            <Section title={t("about.timetable.heading")}>
+              <p>
+                {t("about.timetable.body", {
+                  title: TIMETABLE_SOURCE.title,
+                  publisher: TIMETABLE_SOURCE.publisher,
+                  document: TIMETABLE_SOURCE.document,
+                  date: formatDate(
+                    TIMETABLE_SOURCE.extractedOn,
+                    DATE_LOCALES[locale]
+                  ),
+                })}
+              </p>
+              <p>{t("about.timetable.stale")}</p>
             </Section>
 
             <Section title={t("about.stops.heading")}>

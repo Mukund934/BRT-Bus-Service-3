@@ -136,6 +136,13 @@ export const en = {
     The route NUMBER is published and is substituted, never translated. Only
     the word describing it is ours.
   */
+  "timetable.source": "Times as published by {publisher}, read on {date}.",
+  "about.timetable.heading": "Where the timetable came from",
+  "about.timetable.body":
+    "Every departure on this site is read from one document: {title}, published by {publisher} as {document}. It was read on {date}, and nothing has been added to it since.",
+  "about.timetable.stale":
+    "If the operator has reprinted it, we may be behind. A printed timetable at the stop is the operator's; this one is a copy of theirs, dated.",
+
   "timetable.title": "Bus timetable",
   "timetable.nextFrom": "Next from {stop}",
   "timetable.scheduled": "Scheduled · Route {route}",

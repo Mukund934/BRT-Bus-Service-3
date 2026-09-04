@@ -10,6 +10,7 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import Timetable from "@/pages/Timetable";
+import { TIMETABLE_SOURCE } from "@/domain/transit/timetable";
 import { renderWithProviders, screen, within } from "../helpers/render";
 
 vi.mock("@/services/userService", async () => {
@@ -37,6 +38,28 @@ const renderAt = (when: Date) => {
 
   return renderWithProviders(<Timetable />, { route: "/timetable" });
 };
+
+/*
+  Which timetable this is.
+
+  The page shows departures to the minute and said nothing about where they
+  came from or how old they are, so a passenger had no way to tell a current
+  timetable from one the operator has since reprinted. Read from
+  `TIMETABLE_SOURCE` rather than typed, so the assertion cannot outlive the
+  data it describes.
+*/
+describe("saying which timetable this is", () => {
+  it("names the publisher and the date it was read", async () => {
+    renderAt(new Date("2026-08-31T09:00:00"));
+
+    await screen.findByRole("table");
+
+    const shown = document.body.textContent ?? "";
+
+    expect(shown).toContain(TIMETABLE_SOURCE.publisher);
+    expect(shown).toContain("2026");
+  });
+});
 
 describe("knowing what day it is without being asked", () => {
   it("opens on the weekday timetable on a Monday", async () => {

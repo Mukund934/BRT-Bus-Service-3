@@ -4,6 +4,8 @@ import { toast } from "sonner";
 import Header from "@/components/Header";
 import { useTranslation } from "@/contexts/LocaleContext";
 import { DATE_LOCALES, type TranslationKey } from "@/domain/i18n/strings";
+import { TIMETABLE_SOURCE } from "@/domain/transit/timetable";
+import { formatDate } from "@/domain/time";
 
 /** Service days, as interface copy rather than as the domain's English labels. */
 const SERVICE_KEYS = {
@@ -572,6 +574,19 @@ const Timetable = () => {
               onBook={handleBook}
             />
           )}
+
+          {/*
+            Which timetable this is. The page shows times to the minute and
+            said nothing about where they came from or how old they are - so a
+            passenger had no way to tell a current timetable from a stale one,
+            and neither did we.
+          */}
+          <p className="text-xs text-muted-foreground mt-4">
+            {t("timetable.source", {
+              publisher: TIMETABLE_SOURCE.publisher,
+              date: formatDate(TIMETABLE_SOURCE.extractedOn, DATE_LOCALES[locale]),
+            })}
+          </p>
         </div>
       </main>
 
