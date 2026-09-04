@@ -159,8 +159,13 @@ describe("how fresh a vehicle is", () => {
   */
   it("gives every state a label and an explanation", () => {
     for (const state of Object.keys(STATE_LABELS) as VehicleState[]) {
-      expect(STATE_LABELS[state].length).toBeGreaterThan(0);
-      expect(STATE_DESCRIPTIONS[state].length).toBeGreaterThan(10);
+      for (const catalogue of [en, hi]) {
+        expect(catalogue[STATE_LABELS[state]].length, state).toBeGreaterThan(0);
+        expect(
+          catalogue[STATE_DESCRIPTIONS[state]].length,
+          state
+        ).toBeGreaterThan(10);
+      }
     }
   });
 

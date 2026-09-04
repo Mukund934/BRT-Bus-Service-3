@@ -305,6 +305,22 @@ export const hi: Catalogue = {
   "dashboard.cancel.announced": "आपका टिकट रद्द कर दिया गया है।",
 
 
+  "fleet.noShift": "शिफ़्ट शुरू नहीं हुई",
+  "fleet.state.live": "लाइव",
+  "fleet.state.recent": "हाल ही में",
+  "fleet.state.stale": "पुरानी सूचना",
+  "fleet.state.offline": "सूचना नहीं आ रही",
+  "fleet.state.unknown": "पता नहीं",
+
+  "fleet.state.live.detail": "अभी सूचना आ रही है।",
+  "fleet.state.recent.detail": "पिछली सूचना एक-दो मिनट के भीतर आई थी।",
+  "fleet.state.stale.detail":
+    "पिछली सूचना कई मिनट पुरानी है, इसलिए बस तब से आगे बढ़ चुकी है।",
+  "fleet.state.offline.detail":
+    "इस बस से सूचना आना बंद हो गया है। हो सकता है यह अब भी चल रही हो।",
+  "fleet.state.unknown.detail":
+    "इस बस ने कोई काम का समय नहीं भेजा, इसलिए इसकी स्थिति का समय तय नहीं हो सकता।",
+
   "fleet.sharing.idle": "साझा नहीं हो रहा",
   "fleet.sharing.sharing": "आपकी लाइव स्थिति साझा हो रही है",
   "fleet.sharing.interrupted": "आपकी स्थिति यात्रियों तक नहीं पहुँच रही",

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Bus, RadioTower } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { PERMISSIONS, can } from "@/domain/auth/permissions";
+import { useTranslation } from "@/contexts/LocaleContext";
 import { POLLING } from "@/constants/config";
 import { destinationOf, getRoute } from "@/domain/transit/routes";
 import type { VehicleTelemetry } from "@/domain/fleet/telemetry";
@@ -69,6 +70,7 @@ interface FleetStatusProps {
 }
 
 const FleetStatus = ({ users, loading }: FleetStatusProps) => {
+  const { t } = useTranslation();
   const { actor } = useAuth();
 
   const mayView = can(actor, PERMISSIONS.READ_ALL_USERS);
@@ -260,7 +262,7 @@ const FleetStatus = ({ users, loading }: FleetStatusProps) => {
             key={state}
             className={`rounded-lg px-3 py-2 ${STATE_STYLES[state]}`}
           >
-            <dt className="text-xs font-semibold">{STATE_LABELS[state]}</dt>
+            <dt className="text-xs font-semibold">{t(STATE_LABELS[state])}</dt>
             <dd className="text-lg font-bold">{counts[state]}</dd>
           </div>
         ))}
@@ -334,7 +336,7 @@ const FleetStatus = ({ users, loading }: FleetStatusProps) => {
                       <span
                         title={
                           bus
-                            ? STATE_DESCRIPTIONS[bus.state]
+                            ? t(STATE_DESCRIPTIONS[bus.state])
                             : "This driver has not started broadcasting."
                         }
                         className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
@@ -342,7 +344,7 @@ const FleetStatus = ({ users, loading }: FleetStatusProps) => {
                         }`}
                       >
                         <Bus className="w-3 h-3" aria-hidden="true" />
-                        {bus ? STATE_LABELS[bus.state] : "No shift started"}
+                        {bus ? t(STATE_LABELS[bus.state]) : t("fleet.noShift")}
                       </span>
 
                     </td>

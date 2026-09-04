@@ -12,6 +12,7 @@
  */
 
 import type { VehicleTelemetry } from "./telemetry";
+import type { TranslationKey } from "@/domain/i18n/en";
 
 export type VehicleState = "LIVE" | "RECENT" | "STALE" | "OFFLINE" | "UNKNOWN";
 
@@ -130,12 +131,12 @@ export const isPassengerVisible = (vehicle: ClassifiedVehicle): boolean =>
   PASSENGER_VISIBLE.includes(vehicle.state);
 
 /** Words for each state, so no surface invents its own vocabulary. */
-export const STATE_LABELS: Record<VehicleState, string> = {
-  LIVE: "Live",
-  RECENT: "Recent",
-  STALE: "Delayed report",
-  OFFLINE: "Not reporting",
-  UNKNOWN: "Unknown",
+export const STATE_LABELS: Record<VehicleState, TranslationKey> = {
+  LIVE: "fleet.state.live",
+  RECENT: "fleet.state.recent",
+  STALE: "fleet.state.stale",
+  OFFLINE: "fleet.state.offline",
+  UNKNOWN: "fleet.state.unknown",
 };
 
 /**
@@ -146,12 +147,12 @@ export const STATE_LABELS: Record<VehicleState, string> = {
  * words attached at the point of definition rather than being left to each
  * screen.
  */
-export const STATE_DESCRIPTIONS: Record<VehicleState, string> = {
-  LIVE: "Reporting now.",
-  RECENT: "Last reported within the last minute or two.",
-  STALE: "The last report is several minutes old, so the bus has moved since.",
-  OFFLINE: "This bus has stopped reporting. It may still be running.",
-  UNKNOWN: "This bus reported no usable time, so its position cannot be dated.",
+export const STATE_DESCRIPTIONS: Record<VehicleState, TranslationKey> = {
+  LIVE: "fleet.state.live.detail",
+  RECENT: "fleet.state.recent.detail",
+  STALE: "fleet.state.stale.detail",
+  OFFLINE: "fleet.state.offline.detail",
+  UNKNOWN: "fleet.state.unknown.detail",
 };
 
 /**

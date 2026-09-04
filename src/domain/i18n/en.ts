@@ -396,6 +396,27 @@ export const en = {
     a backgrounded tab, and stay general about everything else. Translating
     them must not turn "we do not know why" into a guess that sounds specific.
   */
+  /*
+    What a reported position is worth, shown on /about, on the map, and in the
+    operator's fleet table. Three surfaces, one table — /about exists to
+    explain the words the map uses, so they cannot be allowed to drift.
+  */
+  "fleet.noShift": "No shift started",
+  "fleet.state.live": "Live",
+  "fleet.state.recent": "Recent",
+  "fleet.state.stale": "Delayed report",
+  "fleet.state.offline": "Not reporting",
+  "fleet.state.unknown": "Unknown",
+
+  "fleet.state.live.detail": "Reporting now.",
+  "fleet.state.recent.detail": "Last reported within the last minute or two.",
+  "fleet.state.stale.detail":
+    "The last report is several minutes old, so the bus has moved since.",
+  "fleet.state.offline.detail":
+    "This bus has stopped reporting. It may still be running.",
+  "fleet.state.unknown.detail":
+    "This bus reported no usable time, so its position cannot be dated.",
+
   "fleet.sharing.idle": "Not sharing",
   "fleet.sharing.sharing": "Sharing your live location",
   "fleet.sharing.interrupted": "Your position is not reaching passengers",

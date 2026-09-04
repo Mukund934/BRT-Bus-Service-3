@@ -8,6 +8,7 @@ import { useAnnounce } from "@/components/a11y/LiveAnnouncer";
 import { DEFAULT_MAP_CENTER } from "@/domain/transit/stops";
 import { ROUTE_IDS, destinationOf, getRoute, type RouteId } from "@/domain/transit/routes";
 import { STATE_DESCRIPTIONS, STATE_LABELS } from "@/domain/fleet/state";
+import { useTranslation } from "@/contexts/LocaleContext";
 import { hasPosition } from "@/domain/fleet/telemetry";
 import {
   selectFreshBuses,
@@ -25,6 +26,7 @@ import {
  * world-readable page; they are no longer published at all.
  */
 const MapPage = () => {
+  const { t } = useTranslation();
   const [buses, setBuses] = useState<LiveBus[]>([]);
   /* Empty means the whole fleet, which stays the default. */
   const [routeId, setRouteId] = useState<RouteId | "">("");
@@ -295,8 +297,11 @@ const MapPage = () => {
                         <td>{telemetry.routeId ? getRoute(telemetry.routeId).name : "—"}</td>
                         <td>{telemetry.routeId ? destinationOf(telemetry.routeId) : "—"}</td>
                         <td>
-                          {STATE_LABELS[state]}
-                          <span className="sr-only"> — {STATE_DESCRIPTIONS[state]}</span>
+                          {t(STATE_LABELS[state])}
+                          <span className="sr-only">
+                            {" — "}
+                            {t(STATE_DESCRIPTIONS[state])}
+                          </span>
                         </td>
                         <td className="text-center">
                           {telemetry.observedAt

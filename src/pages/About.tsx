@@ -20,6 +20,7 @@ import {
   STATE_DESCRIPTIONS,
 } from "@/domain/fleet/state";
 import { activePaymentProvider } from "@/services/payment/demoProvider";
+import { useTranslation } from "@/contexts/LocaleContext";
 
 /*
   Read from the fare chart rather than typed, for the same reason the fares
@@ -69,6 +70,7 @@ const FactList = ({ facts }: { facts: readonly OperatorFact[] }) => (
 );
 
 const About = () => {
+  const { t } = useTranslation();
   const payments = activePaymentProvider();
 
   return (
@@ -217,9 +219,9 @@ const About = () => {
                 {PASSENGER_VISIBLE.map((state) => (
                   <div key={state} className="py-3">
                     <dt className="font-medium text-gray-900">
-                      {STATE_LABELS[state]}
+                      {t(STATE_LABELS[state])}
                     </dt>
-                    <dd>{STATE_DESCRIPTIONS[state]}</dd>
+                    <dd>{t(STATE_DESCRIPTIONS[state])}</dd>
                   </div>
                 ))}
               </dl>

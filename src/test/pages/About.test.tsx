@@ -10,6 +10,7 @@
 import { readFileSync } from "node:fs";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LOCALES } from "@/domain/i18n/strings";
+import { en } from "@/domain/i18n/en";
 import About from "@/pages/About";
 import {
   OPERATOR,
@@ -148,8 +149,10 @@ describe("what it says about live tracking", () => {
     renderAbout();
 
     for (const state of PASSENGER_VISIBLE) {
-      expect(screen.getByText(STATE_LABELS[state])).toBeInTheDocument();
-      expect(screen.getByText(STATE_DESCRIPTIONS[state])).toBeInTheDocument();
+      expect(screen.getByText(en[STATE_LABELS[state]])).toBeInTheDocument();
+      expect(
+        screen.getByText(en[STATE_DESCRIPTIONS[state]])
+      ).toBeInTheDocument();
     }
   });
 
