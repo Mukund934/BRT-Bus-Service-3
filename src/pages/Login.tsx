@@ -2,6 +2,9 @@ import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { useAnnounce } from "@/components/a11y/LiveAnnouncer";
 import { useAuth } from "@/contexts/AuthContext";
+import { useTranslation } from "@/contexts/LocaleContext";
+import { isTranslationKey } from "@/domain/i18n/strings";
+import type { TranslationKey } from "@/domain/i18n/en";
 import {
 	emailSchema,
 	fieldErrors,
@@ -46,6 +49,20 @@ const Field = ({ id, label, error, children }: FieldProps) => (
 	</div>
 );
 
+/**
+ * A validation message as a key, or nothing.
+ *
+ * Every message these schemas declare is a key. Zod supplies its own English
+ * for a rule nobody gave a message to, and that must not reach a passenger as
+ * `validation.email.required` - so anything unrecognised becomes the generic
+ * one rather than being rendered raw.
+ */
+const asKey = (message: string | undefined): TranslationKey | "" => {
+	if (!message) return "";
+
+	return isTranslationKey(message) ? message : "validation.generic";
+};
+
 const inputClass = (hasError: boolean) =>
 	`w-full bg-secondary rounded-lg px-4 py-2.5 border-2 transition-colors ${
 		hasError ? "border-destructive" : "border-transparent focus:border-primary"
@@ -55,6 +72,14 @@ const Login = () => {
 	// Redirecting an already-signed-in visitor is the route guard's job.
 	const { signIn, signUp, signInWithGoogle, resetPassword } = useAuth();
 	const announce = useAnnounce();
+	const { t } = useTranslation();
+
+	/*
+		Errors travel as keys and become words here. The schema that detects a
+		problem and the mapper that classifies an auth failure both run in a
+		domain with no idea which language anybody is reading in.
+	*/
+	const say = (key: TranslationKey | "") => (key ? t(key) : "");
 
 	/**
 	 * Only one layout is mounted at a time.
@@ -78,22 +103,22 @@ const Login = () => {
 	const [signInEmail, setSignInEmail] = useState("");
 	const [signInPass, setSignInPass] = useState("");
 	const [showSignInPass, setShowSignInPass] = useState(false);
-	const [signInEmailError, setSignInEmailError] = useState("");
-	const [signInPassError, setSignInPassError] = useState("");
+	const [signInEmailError, setSignInEmailError] = useState<TranslationKey | "">("");
+	const [signInPassError, setSignInPassError] = useState<TranslationKey | "">("");
 
 	const [signUpName, setSignUpName] = useState("");
 	const [signUpEmail, setSignUpEmail] = useState("");
 	const [signUpPass, setSignUpPass] = useState("");
 	const [showSignUpPass, setShowSignUpPass] = useState(false);
-	const [signUpNameError, setSignUpNameError] = useState("");
-	const [signUpEmailError, setSignUpEmailError] = useState("");
-	const [signUpPassError, setSignUpPassError] = useState("");
+	const [signUpNameError, setSignUpNameError] = useState<TranslationKey | "">("");
+	const [signUpEmailError, setSignUpEmailError] = useState<TranslationKey | "">("");
+	const [signUpPassError, setSignUpPassError] = useState<TranslationKey | "">("");
 
 	const [resetEmail, setResetEmail] = useState("");
-	const [resetEmailError, setResetEmailError] = useState("");
+	const [resetEmailError, setResetEmailError] = useState<TranslationKey | "">("");
 	const [resetSent, setResetSent] = useState(false);
 
-	const [error, setError] = useState("");
+	const [error, setError] = useState<TranslationKey | "">("");
 	const [loadingAuth, setLoadingAuth] = useState(false);
 
 	const ids = useId();
@@ -122,8 +147,8 @@ const Login = () => {
 
 		if (!parsed.success) {
 			const errors = fieldErrors(parsed.error);
-			setSignInEmailError(errors.email ?? "");
-			setSignInPassError(errors.password ?? "");
+			setSignInEmailError(asKey(errors.email));
+			setSignInPassError(asKey(errors.password));
 
 			// Focus the first field that failed, so a keyboard user lands on
 			// the thing they need to fix rather than hunting for it.
@@ -143,7 +168,7 @@ const Login = () => {
 
 		if (message) {
 			setError(message);
-			announce(message, "assertive");
+			announce(t(message), "assertive");
 		}
 	};
 
@@ -163,9 +188,9 @@ const Login = () => {
 
 		if (!parsed.success) {
 			const errors = fieldErrors(parsed.error);
-			setSignUpNameError(errors.name ?? "");
-			setSignUpEmailError(errors.email ?? "");
-			setSignUpPassError(errors.password ?? "");
+			setSignUpNameError(asKey(errors.name));
+			setSignUpEmailError(asKey(errors.email));
+			setSignUpPassError(asKey(errors.password));
 
 			if (errors.name) signUpNameRef.current?.focus();
 			else if (errors.email) signUpEmailRef.current?.focus();
@@ -184,7 +209,7 @@ const Login = () => {
 
 		if (message) {
 			setError(message);
-			announce(message, "assertive");
+			announce(t(message), "assertive");
 		}
 	};
 
@@ -197,7 +222,7 @@ const Login = () => {
 		const parsed = emailSchema.safeParse(resetEmail);
 
 		if (!parsed.success) {
-			setResetEmailError(parsed.error.issues[0]?.message ?? "Please check your email.");
+			setResetEmailError(asKey(parsed.error.issues[0]?.message));
 			resetEmailRef.current?.focus();
 			announce("There is a problem with the reset form.", "assertive");
 			return;
@@ -211,7 +236,7 @@ const Login = () => {
 
 		if (message) {
 			setError(message);
-			announce(message, "assertive");
+			announce(t(message), "assertive");
 			return;
 		}
 
@@ -229,7 +254,7 @@ const Login = () => {
 
 		if (message) {
 			setError(message);
-			announce(message, "assertive");
+			announce(t(message), "assertive");
 		}
 	};
 
@@ -256,7 +281,7 @@ const Login = () => {
 
 	const errorBanner = error ? (
 		<div className="w-full mb-3 p-3 bg-destructive/10 border border-destructive/30 rounded-lg" role="alert">
-			<p className="text-xs text-destructive text-center">{error}</p>
+			<p className="text-xs text-destructive text-center">{say(error)}</p>
 		</div>
 	) : null;
 
@@ -282,7 +307,7 @@ const Login = () => {
 
 			{errorBanner}
 
-			<Field id={signInEmailId} label="Email" error={signInEmailError}>
+			<Field id={signInEmailId} label="Email" error={say(signInEmailError)}>
 				<input
 					ref={signInEmailRef}
 					id={signInEmailId}
@@ -301,7 +326,7 @@ const Login = () => {
 				/>
 			</Field>
 
-			<Field id={signInPassId} label="Password" error={signInPassError}>
+			<Field id={signInPassId} label="Password" error={say(signInPassError)}>
 				<div className="relative">
 					<input
 						ref={signInPassRef}
@@ -377,7 +402,7 @@ const Login = () => {
 						Enter your email and we will send you a link to set a new password.
 					</p>
 
-					<Field id={resetEmailId} label="Email" error={resetEmailError}>
+					<Field id={resetEmailId} label="Email" error={say(resetEmailError)}>
 						<input
 							ref={resetEmailRef}
 							id={resetEmailId}
@@ -423,7 +448,7 @@ const Login = () => {
 
 			{errorBanner}
 
-			<Field id={signUpNameId} label="Full name" error={signUpNameError}>
+			<Field id={signUpNameId} label="Full name" error={say(signUpNameError)}>
 				<input
 					ref={signUpNameRef}
 					id={signUpNameId}
@@ -441,7 +466,7 @@ const Login = () => {
 				/>
 			</Field>
 
-			<Field id={signUpEmailId} label="Email" error={signUpEmailError}>
+			<Field id={signUpEmailId} label="Email" error={say(signUpEmailError)}>
 				<input
 					ref={signUpEmailRef}
 					id={signUpEmailId}
@@ -460,7 +485,7 @@ const Login = () => {
 				/>
 			</Field>
 
-			<Field id={signUpPassId} label="Password" error={signUpPassError}>
+			<Field id={signUpPassId} label="Password" error={say(signUpPassError)}>
 				<div className="relative">
 					<input
 						ref={signUpPassRef}

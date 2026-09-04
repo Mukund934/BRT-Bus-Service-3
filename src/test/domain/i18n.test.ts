@@ -12,6 +12,7 @@ import { describe, expect, it } from "vitest";
 import {
   ENGLISH,
   isLocale,
+  isTranslationKey,
   loadCatalogue,
   loadedCatalogue,
   LOCALES,
@@ -172,6 +173,43 @@ describe("looking a string up", () => {
     };
 
     expect(translate(stale, "nav.timetable")).toBe("Timetable");
+  });
+});
+
+/*
+  Messages that travel as keys.
+
+  A zod schema and a Firebase error mapper both decide WHICH problem occurred,
+  in a domain that has no idea which language anybody is reading in. They
+  therefore name a key and leave the wording to whatever renders it - but zod
+  supplies its own English for any rule nobody gave a message to, so the two
+  have to be told apart at the boundary.
+*/
+describe("telling a key from a sentence", () => {
+  it("recognises a key the catalogue answers for", () => {
+    expect(isTranslationKey("validation.email.required")).toBe(true);
+    expect(isTranslationKey("auth.error.credentials")).toBe(true);
+  });
+
+  it("refuses a sentence, so it renders as itself", () => {
+    expect(isTranslationKey("Email is required")).toBe(false);
+    expect(isTranslationKey("Required")).toBe(false);
+  });
+
+  it("refuses anything that is not a string", () => {
+    expect(isTranslationKey(undefined)).toBe(false);
+    expect(isTranslationKey(null)).toBe(false);
+    expect(isTranslationKey(42)).toBe(false);
+  });
+
+  /*
+    Object prototype members are not keys. `"toString" in en` is true, and a
+    guard written that way would let `toString` through to be rendered as a
+    function body at a passenger.
+  */
+  it("refuses an inherited property name", () => {
+    expect(isTranslationKey("toString")).toBe(false);
+    expect(isTranslationKey("constructor")).toBe(false);
   });
 });
 

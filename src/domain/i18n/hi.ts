@@ -159,4 +159,34 @@ export const hi: Catalogue = {
   "plan.unservedStop":
     "{stop} प्रकाशित नेटवर्क में है, पर वहाँ से अभी कोई प्रस्थान नहीं है। समय सारणी किन स्टॉप को कवर करती है, यह देखने के लिए मार्ग देखिए।",
   "stopField.placeholder": "स्टॉप खोजने के लिए लिखिए",
+
+  "validation.generic": "कृपया अपनी जानकारी जाँचिए।",
+  "validation.email.required": "ईमेल भरना ज़रूरी है",
+  "validation.email.tooLong": "ईमेल बहुत लंबा है",
+  "validation.email.invalid": "कृपया सही ईमेल पता भरिए",
+  "validation.password.tooShort": "पासवर्ड कम से कम 6 अक्षरों का होना चाहिए",
+  "validation.password.tooLong": "पासवर्ड 128 अक्षरों से ज़्यादा नहीं हो सकता",
+  "validation.name.required": "नाम भरना ज़रूरी है",
+  "validation.name.tooLong": "नाम बहुत लंबा है",
+  "validation.name.invalid": "नाम में अमान्य अक्षर हैं",
+
+  /*
+    One string for every credential failure, exactly as in English. A more
+    natural Hindi rendering that distinguished "यह खाता मौजूद नहीं है" from
+    "पासवर्ड ग़लत है" would be better prose and a security defect.
+  */
+  "auth.error.credentials": "ईमेल या पासवर्ड ग़लत है।",
+  "auth.error.tooManyAttempts":
+    "बहुत बार कोशिश हो चुकी है। कुछ मिनट रुककर फिर कोशिश कीजिए।",
+  "auth.error.disabled": "यह खाता बंद कर दिया गया है।",
+  "auth.error.emailInUse": "इस ईमेल पते से पंजीकरण नहीं हो सकता।",
+  "auth.error.weakPassword": "कम से कम 6 अक्षरों का पासवर्ड चुनिए।",
+  "auth.error.cancelled": "साइन इन रद्द कर दिया गया।",
+  "auth.error.popupBlocked":
+    "आपके ब्राउज़र ने साइन इन विंडो रोक दी। कृपया पॉपअप की अनुमति देकर फिर कोशिश कीजिए।",
+  "auth.error.network":
+    "नेटवर्क उपलब्ध नहीं है। अपना कनेक्शन जाँचकर फिर कोशिश कीजिए।",
+  "auth.error.generic": "साइन इन नहीं हो सका। कृपया फिर कोशिश कीजिए।",
+  "auth.error.resetFailed":
+    "रीसेट ईमेल नहीं भेजा जा सका। कृपया फिर कोशिश कीजिए।",
 };

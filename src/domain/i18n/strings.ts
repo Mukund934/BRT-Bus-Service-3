@@ -111,6 +111,19 @@ export const loadCatalogue = async (
 };
 
 /**
+ * Whether a string is a key the catalogues answer for.
+ *
+ * The boundary for messages that travel as keys. A zod schema reports which
+ * rule failed rather than choosing the words, and zod supplies its own
+ * built-in text for a rule nobody gave a message to - so what arrives at the
+ * interface is USUALLY a key and occasionally an English sentence. This tells
+ * the two apart, so the sentence renders as itself instead of a passenger
+ * meeting `validation.email.required`.
+ */
+export const isTranslationKey = (value: unknown): value is TranslationKey =>
+  typeof value === "string" && Object.prototype.hasOwnProperty.call(en, value);
+
+/**
  * Whether a value is a locale this app ships.
  *
  * Used at the storage boundary: a value read back from a device is not

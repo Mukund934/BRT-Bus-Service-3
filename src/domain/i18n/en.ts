@@ -178,6 +178,47 @@ export const en = {
   "plan.unservedStop":
     "{stop} is on the published network but has no departures yet. Browse the routes to see which stops the timetable covers.",
   "stopField.placeholder": "Type to search stops",
+
+  /*
+    Form validation.
+
+    Named by the problem rather than the sentence, because the schema that
+    detects the problem should not be choosing the words - it runs in a domain
+    that has no idea which language anybody is reading in.
+  */
+  "validation.generic": "Please check your details.",
+  "validation.email.required": "Email is required",
+  "validation.email.tooLong": "Email is too long",
+  "validation.email.invalid": "Please enter a valid email address",
+  "validation.password.tooShort": "Password must be at least 6 characters",
+  "validation.password.tooLong": "Password must be at most 128 characters",
+  "validation.name.required": "Name is required",
+  "validation.name.tooLong": "Name is too long",
+  "validation.name.invalid": "Name contains invalid characters",
+
+  /*
+    Sign-in failures.
+
+    `auth.error.credentials` covers a wrong password, an unknown account, a
+    malformed address and a rejected credential, and it must stay one string
+    in every language. Splitting it - even into two Hindi sentences that read
+    more naturally - turns the form into an account-enumeration oracle, where
+    an attacker learns which addresses are registered by watching which
+    message comes back.
+  */
+  "auth.error.credentials": "Incorrect email or password.",
+  "auth.error.tooManyAttempts":
+    "Too many attempts. Please wait a few minutes and try again.",
+  "auth.error.disabled": "This account has been disabled.",
+  "auth.error.emailInUse": "That email address cannot be used to register.",
+  "auth.error.weakPassword": "Please choose a password of at least 6 characters.",
+  "auth.error.cancelled": "Sign-in was cancelled.",
+  "auth.error.popupBlocked":
+    "Your browser blocked the sign-in popup. Please allow popups and retry.",
+  "auth.error.network":
+    "Network unavailable. Please check your connection and try again.",
+  "auth.error.generic": "Sign-in failed. Please try again.",
+  "auth.error.resetFailed": "Could not send the reset email. Please try again.",
 } as const;
 
 /**

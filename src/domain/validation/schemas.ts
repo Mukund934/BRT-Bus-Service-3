@@ -13,6 +13,18 @@ import { ROUTE_IDS } from "@/domain/transit/routes";
 import { STOPS } from "@/domain/transit/stops";
 import { USER_ROLES } from "@/types/user";
 import { ANNOUNCEMENT_SEVERITIES } from "@/types/announcement";
+import type { TranslationKey } from "@/domain/i18n/en";
+
+/**
+ * Names a translation key where a validation message would go.
+ *
+ * These schemas run in a domain that has no idea which language anybody is
+ * reading in, so they report WHICH rule failed and leave the wording to
+ * whatever is rendering. The identity function exists for its type: a key
+ * that does not exist in the catalogue fails to compile here rather than
+ * rendering as `validation.email.required` at a passenger.
+ */
+const message = (key: TranslationKey): string => key;
 
 /** Stop names, validated against the canonical registry. */
 export const stopNameSchema = z.enum(STOPS);
@@ -259,9 +271,9 @@ export const announcementSchema = announcementDraftSchema.extend({
 export const emailSchema = z
   .string()
   .trim()
-  .min(1, "Email is required")
-  .max(320, "Email is too long")
-  .email("Please enter a valid email address");
+  .min(1, message("validation.email.required"))
+  .max(320, message("validation.email.tooLong"))
+  .email(message("validation.email.invalid"));
 
 /**
  * Password policy.
@@ -272,16 +284,16 @@ export const emailSchema = z
  */
 export const passwordSchema = z
   .string()
-  .min(6, "Password must be at least 6 characters")
-  .max(128, "Password must be at most 128 characters");
+  .min(6, message("validation.password.tooShort"))
+  .max(128, message("validation.password.tooLong"));
 
 export const displayNameSchema = z
   .string()
   .trim()
-  .min(1, "Name is required")
-  .max(80, "Name is too long")
+  .min(1, message("validation.name.required"))
+  .max(80, message("validation.name.tooLong"))
   // Control characters can be used to spoof rendering in the admin roster.
-  .regex(/^[^\p{Cc}\p{Cf}]+$/u, "Name contains invalid characters");
+  .regex(/^[^\p{Cc}\p{Cf}]+$/u, message("validation.name.invalid"));
 
 export const signInSchema = z.object({
   email: emailSchema,
