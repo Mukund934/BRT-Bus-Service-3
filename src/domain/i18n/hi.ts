@@ -346,6 +346,17 @@ export const hi: Catalogue = {
   "login.announce.creating": "आपका खाता बनाया जा रहा है…",
   "login.announce.resetSent":
     "अगर उस ईमेल पर खाता है, तो रीसेट लिंक भेजा जा रहा है।",
+
+  "error.generic": "कुछ गड़बड़ हो गई। कृपया फिर कोशिश कीजिए।",
+  "error.noPermission": "आपके पास यह काम करने की अनुमति नहीं है।",
+  "error.signInRequired": "जारी रखने के लिए साइन इन कीजिए।",
+  "error.network":
+    "नेटवर्क उपलब्ध नहीं है। अपना कनेक्शन जाँचकर फिर कोशिश कीजिए।",
+  "error.loadUsers": "उपयोगकर्ता लोड नहीं हो सके।",
+  "error.updateRole": "वह भूमिका नहीं बदली जा सकी।",
+  "error.loadAnnouncements": "घोषणाएँ लोड नहीं हो सकीं।",
+  "error.shareLocation": "आपकी स्थिति साझा नहीं की जा सकी।",
+
   "validation.generic": "कृपया अपनी जानकारी जाँचिए।",
   "validation.email.required": "ईमेल भरना ज़रूरी है",
   "validation.email.tooLong": "ईमेल बहुत लंबा है",

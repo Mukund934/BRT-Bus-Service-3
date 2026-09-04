@@ -43,11 +43,16 @@ export const isAuthorizationError = (error: unknown): error is AuthorizationErro
  */
 export const toSafeMessage = (
   error: unknown,
-  fallback = "Something went wrong. Please try again."
-): string => {
-  if (error instanceof AuthorizationError || error instanceof AuthenticationError) {
-    return error.message;
-  }
+  fallback: TranslationKey = "error.generic"
+): TranslationKey => {
+  /*
+    Matched on the class rather than passed through as `error.message`. A
+    thrown Error's message is a developer artefact - it goes to a log and a
+    stack trace - and the words a passenger reads are chosen where the
+    language is known.
+  */
+  if (error instanceof AuthorizationError) return "error.noPermission";
+  if (error instanceof AuthenticationError) return "error.signInRequired";
 
   if (typeof error === "object" && error !== null && "code" in error) {
     const code = String((error as { code: unknown }).code);
@@ -55,11 +60,11 @@ export const toSafeMessage = (
     // Permission denials are expected when rules do their job; they are not
     // a bug and should read as a plain refusal.
     if (code.includes("permission-denied") || code.includes("PERMISSION_DENIED")) {
-      return "You do not have permission to perform this action.";
+      return "error.noPermission";
     }
 
     if (code.includes("unavailable") || code.includes("network")) {
-      return "Network unavailable. Please check your connection and try again.";
+      return "error.network";
     }
   }
 

@@ -3,6 +3,7 @@ import { Megaphone, Plus, Trash2, X } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { PERMISSIONS, can } from "@/domain/auth/permissions";
 import { toSafeMessage } from "@/domain/auth/errors";
+import { useTranslation } from "@/contexts/LocaleContext";
 import {
   deleteAnnouncement,
   fetchAllAnnouncements,
@@ -37,6 +38,7 @@ const SEVERITY_STYLES: Record<AnnouncementSeverity, string> = {
 };
 
 const AnnouncementManager = () => {
+  const { t } = useTranslation();
   const { actor } = useAuth();
 
   const mayManage = can(actor, PERMISSIONS.MANAGE_ANNOUNCEMENTS);
@@ -73,11 +75,11 @@ const AnnouncementManager = () => {
     try {
       setAnnouncements(await fetchAllAnnouncements(actor));
     } catch (err) {
-      setError(toSafeMessage(err, "Could not load announcements."));
+      setError(t(toSafeMessage(err, "error.loadAnnouncements")));
     } finally {
       setLoading(false);
     }
-  }, [actor, mayManage]);
+  }, [actor, mayManage, t]);
 
   useEffect(() => {
     void load();

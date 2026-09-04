@@ -426,6 +426,24 @@ export const en = {
   "login.announce.creating": "Creating your account…",
   "login.announce.resetSent":
     "If that email has an account, a reset link is on its way.",
+
+  /*
+    What is safe to show when something failed.
+
+    Never a Firebase code, an index hint or a project id - those go to the
+    console for whoever debugs them. A rules refusal is not a bug and reads as
+    a plain refusal.
+  */
+  "error.generic": "Something went wrong. Please try again.",
+  "error.noPermission": "You do not have permission to perform this action.",
+  "error.signInRequired": "Please sign in to continue.",
+  "error.network":
+    "Network unavailable. Please check your connection and try again.",
+  "error.loadUsers": "Could not load users.",
+  "error.updateRole": "Could not update that role.",
+  "error.loadAnnouncements": "Could not load announcements.",
+  "error.shareLocation": "Could not share your location.",
+
   "validation.generic": "Please check your details.",
   "validation.email.required": "Email is required",
   "validation.email.tooLong": "Email is too long",

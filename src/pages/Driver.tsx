@@ -97,7 +97,7 @@ const Driver = () => {
             })
             .catch((err) => {
               if (cancelled) return;
-              setError(toSafeMessage(err, "Could not share your location."));
+              setError(toSafeMessage(err, "error.shareLocation"));
               setIsSharing(false);
             });
         },

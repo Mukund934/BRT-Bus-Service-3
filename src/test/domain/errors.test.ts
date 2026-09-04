@@ -157,22 +157,25 @@ describe("authorization errors", () => {
 
 describe("turning any thrown value into something safe to show", () => {
   it("passes through our own authorization message", () => {
-    expect(toSafeMessage(new AuthorizationError())).toMatch(/do not have permission/i);
+    expect(toSafeMessage(new AuthorizationError())).toBe("error.noPermission");
+    expect(en["error.noPermission"]).toMatch(/do not have permission/i);
   });
 
   it("passes through our own authentication message", () => {
-    expect(toSafeMessage(new AuthenticationError())).toMatch(/sign in/i);
+    expect(toSafeMessage(new AuthenticationError())).toBe("error.signInRequired");
+    expect(en["error.signInRequired"]).toMatch(/sign in/i);
   });
 
   it("reads a rules rejection as a plain refusal", () => {
     // Permission denied is the rules doing their job, not a bug.
-    expect(toSafeMessage(firebaseError("permission-denied"))).toMatch(
-      /do not have permission/i
+    expect(toSafeMessage(firebaseError("permission-denied"))).toBe(
+      "error.noPermission"
     );
   });
 
   it("distinguishes a network problem so the user knows to retry", () => {
-    expect(toSafeMessage(firebaseError("unavailable"))).toMatch(/network/i);
+    expect(toSafeMessage(firebaseError("unavailable"))).toBe("error.network");
+    expect(en["error.network"]).toMatch(/network/i);
   });
 
   it("collapses anything unrecognised rather than leaking backend detail", () => {
@@ -182,8 +185,9 @@ describe("turning any thrown value into something safe to show", () => {
 
     const message = toSafeMessage(leaky);
 
-    expect(message).toBe("Something went wrong. Please try again.");
-    expect(message).not.toMatch(/brtbus/);
+    expect(message).toBe("error.generic");
+    expect(en[message]).not.toMatch(/brtbus/);
+    expect(hi[message]).not.toMatch(/brtbus/);
   });
 
   /*
@@ -199,9 +203,10 @@ describe("turning any thrown value into something safe to show", () => {
   });
 
   it("accepts a caller-supplied fallback", () => {
-    expect(toSafeMessage(new Error("x"), "Could not load users.")).toBe(
-      "Could not load users."
+    expect(toSafeMessage(new Error("x"), "error.loadUsers")).toBe(
+      "error.loadUsers"
     );
+    expect(en["error.loadUsers"]).toBe("Could not load users.");
   });
 });
 

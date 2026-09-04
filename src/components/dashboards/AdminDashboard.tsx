@@ -8,6 +8,7 @@ import {
 } from "@/services/auditService";
 import { useAuth } from "@/contexts/AuthContext";
 import { toSafeMessage } from "@/domain/auth/errors";
+import { useTranslation } from "@/contexts/LocaleContext";
 import { PERMISSIONS, can } from "@/domain/auth/permissions";
 import {
   MAX_USERS_PER_READ,
@@ -35,6 +36,7 @@ const ROLE_LABELS: Record<UserRole, string> = {
 };
 
 const AdminDashboard = ({ onError }: AdminDashboardProps) => {
+  const { t } = useTranslation();
   const { user, actor, refreshUserRecord } = useAuth();
 
   const mayViewPanel = can(actor, PERMISSIONS.VIEW_ADMIN_PANEL);
@@ -63,13 +65,13 @@ const AdminDashboard = ({ onError }: AdminDashboardProps) => {
       setTruncated(roster.truncated);
       setError("");
     } catch (err) {
-      const message = toSafeMessage(err, "Could not load users.");
+      const message = t(toSafeMessage(err, "error.loadUsers"));
       setError(message);
       onError?.(message);
     } finally {
       setLoading(false);
     }
-  }, [actor, onError]);
+  }, [actor, onError, t]);
 
   useEffect(() => {
     if (!mayViewPanel) {
@@ -169,7 +171,7 @@ const AdminDashboard = ({ onError }: AdminDashboardProps) => {
       // the admin panel and admin privileges until a full reload.
       if (userId === user?.uid) await refreshUserRecord();
     } catch (err) {
-      const message = toSafeMessage(err, "Could not update that role.");
+      const message = t(toSafeMessage(err, "error.updateRole"));
       setError(message);
       onError?.(message);
     } finally {
