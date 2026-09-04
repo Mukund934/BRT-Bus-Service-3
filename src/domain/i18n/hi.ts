@@ -433,6 +433,16 @@ export const hi: Catalogue = {
   "page.driver": "चालक लाइव ट्रैकिंग",
 
   /* Says no more than the English does about what lies behind the refusal. */
+  "help.refusalsIntro": "इन कारणों से बुकिंग अस्वीकार होती है:",
+  "help.state.active":
+    "— बुक है और प्रतीक्षा में, प्रस्थान से {minutes} मिनट से ज़्यादा पहले।",
+  "help.state.boardingSoon": "— प्रस्थान से {minutes} मिनट के भीतर।",
+  "help.state.inTransit": "— निर्धारित यात्रा चल रही है।",
+  "help.state.completed": "— बस आपके गंतव्य तक पहुँच चुकी है।",
+  "help.state.cancelled": "— आपने इसे रद्द किया। इसे वापस नहीं लिया जा सकता।",
+  "help.statesFollowClock":
+    "स्थितियाँ घड़ी के हिसाब से बदलती हैं, इसलिए टिकट अपने आप एक से दूसरी में जाता है, आपको कुछ रीफ़्रेश नहीं करना पड़ता।",
+
   "guard.checking": "आपकी पहुँच जाँची जा रही है…",
   "guard.deniedTitle": "पहुँच नहीं है",
   "guard.deniedBody": "आपको यह पेज देखने की अनुमति नहीं है।",

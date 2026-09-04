@@ -124,7 +124,7 @@ const Help = () => {
 
             <Section title="Booking a ticket">
               <Answer question="What stops a booking from going through?">
-                <p>These are the reasons a booking is refused:</p>
+                <p>{t("help.refusalsIntro")}</p>
                 <ul className="list-disc pl-5 space-y-1">
                   <li>{t(BOOKING_FAILURE_MESSAGES.NOT_AUTHENTICATED)}</li>
                   <li>{t(BOOKING_FAILURE_MESSAGES.ALREADY_DEPARTED)}</li>
@@ -145,30 +145,34 @@ const Help = () => {
               <Answer question="What do the ticket states mean?">
                 <ul className="list-disc pl-5 space-y-1">
                   <li>
-                    <span className="font-medium">{t(STATUS_LABELS.ACTIVE)}</span> — booked
-                    and waiting, more than {TICKET_RULES.BOARDING_WINDOW_MINUTES} minutes
-                    before departure.
+                    <span className="font-medium">{t(STATUS_LABELS.ACTIVE)}</span>{" "}
+                    {t("help.state.active", {
+                      minutes: TICKET_RULES.BOARDING_WINDOW_MINUTES,
+                    })}
                   </li>
                   <li>
-                    <span className="font-medium">{t(STATUS_LABELS.BOARDING_SOON)}</span> —
-                    within {TICKET_RULES.BOARDING_WINDOW_MINUTES} minutes of departure.
+                    <span className="font-medium">
+                      {t(STATUS_LABELS.BOARDING_SOON)}
+                    </span>{" "}
+                    {t("help.state.boardingSoon", {
+                      minutes: TICKET_RULES.BOARDING_WINDOW_MINUTES,
+                    })}
                   </li>
                   <li>
-                    <span className="font-medium">{t(STATUS_LABELS.IN_TRANSIT)}</span> — the
-                    scheduled journey is under way.
+                    <span className="font-medium">{t(STATUS_LABELS.IN_TRANSIT)}</span>{" "}
+                    {t("help.state.inTransit")}
                   </li>
                   <li>
-                    <span className="font-medium">{t(STATUS_LABELS.COMPLETED)}</span> — the
-                    bus has reached your destination.
+                    <span className="font-medium">{t(STATUS_LABELS.COMPLETED)}</span>{" "}
+                    {t("help.state.completed")}
                   </li>
                   <li>
-                    <span className="font-medium">{t(STATUS_LABELS.CANCELLED)}</span> — you
-                    cancelled it. This cannot be undone.
+                    <span className="font-medium">{t(STATUS_LABELS.CANCELLED)}</span>{" "}
+                    {t("help.state.cancelled")}
                   </li>
                 </ul>
                 <p>
-                  States follow the clock, so a ticket moves through them on its own
-                  without you refreshing anything.
+                  {t("help.statesFollowClock")}
                 </p>
               </Answer>
 

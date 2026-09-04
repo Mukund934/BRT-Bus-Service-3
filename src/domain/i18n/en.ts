@@ -551,6 +551,25 @@ export const en = {
     page contains or which role would grant it - a refusal should not double
     as a map of the app, in any language.
   */
+  /*
+    Only the two blocks of /help that render shared registries. Keying those
+    registries made the STATUS WORDS Hindi while the sentences beside them
+    stayed English, and a half-Hindi line is worse than an English one - so
+    the sentences beside them come too. The rest of /help is long-form copy
+    and belongs to a later stage.
+
+    The boarding window is a number substituted in, never translated.
+  */
+  "help.refusalsIntro": "These are the reasons a booking is refused:",
+  "help.state.active":
+    "— booked and waiting, more than {minutes} minutes before departure.",
+  "help.state.boardingSoon": "— within {minutes} minutes of departure.",
+  "help.state.inTransit": "— the scheduled journey is under way.",
+  "help.state.completed": "— the bus has reached your destination.",
+  "help.state.cancelled": "— you cancelled it. This cannot be undone.",
+  "help.statesFollowClock":
+    "States follow the clock, so a ticket moves through them on its own without you refreshing anything.",
+
   "guard.checking": "Checking your access…",
   "guard.deniedTitle": "Access denied",
   "guard.deniedBody": "You do not have permission to view this page.",
