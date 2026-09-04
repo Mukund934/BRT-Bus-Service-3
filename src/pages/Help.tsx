@@ -145,24 +145,24 @@ const Help = () => {
               <Answer question="What do the ticket states mean?">
                 <ul className="list-disc pl-5 space-y-1">
                   <li>
-                    <span className="font-medium">{STATUS_LABELS.ACTIVE}</span> — booked
+                    <span className="font-medium">{t(STATUS_LABELS.ACTIVE)}</span> — booked
                     and waiting, more than {TICKET_RULES.BOARDING_WINDOW_MINUTES} minutes
                     before departure.
                   </li>
                   <li>
-                    <span className="font-medium">{STATUS_LABELS.BOARDING_SOON}</span> —
+                    <span className="font-medium">{t(STATUS_LABELS.BOARDING_SOON)}</span> —
                     within {TICKET_RULES.BOARDING_WINDOW_MINUTES} minutes of departure.
                   </li>
                   <li>
-                    <span className="font-medium">{STATUS_LABELS.IN_TRANSIT}</span> — the
+                    <span className="font-medium">{t(STATUS_LABELS.IN_TRANSIT)}</span> — the
                     scheduled journey is under way.
                   </li>
                   <li>
-                    <span className="font-medium">{STATUS_LABELS.COMPLETED}</span> — the
+                    <span className="font-medium">{t(STATUS_LABELS.COMPLETED)}</span> — the
                     bus has reached your destination.
                   </li>
                   <li>
-                    <span className="font-medium">{STATUS_LABELS.CANCELLED}</span> — you
+                    <span className="font-medium">{t(STATUS_LABELS.CANCELLED)}</span> — you
                     cancelled it. This cannot be undone.
                   </li>
                 </ul>

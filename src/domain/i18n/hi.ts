@@ -236,6 +236,14 @@ export const hi: Catalogue = {
     "भुगतान सफल। {from} से {to} तक का आपका टिकट पक्का हो गया है।",
   "payment.announce.retry": "भुगतान असफल। कृपया फिर कोशिश कीजिए।",
 
+
+  "ticket.status.pending": "बाकी",
+  "ticket.status.active": "चालू",
+  "ticket.status.boardingSoon": "चढ़ने का समय",
+  "ticket.status.inTransit": "यात्रा में",
+  "ticket.status.completed": "पूरी हुई",
+  "ticket.status.cancelled": "रद्द",
+
   "login.signIn.title": "साइन इन करें",
   "login.signUp.title": "खाता बनाएँ",
   "login.reset.title": "पासवर्ड रीसेट करें",

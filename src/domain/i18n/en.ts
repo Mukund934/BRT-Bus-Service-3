@@ -288,6 +288,19 @@ export const en = {
     "Payment successful. Your ticket from {from} to {to} is confirmed.",
   "payment.announce.retry": "Payment failed. Please try again.",
 
+
+  /*
+    What a ticket says it is. Shown on the ticket itself, in the history list
+    and explained on /help - three surfaces that have to agree, which is why
+    the status engine names a key rather than each screen writing its own.
+  */
+  "ticket.status.pending": "Pending",
+  "ticket.status.active": "Active",
+  "ticket.status.boardingSoon": "Boarding Soon",
+  "ticket.status.inTransit": "In Transit",
+  "ticket.status.completed": "Completed",
+  "ticket.status.cancelled": "Cancelled",
+
   "login.signIn.title": "Sign in",
   "login.signUp.title": "Create account",
   "login.reset.title": "Reset password",

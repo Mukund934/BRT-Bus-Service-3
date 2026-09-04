@@ -7,6 +7,7 @@ import { useAnnounce } from "@/components/a11y/LiveAnnouncer";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTickets } from "@/contexts/TicketContext";
 import { STATUS_LABELS } from "@/domain/ticket/status";
+import { useTranslation } from "@/contexts/LocaleContext";
 import type { TicketStatus } from "@/domain/ticket/types";
 import { formatDate } from "@/domain/time";
 import { requestAlertPermission } from "@/services/notificationService";
@@ -35,6 +36,7 @@ const UserDashboard = () => {
   const { user, profile, refreshUserRecord } = useAuth();
   const { activeTicket, ticketHistory, stats, cancelTicket } = useTickets();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const announce = useAnnounce();
 
   const [filter, setFilter] = useState<HistoryFilter>("ALL");
@@ -269,7 +271,7 @@ const UserDashboard = () => {
                         HISTORY_STYLES[ticket.status] ?? "bg-gray-200 text-gray-700"
                       }`}
                     >
-                      {STATUS_LABELS[ticket.status]}
+                      {t(STATUS_LABELS[ticket.status])}
                     </span>
                   </div>
                 </li>

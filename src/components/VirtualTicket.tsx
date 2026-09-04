@@ -4,6 +4,7 @@ import { Check, Copy, Download } from "lucide-react";
 import { POLLING, QR_CONFIG } from "@/constants/config";
 import { useAnnounce } from "@/components/a11y/LiveAnnouncer";
 import { STATUS_LABELS, isLiveStatus } from "@/domain/ticket/status";
+import { useTranslation } from "@/contexts/LocaleContext";
 import type { Ticket, TicketStatus } from "@/domain/ticket/types";
 import { formatCountdown } from "@/domain/time";
 
@@ -33,6 +34,7 @@ const STATUS_STYLES: Record<TicketStatus, string> = {
 const ANNOUNCE_AT_MINUTES = [30, 10, 5, 1];
 
 const VirtualTicket = ({ ticket, onCancel }: VirtualTicketProps) => {
+  const { t } = useTranslation();
   const [timeLeft, setTimeLeft] = useState("");
   const [copied, setCopied] = useState(false);
   const qrRef = useRef<HTMLDivElement>(null);
@@ -126,7 +128,7 @@ const VirtualTicket = ({ ticket, onCancel }: VirtualTicketProps) => {
             }`}
           >
             <span className="sr-only">Ticket status: </span>
-            {STATUS_LABELS[ticket.status]}
+            {t(STATUS_LABELS[ticket.status])}
           </span>
         </div>
       </div>

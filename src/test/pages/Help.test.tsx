@@ -95,7 +95,7 @@ describe("what it says about a ticket", () => {
       "COMPLETED",
       "CANCELLED",
     ] as const) {
-      expect(screen.getByText(STATUS_LABELS[status])).toBeInTheDocument();
+      expect(screen.getByText(en[STATUS_LABELS[status]])).toBeInTheDocument();
     }
   });
 
