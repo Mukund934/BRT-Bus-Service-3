@@ -2,6 +2,7 @@ import { useState } from "react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { useAuth } from "@/contexts/AuthContext";
+import { useTranslation } from "@/contexts/LocaleContext";
 import { PERMISSIONS, can } from "@/domain/auth/permissions";
 import UserDashboard from "@/components/dashboards/UserDashboard";
 import DriverDashboard from "@/components/dashboards/DriverDashboard";
@@ -9,6 +10,7 @@ import AdminDashboard from "@/components/dashboards/AdminDashboard";
 import { AlertCircle, Loader } from "lucide-react";
 
 const Dashboard = () => {
+  const { t } = useTranslation();
   const { actor, loading } = useAuth();
   const [error, setError] = useState<string | null>(null);
 
@@ -44,7 +46,7 @@ const Dashboard = () => {
               onClick={() => setError(null)}
               className="ml-auto text-destructive hover:text-destructive font-medium touch-target px-2"
             >
-              Dismiss
+              {t("action.dismiss")}
               <span className="sr-only"> error message</span>
             </button>
           </div>

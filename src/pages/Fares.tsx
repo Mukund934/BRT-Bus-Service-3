@@ -82,7 +82,7 @@ const Fares = () => {
           <div className="brt-search-card animate-fade-in-up animate-stagger-1">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <StopField
-                label="From"
+                label={t("fares.from")}
                 value={from}
                 onChange={setFrom}
                 exclude={destination ?? ""}
@@ -115,7 +115,7 @@ const Fares = () => {
                     </div>
 
                     <p className="text-3xl font-bold text-primary">
-                      {fare === null ? "Not published" : `₹${fare}/-`}
+                      {fare === null ? t("fares.notPublished") : `₹${fare}/-`}
                     </p>
                   </div>
 
@@ -221,14 +221,14 @@ const Fares = () => {
                   className="px-6 py-3 rounded-xl border border-border text-foreground font-medium transition-colors duration-state hover:bg-secondary inline-flex items-center gap-2 touch-target"
                 >
                   <Download className="w-4 h-4" aria-hidden="true" />
-                  Download
+                  {t("fares.download")}
                 </a>
               </div>
 
               <object
                 data={FARE_CHART_URL}
                 type="application/pdf"
-                title="Official Tatpar BRTS fare chart"
+                title={t("fares.chartTitle")}
                 className="w-full h-[420px] md:h-[560px] rounded-xl border border-border"
               >
                 <div className="p-6 text-center">

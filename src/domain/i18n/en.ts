@@ -43,6 +43,16 @@ export const en = {
   "nav.closeMenu": "Close menu",
   "nav.primary": "Primary",
 
+  /*
+    The wordmark itself is NOT here. "BRT Bus Service" is a name, and a name
+    is not translated - it is allow-listed in the surface guard instead. The
+    line under it says something, so it is.
+  */
+  "brand.tagline": "Your Journey, Our Priority",
+  "nav.homeAria": "{brand}, go to home page",
+  "footer.quickLinks": "Quick Links",
+  "footer.blurb":
+    "Your trusted partner for reliable and comfortable bus transportation services.",
   "footer.location": "Location",
   "footer.explore": "Explore",
   "footer.rights": "© BRT Bus Services. All Rights Reserved.",
@@ -178,6 +188,21 @@ export const en = {
   "timetable.now": "Now {time}",
   "timetable.noneForDirection":
     "No services are published for this direction on the {service}.",
+
+  "plan.officialFare": "Official fare",
+  "plan.bookTicket": "Book ticket",
+  "plan.todayOnly":
+    "Tickets are issued for travel today, so booking is available on today's departures only.",
+  "plan.noTrip":
+    "No published trip runs from {from} to {to} on the selected day after {time}. Both directions are searched; try an earlier time, or check the timetable for the days this journey runs.",
+  "home.busAlt": "A BRT bus on the Raipur to Naya Raipur corridor",
+  "home.places.short":
+    "Campuses, hospitals, government offices and attractions across Nava Raipur, each with its nearest BRT stop.",
+  "fares.from": "From",
+  "fares.notPublished": "Not published",
+  "fares.download": "Download",
+  "fares.chartTitle": "Official Tatpar BRTS fare chart",
+  "action.dismiss": "Dismiss",
 
   "plan.title": "Plan your journey",
   "plan.intro":

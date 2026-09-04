@@ -1,6 +1,7 @@
 import { MapPin } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "@/contexts/LocaleContext";
+import { BRAND_NAME } from "@/constants/config";
 import type { TranslationKey } from "@/domain/i18n/strings";
 
 interface FooterProps {
@@ -52,17 +53,16 @@ const Footer = ({ text }: FooterProps) => {
 							</div>
 							<div className="flex flex-col">
 								<span className="text-lg lg:text-xl font-bold tracking-tight">
-									BRT Bus Service
+									{BRAND_NAME}
 								</span>
 								<span className="text-xs text-primary-foreground/90 hidden sm:block">
-									Your Journey, Our Priority
+									{t("brand.tagline")}
 								</span>
 							</div>
 						</Link>
 
 						<p className="text-primary-foreground/90 text-sm leading-relaxed">
-							Your trusted partner for reliable and comfortable
-							bus transportation services.
+							{t("footer.blurb")}
 						</p>
 					</div>
 
@@ -73,7 +73,7 @@ const Footer = ({ text }: FooterProps) => {
 					*/}
 					<nav aria-labelledby="footer-links-heading">
 						<h2 id="footer-links-heading" className="font-semibold text-lg mb-4">
-							Quick Links
+							{t("footer.quickLinks")}
 						</h2>
 						<ul className="space-y-2 text-sm">
 							{FOOTER_LINKS.map(({ to, labelKey }) => (

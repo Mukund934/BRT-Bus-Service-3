@@ -297,7 +297,7 @@ const Plan = () => {
 
                     <div className="text-right">
                       <p className="text-xs text-muted-foreground">
-                        Official fare
+                        {t("plan.officialFare")}
                       </p>
                       <p className="text-2xl font-bold text-primary">
                         {fare === null ? t("plan.notPublished") : `₹${fare}/-`}
@@ -325,10 +325,11 @@ const Plan = () => {
                       </p>
                     ) : (
                       <p className="text-sm text-muted-foreground">
-                        No published trip runs from {origin} to {destination} on
-                        the selected day after {searchedTime}. Both directions
-                        are searched; try an earlier time, or check the
-                        timetable for the days this journey runs.
+                        {t("plan.noTrip", {
+                          from: origin,
+                          to: destination,
+                          time: searchedTime,
+                        })}
                       </p>
                     )}
                   </div>
@@ -373,7 +374,7 @@ const Plan = () => {
                               onClick={() => handleBook(option.trip)}
                               className="brt-button disabled:opacity-40 disabled:cursor-not-allowed touch-target"
                             >
-                              Book ticket
+                              {t("plan.bookTicket")}
                             </button>
                           </div>
                         </div>
@@ -382,8 +383,7 @@ const Plan = () => {
 
                     {!bookable && (
                       <p className="text-sm text-muted-foreground mt-4">
-                        Tickets are issued for travel today, so booking is
-                        available on today's departures only.
+                        {t("plan.todayOnly")}
                       </p>
                     )}
                   </>

@@ -45,6 +45,11 @@ export const hi: Catalogue = {
   "nav.closeMenu": "मेन्यू बंद करें",
   "nav.primary": "मुख्य",
 
+  "brand.tagline": "आपकी यात्रा, हमारी प्राथमिकता",
+  "nav.homeAria": "{brand}, होम पेज पर जाइए",
+  "footer.quickLinks": "मुख्य लिंक",
+  "footer.blurb":
+    "भरोसेमंद और आरामदायक बस सेवा के लिए आपका विश्वसनीय साथी।",
   "footer.location": "स्थान",
   "footer.explore": "और देखें",
   "footer.rights": "© BRT Bus Services. सर्वाधिकार सुरक्षित।",
@@ -155,6 +160,21 @@ export const hi: Catalogue = {
   "timetable.now": "अभी {time}",
   "timetable.noneForDirection":
     "इस दिशा के लिए {service} पर कोई सेवा प्रकाशित नहीं है।",
+
+  "plan.officialFare": "आधिकारिक किराया",
+  "plan.bookTicket": "टिकट बुक करें",
+  "plan.todayOnly":
+    "टिकट आज की यात्रा के लिए ही जारी होते हैं, इसलिए बुकिंग केवल आज के प्रस्थानों पर उपलब्ध है।",
+  "plan.noTrip":
+    "चुने हुए दिन {time} के बाद {from} से {to} तक कोई प्रकाशित यात्रा नहीं चलती। दोनों दिशाएँ खोजी जाती हैं; कोई पहले का समय आज़माइए, या समय सारणी में देखिए कि यह यात्रा किन दिनों चलती है।",
+  "home.busAlt": "रायपुर से नया रायपुर कॉरिडोर पर एक BRT बस",
+  "home.places.short":
+    "नवा रायपुर के परिसर, अस्पताल, सरकारी कार्यालय और दर्शनीय स्थल — हर एक के पास का BRT स्टॉप साथ में।",
+  "fares.from": "कहाँ से",
+  "fares.notPublished": "प्रकाशित नहीं",
+  "fares.download": "डाउनलोड",
+  "fares.chartTitle": "आधिकारिक Tatpar BRTS किराया सूची",
+  "action.dismiss": "हटाएँ",
 
   "plan.title": "अपनी यात्रा की योजना बनाइए",
   "plan.intro":

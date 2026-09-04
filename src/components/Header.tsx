@@ -2,6 +2,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTranslation } from "@/contexts/LocaleContext";
 import { LOCALES, LOCALE_NAMES, type TranslationKey } from "@/domain/i18n/strings";
+import { BRAND_NAME } from "@/constants/config";
 import type { LucideIcon } from "lucide-react";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import {
@@ -198,7 +199,7 @@ const Header = () => {
 					<Link
 						to="/"
 						className="flex items-center gap-3 text-white group flex-shrink-0 rounded-xl"
-						aria-label="BRT Bus Service, go to home page"
+						aria-label={t("nav.homeAria", { brand: BRAND_NAME })}
 					>
 						<div className="p-[2px] rounded-xl bg-white/20">
 							<div className="bg-white/10 rounded-xl p-2 group-hover:bg-white/20 transition duration-enter">
@@ -212,10 +213,10 @@ const Header = () => {
 						</div>
 						<div className="hidden sm:flex flex-col">
 							<span className="text-lg lg:text-xl font-semibold tracking-tight">
-								BRT Bus Service
+								{BRAND_NAME}
 							</span>
 							<span className="text-xs text-white/90">
-								Your Journey, Our Priority
+								{t("brand.tagline")}
 							</span>
 						</div>
 					</Link>

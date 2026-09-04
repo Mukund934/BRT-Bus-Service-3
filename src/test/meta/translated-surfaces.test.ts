@@ -16,58 +16,52 @@
  * keeps its English - and these files are full of branches.
  */
 
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 /*
-  Every translated surface. A file joins this list when it is translated, and
-  the list is the record of what has been done - so adding a screen here
-  before wiring it fails immediately, which is the point.
+  Every page and every component, found rather than listed.
 
-  As of stage 4 that is the whole interface: every page and every component a
-  passenger, a driver or an operator can reach.
+  This was a hand-written array, and that is exactly how four surfaces stayed
+  English through two translation stages: they were never added to it, so the
+  guard reported nothing and the gap looked like completeness. A list of what
+  to check is a list that goes stale, and it goes stale silently.
+
+  Enumerated from the directories instead. A new page is covered the day it is
+  written, without anybody remembering to say so.
 */
 const SURFACES = [
-  "src/pages/About.tsx",
-  "src/pages/Help.tsx",
-  "src/pages/Contact.tsx",
-  "src/pages/NotFound.tsx",
-  "src/pages/Search.tsx",
-  "src/pages/MapPage.tsx",
-  "src/pages/NearbyPlaces.tsx",
-  "src/pages/PlaceDetail.tsx",
-  "src/pages/RouteExplorer.tsx",
-  "src/pages/Login.tsx",
-  "src/pages/Timetable.tsx",
-  "src/pages/Driver.tsx",
-  "src/components/NetworkTable.tsx",
-  "src/components/JourneyOutlook.tsx",
-  "src/components/JourneyShortcuts.tsx",
-  "src/components/ServiceAlerts.tsx",
-  "src/components/RouteStopList.tsx",
-  "src/components/BookingModal.tsx",
-  "src/components/PaymentModal.tsx",
-  "src/components/VirtualTicket.tsx",
-  "src/components/StopField.tsx",
-  "src/components/routing/RouteGuards.tsx",
-  "src/components/a11y/RouteChangeHandler.tsx",
-  "src/components/ErrorBoundary.tsx",
-  "src/components/NotificationPopup.tsx",
-  "src/components/dashboards/AdminDashboard.tsx",
-  "src/components/dashboards/AnnouncementManager.tsx",
-  "src/components/dashboards/FleetStatus.tsx",
-  "src/components/dashboards/UserDashboard.tsx",
-  "src/components/dashboards/DriverDashboard.tsx",
+  ...readdirSync("src/pages")
+    .filter((name) => name.endsWith(".tsx"))
+    .map((name) => `src/pages/${name}`),
+  ...componentFiles("src/components"),
 ];
 
 /*
-  English that is allowed to stay, each with the reason it is not ours to
-  translate. A name is not copy.
+  Vendored shadcn primitives are excluded: they are third-party building
+  blocks with their own copy conventions, none of it ours to translate. Every
+  other component is in.
 */
-const PUBLISHED: Record<string, string[]> = {
-  /* The operator's name, printed on the ticket as they publish it. */
-  "src/components/VirtualTicket.tsx": ["BRT Bus Service"],
-};
+function componentFiles(dir: string): string[] {
+  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    const path = `${dir}/${entry.name}`;
+
+    if (entry.isDirectory()) return entry.name === "ui" ? [] : componentFiles(path);
+
+    return entry.name.endsWith(".tsx") ? [path] : [];
+  });
+}
+
+/*
+  English that is allowed to stay, per file, each with the reason it is not
+  ours to translate.
+
+  Empty, and worth keeping empty. The one entry it held was the wordmark on
+  the ticket, and the better fix was to stop writing the name out four times:
+  it is `BRAND_NAME` now, so no file contains it as prose and nothing needs
+  excusing.
+*/
+const PUBLISHED: Record<string, string[]> = {};
 
 /** Attributes whose value a person reads or hears. */
 const SPOKEN = /(?:aria-label|alt|title|placeholder)="([^"]{4,})"/g;
@@ -160,9 +154,18 @@ describe("screens that are supposed to be translated", () => {
     );
   });
 
-  it("reads every surface it names", () => {
+  /*
+    The list is derived now, so the thing worth asserting is that it found a
+    plausible number of files. An empty or near-empty enumeration would make
+    every check above pass while inspecting nothing.
+  */
+  it("finds every page and component", () => {
+    expect(SURFACES.length).toBeGreaterThan(25);
+    expect(SURFACES.filter((file) => file.startsWith("src/pages/")).length)
+      .toBeGreaterThan(10);
+
     for (const file of SURFACES) {
-      expect(readFileSync(file, "utf8").length).toBeGreaterThan(500);
+      expect(readFileSync(file, "utf8").length).toBeGreaterThan(200);
     }
   });
 });

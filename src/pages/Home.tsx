@@ -139,7 +139,7 @@ const Home = () => {
         */}
         <img
           src={heroBus}
-          alt="A BRT bus on the Raipur to Naya Raipur corridor"
+          alt={t("home.busAlt")}
           width={1080}
           height={572}
           {...{ fetchpriority: "high" }}
@@ -284,8 +284,7 @@ const Home = () => {
               </h2>
 
               <p className="text-muted-foreground text-[15px] md:text-[16px] mt-3 max-w-2xl">
-                Campuses, hospitals, government offices and attractions across
-                Nava Raipur, each with its nearest BRT stop.
+                {t("home.places.short")}
               </p>
             </div>
 

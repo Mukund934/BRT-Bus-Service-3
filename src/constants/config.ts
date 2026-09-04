@@ -6,6 +6,15 @@
  * this file - those live under `src/domain`.
  */
 
+/**
+ * What the service is called.
+ *
+ * A name, not copy: it is never translated, and it is not in the string
+ * catalogues for that reason. It was written out in four places, so a rename
+ * would have had to find all four.
+ */
+export const BRAND_NAME = "BRT Bus Service";
+
 /** Ticket lifecycle timing rules. */
 export const TICKET_RULES = {
   /** Minutes a ticket stays valid after its scheduled arrival. */

@@ -12,6 +12,7 @@
 import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { setPageDescription } from "@/lib/page-meta";
+import { BRAND_NAME } from "@/constants/config";
 import { useAnnounce } from "./LiveAnnouncer";
 import { useTranslation } from "@/contexts/LocaleContext";
 import { en, type TranslationKey } from "@/domain/i18n/en";
@@ -118,7 +119,7 @@ export const RouteChangeHandler = () => {
 
     const title = titleFor(pathname);
 
-    document.title = `${en[title]} · BRT Bus Service`;
+    document.title = `${en[title]} · ${BRAND_NAME}`;
     setPageDescription(ROUTE_DESCRIPTIONS[pathname]);
     announce(t("route.loaded", { page: t(title) }));
   }, [pathname, announce, t]);

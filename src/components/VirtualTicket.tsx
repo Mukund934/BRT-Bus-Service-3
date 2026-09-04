@@ -4,6 +4,7 @@ import { Check, Copy, Download } from "lucide-react";
 import { POLLING, QR_CONFIG } from "@/constants/config";
 import { useAnnounce } from "@/components/a11y/LiveAnnouncer";
 import { STATUS_LABELS, isLiveStatus } from "@/domain/ticket/status";
+import { BRAND_NAME } from "@/constants/config";
 import { useTranslation } from "@/contexts/LocaleContext";
 import type { Ticket, TicketStatus } from "@/domain/ticket/types";
 import { formatCountdown } from "@/domain/time";
@@ -119,7 +120,7 @@ const VirtualTicket = ({ ticket, onCancel }: VirtualTicketProps) => {
         <div className="flex items-center justify-between gap-3">
           <div>
             <p className="text-xs uppercase tracking-widest opacity-80">
-              BRT Bus Service
+              {BRAND_NAME}
             </p>
             <h3 id={headingId} className="text-lg font-bold tracking-tight">
               {t("ticket.heading", {
