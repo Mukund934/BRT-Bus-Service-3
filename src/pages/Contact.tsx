@@ -1,4 +1,5 @@
 import Header from "@/components/Header";
+import { useTranslation } from "@/contexts/LocaleContext";
 import Footer from "@/components/Footer";
 import ContactCard from "@/components/ContactCard";
 
@@ -24,6 +25,7 @@ const team = [
 ];
 
 const Contact = () => {
+	const { t } = useTranslation();
 	return (
 		<div className="min-h-screen bg-background relative overflow-hidden">
 
@@ -43,11 +45,11 @@ const Contact = () => {
 
 							<div className="text-center mb-16">
 								<h1 className="text-[40px] md:text-[48px] font-semibold tracking-tight text-primary-deep leading-[1.1]">
-									Meet Our Team
+									{t("contact.title")}
 								</h1>
 
 								<p className="mt-5 text-muted-foreground text-[15px] md:text-[16px] max-w-2xl mx-auto leading-relaxed">
-									Our dedicated team members are here to assist you. Reach out anytime for support, collaboration, or queries.
+									{t("contact.intro")}
 								</p>
 							</div>
 

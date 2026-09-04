@@ -305,6 +305,29 @@ export const hi: Catalogue = {
   "dashboard.cancel.announced": "आपका टिकट रद्द कर दिया गया है।",
 
 
+  "contact.title": "हमारी टीम से मिलिए",
+  "contact.intro":
+    "हमारी टीम के सदस्य आपकी मदद के लिए हैं। सहायता, सहयोग या किसी सवाल के लिए कभी भी संपर्क कीजिए।",
+  "notFound.title": "पेज नहीं मिला",
+  "notFound.body":
+    "आप जो पेज खोज रहे थे वह हमें नहीं मिला। हो सकता है वह हटा दिया गया हो, या लिंक पुराना हो।",
+  "notFound.timetable": "समय सारणी देखिए",
+  "search.intro": "कॉरिडोर के स्टॉप, मार्ग और जगहें — सब एक जगह।",
+  "search.placeholder": "जैसे {stop}, {route}, या {place}",
+  "search.begin": "शुरू करने के लिए कोई स्टॉप, मार्ग या जगह लिखिए।",
+  "search.nothing": "“{query}” से कुछ मेल नहीं खाता",
+  "search.onlyPublished":
+    "केवल वही नाम खोजे जाते हैं जो कॉरिडोर वाक़ई प्रकाशित करता है, और कुछ भी अंदाज़े से नहीं जोड़ा जाता। वर्तनी जाँचिए, या",
+  "search.browseRoutes": "हर मार्ग देखिए",
+  "search.resultsOne": "“{query}” के लिए {count} परिणाम",
+  "search.resultsMany": "“{query}” के लिए {count} परिणाम",
+  "search.announce.none": "{query} के लिए कोई परिणाम नहीं",
+  "search.announce.one": "{query} के लिए {count} परिणाम",
+  "search.announce.many": "{query} के लिए {count} परिणाम",
+  "search.kind.stop": "स्टॉप",
+  "search.kind.route": "मार्ग",
+  "search.kind.place": "जगह",
+
   "help.title": "यात्री सहायता",
   "help.intro":
     "यह सेवा कैसे चलती है, आपके टिकट का क्या मतलब है, और कुछ ग़लत लगे तो क्या कीजिए।",

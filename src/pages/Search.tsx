@@ -3,6 +3,8 @@ import { Link, useSearchParams } from "react-router-dom";
 import { MapPin, Route as RouteIcon, Compass, Search as SearchIcon } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import { useTranslation } from "@/contexts/LocaleContext";
+import type { TranslationKey } from "@/domain/i18n/en";
 import { searchEverything, type SearchResult } from "@/domain/search";
 import { isNetworkRouteId } from "@/domain/transit/routes";
 
@@ -13,10 +15,10 @@ const KIND_ICONS = {
 } as const;
 
 const KIND_LABELS = {
-  stop: "Stop",
-  route: "Route",
-  place: "Place",
-} as const;
+  stop: "search.kind.stop",
+  route: "search.kind.route",
+  place: "search.kind.place",
+} as const satisfies Record<string, TranslationKey>;
 
 /**
  * Where a result leads.
@@ -39,6 +41,7 @@ const hrefFor = (result: SearchResult): string => {
 };
 
 const Search = () => {
+  const { t } = useTranslation();
   const [params, setParams] = useSearchParams();
 
   const query = params.get("q") ?? "";
@@ -61,15 +64,17 @@ const Search = () => {
       <main id="main-content" tabIndex={-1} className="py-16 px-4">
         <div className="max-w-3xl mx-auto">
           <div className="text-center mb-8">
-            <h1 className="text-4xl font-bold text-primary-deep mb-3">Search</h1>
+            <h1 className="text-4xl font-bold text-primary-deep mb-3">
+              {t("page.search")}
+            </h1>
             <p className="text-gray-600">
-              Stops, routes and places on the corridor, in one place.
+              {t("search.intro")}
             </p>
           </div>
 
           <form onSubmit={submit} role="search" className="flex gap-2 mb-8">
             <label htmlFor="search-query" className="sr-only">
-              Search stops, routes and places
+              {t("home.search.label")}
             </label>
             {/*
               `min-w-0` because a flex item defaults to `min-width: auto`, so
@@ -81,7 +86,11 @@ const Search = () => {
               type="search"
               value={draft}
               onChange={(event) => setDraft(event.target.value)}
-              placeholder="Try CBD, Trunk Route, or Jungle Safari"
+              placeholder={t("search.placeholder", {
+                stop: "CBD",
+                route: "Trunk Route",
+                place: "Jungle Safari",
+              })}
               className="flex-1 min-w-0 bg-white rounded-xl px-4 py-3 border-2 border-input focus:border-primary transition-colors"
             />
             <button
@@ -89,7 +98,7 @@ const Search = () => {
               className="px-5 py-3 bg-primary text-white rounded-xl hover:bg-primary-strong transition-colors font-semibold flex items-center gap-2 flex-shrink-0"
             >
               <SearchIcon className="w-4 h-4" aria-hidden="true" />
-              <span className="sr-only sm:not-sr-only">Search</span>
+              <span className="sr-only sm:not-sr-only">{t("action.search")}</span>
             </button>
           </form>
 
@@ -102,25 +111,29 @@ const Search = () => {
             {query === ""
               ? ""
               : results.length === 0
-                ? `No results for ${query}`
-                : `${results.length} result${results.length === 1 ? "" : "s"} for ${query}`}
+                ? t("search.announce.none", { query })
+                : t(
+                    results.length === 1
+                      ? "search.announce.one"
+                      : "search.announce.many",
+                    { count: results.length, query }
+                  )}
           </p>
 
           <div>
             {query === "" ? (
               <p className="text-center text-gray-600">
-                Type a stop, a route or a place to begin.
+                {t("search.begin")}
               </p>
             ) : results.length === 0 ? (
               <div className="bg-white rounded-2xl p-6 md:p-8 shadow-lg text-center">
                 <p className="font-semibold text-gray-900 mb-1">
-                  Nothing matches &ldquo;{query}&rdquo;
+                  {t("search.nothing", { query })}
                 </p>
                 <p className="text-sm text-gray-600">
-                  Only names the corridor actually publishes are searched, and
-                  nothing is guessed at. Check the spelling, or{" "}
+                  {t("search.onlyPublished")}{" "}
                   <Link to="/routes" className="text-primary font-medium underline">
-                    browse every route
+                    {t("search.browseRoutes")}
                   </Link>
                   .
                 </p>
@@ -128,8 +141,12 @@ const Search = () => {
             ) : (
               <>
                 <p className="text-sm text-gray-600 mb-3">
-                  {results.length} result{results.length === 1 ? "" : "s"} for
-                  &ldquo;{query}&rdquo;
+                  {t(
+                    results.length === 1
+                      ? "search.resultsOne"
+                      : "search.resultsMany",
+                    { count: results.length, query }
+                  )}
                 </p>
 
                 <ul className="space-y-3">
@@ -149,7 +166,7 @@ const Search = () => {
                           <div className="min-w-0">
                             <p className="font-semibold text-gray-900">
                               <span className="sr-only">
-                                {KIND_LABELS[result.kind]}:{" "}
+                                {t(KIND_LABELS[result.kind])}:{" "}
                               </span>
                               {result.label}
                             </p>
@@ -159,7 +176,7 @@ const Search = () => {
                             aria-hidden="true"
                             className="ml-auto text-xs font-medium text-gray-500 bg-gray-100 rounded-full px-2.5 py-1 flex-shrink-0"
                           >
-                            {KIND_LABELS[result.kind]}
+                            {t(KIND_LABELS[result.kind])}
                           </span>
                         </Link>
                       </li>

@@ -417,6 +417,29 @@ export const en = {
     concatenated around it, separators included: Hindi ends a sentence with a
     danda rather than a full stop, and "or" sits differently in a list.
   */
+  "contact.title": "Meet Our Team",
+  "contact.intro":
+    "Our dedicated team members are here to assist you. Reach out anytime for support, collaboration, or queries.",
+  "notFound.title": "Page not found",
+  "notFound.body":
+    "We couldn't find the page you were looking for. It may have moved, or the link may be out of date.",
+  "notFound.timetable": "View timetable",
+  "search.intro": "Stops, routes and places on the corridor, in one place.",
+  "search.placeholder": "Try {stop}, {route}, or {place}",
+  "search.begin": "Type a stop, a route or a place to begin.",
+  "search.nothing": "Nothing matches “{query}”",
+  "search.onlyPublished":
+    "Only names the corridor actually publishes are searched, and nothing is guessed at. Check the spelling, or",
+  "search.browseRoutes": "browse every route",
+  "search.resultsOne": "{count} result for “{query}”",
+  "search.resultsMany": "{count} results for “{query}”",
+  "search.announce.none": "No results for {query}",
+  "search.announce.one": "{count} result for {query}",
+  "search.announce.many": "{count} results for {query}",
+  "search.kind.stop": "Stop",
+  "search.kind.route": "Route",
+  "search.kind.place": "Place",
+
   "help.title": "Passenger Help",
   "help.intro":
     "How this service works, what your ticket means, and what to do when something looks wrong.",
