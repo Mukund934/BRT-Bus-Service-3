@@ -11,7 +11,7 @@
 
 import { describe, expect, it, vi } from "vitest";
 import Header from "@/components/Header";
-import { STRINGS } from "@/domain/i18n/strings";
+import { hi } from "@/domain/i18n/hi";
 import { STORAGE_KEYS } from "@/constants/config";
 import { renderWithProviders, screen, waitFor } from "../helpers/render";
 
@@ -52,7 +52,7 @@ describe("offering the choice", () => {
 
     await waitFor(() =>
       expect(
-        screen.getByRole("combobox", { name: STRINGS.hi["language.change"] })
+        screen.getByRole("combobox", { name: hi["language.change"] })
       ).toBeInTheDocument()
     );
   });
@@ -84,7 +84,7 @@ describe("after choosing Hindi", () => {
 
     await waitFor(() =>
       expect(
-        screen.getAllByText(STRINGS.hi["nav.timetable"]).length
+        screen.getAllByText(hi["nav.timetable"]).length
       ).toBeGreaterThan(0)
     );
     expect(screen.queryByText("Timetable")).not.toBeInTheDocument();

@@ -14,7 +14,6 @@
  */
 
 import { en, type Catalogue, type TranslationKey } from "./en";
-import { hi } from "./hi";
 
 export type { Catalogue, TranslationKey } from "./en";
 
@@ -41,9 +40,74 @@ export const LOCALE_NAMES: Record<Locale, string> = {
   hi: "हिन्दी",
 };
 
-export const STRINGS: Record<Locale, Catalogue> = {
-  en,
-  hi,
+/**
+ * A language's copy, together with the language it is actually in.
+ *
+ * The two travel as one value on purpose. `<html lang>` has to describe the
+ * words currently on screen, and those are not always the words that were
+ * asked for - a passenger who chose Hindi offline gets English, and telling a
+ * screen reader to pronounce English with a Hindi voice is worse than either.
+ * Pairing them makes the two impossible to drift apart.
+ */
+export interface LoadedCatalogue {
+  readonly locale: Locale;
+  readonly strings: Catalogue;
+}
+
+/** The one language that is always present, because it is the fallback. */
+export const ENGLISH: LoadedCatalogue = { locale: "en", strings: en };
+
+/*
+  Every language except English is fetched when somebody asks for it.
+
+  The dictionary is small, but it sits in the ENTRY chunk - the header and
+  footer are in the shell, so whatever they import arrives before the first
+  paint, for every visitor, in every language they did not choose. Shipping
+  each additional language to all of them does not scale past the second one.
+
+  A static `import()` per locale rather than a computed specifier, because the
+  bundler has to be able to see the target to split it. Adding a language is
+  one line here and one file beside it.
+*/
+const LOADERS: Partial<Record<Locale, () => Promise<Catalogue>>> = {
+  hi: () => import("./hi").then((module) => module.hi),
+};
+
+const loaded = new Map<Locale, LoadedCatalogue>([["en", ENGLISH]]);
+
+/**
+ * The catalogue for a locale if it is already in memory, otherwise nothing.
+ *
+ * Lets a caller render the right language immediately when it has been
+ * fetched once already, rather than flashing English on the way back to it.
+ */
+export const loadedCatalogue = (locale: Locale): LoadedCatalogue | null =>
+  loaded.get(locale) ?? null;
+
+/**
+ * Fetches a locale's copy, once.
+ *
+ * Rejects if the chunk cannot be fetched - offline, or a deploy that moved it
+ * out from under an open tab. The caller decides what to do about that, which
+ * is the point: swallowing it here would leave the interface in English while
+ * claiming to be in Hindi, with nobody told.
+ */
+export const loadCatalogue = async (
+  locale: Locale
+): Promise<LoadedCatalogue> => {
+  const already = loaded.get(locale);
+
+  if (already) return already;
+
+  const load = LOADERS[locale];
+
+  if (!load) return ENGLISH;
+
+  const catalogue: LoadedCatalogue = { locale, strings: await load() };
+
+  loaded.set(locale, catalogue);
+
+  return catalogue;
 };
 
 /**
@@ -88,11 +152,11 @@ export const preferredLocale = (
  * that ships.
  */
 export const translate = (
-  locale: Locale,
+  catalogue: LoadedCatalogue,
   key: TranslationKey,
   values?: Readonly<Record<string, string | number>>
 ): string => {
-  const template = STRINGS[locale]?.[key] ?? STRINGS.en[key];
+  const template = catalogue.strings[key] || en[key];
 
   if (!values) return template;
 

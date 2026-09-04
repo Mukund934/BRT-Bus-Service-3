@@ -10,15 +10,27 @@
 
 import { describe, expect, it } from "vitest";
 import {
+  ENGLISH,
   isLocale,
+  loadCatalogue,
+  loadedCatalogue,
   LOCALES,
   LOCALE_NAMES,
   preferredLocale,
-  STRINGS,
   translate,
+  type LoadedCatalogue,
 } from "@/domain/i18n/strings";
+import { en } from "@/domain/i18n/en";
+import { hi } from "@/domain/i18n/hi";
+import type { TranslationKey } from "@/domain/i18n/en";
 import { STOPS } from "@/domain/transit/stops";
 import { ROUTE_IDS, getRoute } from "@/domain/transit/routes";
+
+/*
+  Built here rather than fetched, so the lookup tests stay synchronous. What
+  `loadCatalogue` produces is covered on its own below.
+*/
+const HINDI: LoadedCatalogue = { locale: "hi", strings: hi };
 
 describe("the two languages", () => {
   it("ships both, and no more than it can maintain", () => {
@@ -26,8 +38,8 @@ describe("the two languages", () => {
   });
 
   it("covers every key in both", () => {
-    expect(Object.keys(STRINGS.hi).sort()).toEqual(
-      Object.keys(STRINGS.en).sort()
+    expect(Object.keys(hi).sort()).toEqual(
+      Object.keys(en).sort()
     );
   });
 
@@ -37,9 +49,9 @@ describe("the two languages", () => {
     the brand name are legitimately shared, so only alphabetic copy counts.
   */
   it("does not leave English copy sitting in the Hindi record", () => {
-    const untranslated = (Object.keys(STRINGS.en) as (keyof typeof STRINGS.en)[])
-      .filter((key) => STRINGS.en[key] === STRINGS.hi[key])
-      .filter((key) => /[a-z]{4,}/i.test(STRINGS.en[key]));
+    const untranslated = (Object.keys(en) as TranslationKey[])
+      .filter((key) => en[key] === hi[key])
+      .filter((key) => /[a-z]{4,}/i.test(en[key]));
 
     expect(untranslated).toEqual([]);
   });
@@ -54,11 +66,11 @@ describe("the two languages", () => {
   });
 
   it("writes the Hindi in Devanagari", () => {
-    const devanagari = Object.values(STRINGS.hi).filter((value) =>
+    const devanagari = Object.values(hi).filter((value) =>
       /[ऀ-ॿ]/.test(value)
     );
 
-    expect(devanagari.length).toBeGreaterThan(Object.keys(STRINGS.hi).length / 2);
+    expect(devanagari.length).toBeGreaterThan(Object.keys(hi).length / 2);
   });
 });
 
@@ -75,8 +87,8 @@ describe("the two languages", () => {
 describe("what must never be translated", () => {
   it("holds no stop name in the dictionary, in either language", () => {
     const copy = [
-      ...Object.values(STRINGS.en),
-      ...Object.values(STRINGS.hi),
+      ...Object.values(en),
+      ...Object.values(hi),
     ].join(" ");
 
     for (const stop of STOPS) {
@@ -86,8 +98,8 @@ describe("what must never be translated", () => {
 
   it("holds no route name or headline", () => {
     const copy = [
-      ...Object.values(STRINGS.en),
-      ...Object.values(STRINGS.hi),
+      ...Object.values(en),
+      ...Object.values(hi),
     ].join(" ");
 
     for (const id of ROUTE_IDS) {
@@ -142,19 +154,60 @@ describe("choosing a language", () => {
 
 describe("looking a string up", () => {
   it("returns the language asked for", () => {
-    expect(translate("hi", "nav.timetable")).toBe(STRINGS.hi["nav.timetable"]);
-    expect(translate("en", "nav.timetable")).toBe("Timetable");
+    expect(translate(HINDI, "nav.timetable")).toBe(hi["nav.timetable"]);
+    expect(translate(ENGLISH, "nav.timetable")).toBe("Timetable");
   });
 
   /*
-    Falls back to English rather than rendering the key. A passenger seeing
-    "nav.timetable" learns nothing; seeing "Timetable" on a Hindi screen at
-    least still works.
+    A key the catalogue does not answer for falls back to English rather than
+    rendering nothing. This is not hypothetical now that catalogues are
+    fetched: a tab left open across a deploy can hold a chunk written before
+    the key existed. A passenger seeing "Timetable" on a Hindi screen still
+    gets somewhere; a passenger seeing an empty heading does not.
   */
-  it("falls back to English rather than showing a key", () => {
-    expect(
-      translate("de" as unknown as "hi", "nav.timetable")
-    ).toBe("Timetable");
+  it("falls back to English rather than showing an empty string", () => {
+    const stale: LoadedCatalogue = {
+      locale: "hi",
+      strings: { ...hi, "nav.timetable": "" },
+    };
+
+    expect(translate(stale, "nav.timetable")).toBe("Timetable");
+  });
+});
+
+/*
+  Loading a language, which is the part that changed when the dictionary left
+  the entry bundle. English must never be fetched - it is the fallback, and a
+  fallback that has to arrive over the network is not one.
+*/
+describe("loading a language", () => {
+  it("has English in hand without being asked", () => {
+    expect(loadedCatalogue("en")).toEqual(ENGLISH);
+    expect(ENGLISH.strings["nav.timetable"]).toBe("Timetable");
+  });
+
+  it("fetches Hindi and reports which language it got", async () => {
+    const catalogue = await loadCatalogue("hi");
+
+    expect(catalogue.locale).toBe("hi");
+    expect(catalogue.strings["nav.timetable"]).toBe(hi["nav.timetable"]);
+  });
+
+  /*
+    Cached by identity, not merely by value: a passenger switching back and
+    forth must not re-fetch, and the provider uses a hit here to render the
+    right language on the first paint rather than flashing English.
+  */
+  it("keeps a language it has already fetched", async () => {
+    const first = await loadCatalogue("hi");
+    const second = await loadCatalogue("hi");
+
+    expect(second).toBe(first);
+    expect(loadedCatalogue("hi")).toBe(first);
+  });
+
+  it("resolves English without touching a loader", async () => {
+    await expect(loadCatalogue("en")).resolves.toBe(ENGLISH);
   });
 });
 
@@ -167,10 +220,10 @@ describe("looking a string up", () => {
 */
 describe("putting a value into a sentence", () => {
   it("substitutes wherever the sentence puts the placeholder", () => {
-    expect(translate("en", "timetable.nextFrom", { stop: "HNLU" })).toBe(
+    expect(translate(ENGLISH, "timetable.nextFrom", { stop: "HNLU" })).toBe(
       "Next from HNLU"
     );
-    expect(translate("hi", "timetable.nextFrom", { stop: "HNLU" })).toContain(
+    expect(translate(HINDI, "timetable.nextFrom", { stop: "HNLU" })).toContain(
       "HNLU"
     );
   });
@@ -181,15 +234,15 @@ describe("putting a value into a sentence", () => {
     one.
   */
   it("does not assume the value sits in the same place in both", () => {
-    const english = translate("en", "timetable.nextFrom", { stop: "CBD" });
-    const hindi = translate("hi", "timetable.nextFrom", { stop: "CBD" });
+    const english = translate(ENGLISH, "timetable.nextFrom", { stop: "CBD" });
+    const hindi = translate(HINDI, "timetable.nextFrom", { stop: "CBD" });
 
     expect(english.indexOf("CBD")).toBeGreaterThan(0);
     expect(hindi.indexOf("CBD")).toBe(0);
   });
 
   it("substitutes every placeholder in a sentence with several", () => {
-    const shown = translate("en", "timetable.showing", {
+    const shown = translate(ENGLISH, "timetable.showing", {
       shown: "Weekend service",
       today: "Weekday service",
     });
@@ -204,11 +257,11 @@ describe("putting a value into a sentence", () => {
     reports; "Next from " is a bug that ships.
   */
   it("leaves an unfilled placeholder visible rather than blank", () => {
-    expect(translate("en", "timetable.nextFrom", {})).toBe("Next from {stop}");
+    expect(translate(ENGLISH, "timetable.nextFrom", {})).toBe("Next from {stop}");
   });
 
   it("leaves a plain string alone when given no values", () => {
-    expect(translate("en", "timetable.finished")).toBe(
+    expect(translate(ENGLISH, "timetable.finished")).toBe(
       "Service has finished for today"
     );
   });
@@ -221,9 +274,9 @@ describe("putting a value into a sentence", () => {
     const names = (value: string) =>
       [...value.matchAll(/\{(\w+)\}/g)].map((match) => match[1]).sort();
 
-    for (const key of Object.keys(STRINGS.en) as (keyof typeof STRINGS.en)[]) {
-      expect(names(STRINGS.hi[key]), `${key} placeholders differ`).toEqual(
-        names(STRINGS.en[key])
+    for (const key of Object.keys(en) as TranslationKey[]) {
+      expect(names(hi[key]), `${key} placeholders differ`).toEqual(
+        names(en[key])
       );
     }
   });
