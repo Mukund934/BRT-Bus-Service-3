@@ -80,12 +80,20 @@ Distances and directions on it mean nothing, and it says so.
 
 ### Nearby places
 
-Destinations across Nava Raipur with the nearest stop for each, and a detail page that carries
-its own provenance — including where a coordinate is disputed or unverified.
+Destinations across Nava Raipur with the nearest stop for each.
 
-| | |
-|---|---|
-| ![Nearby places](docs/screenshots/desktop/nearby-places.png) | ![Place detail](docs/screenshots/desktop/place-detail.jpg) |
+![Nearby places](docs/screenshots/desktop/nearby-places.png)
+
+Each place carries its own provenance, and the interesting case is a bad one. The operator
+publishes the same coordinate for this university and for a second, different institution:
+
+![Place detail with a disputed coordinate](docs/screenshots/desktop/place-detail.jpg)
+
+> *"We do not show this place on a map. The operator publishes this exact point for a second,
+> different institution. At most one can be right, so neither is shown as located."*
+
+A conflicting coordinate is **labelled rather than quietly corrected**, alongside the source it
+came from and the date it was last checked.
 
 ### Search
 
