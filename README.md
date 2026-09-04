@@ -280,6 +280,18 @@ hint.
 changes and dialogs, `aria-pressed` on toggles, live regions for announcements, and status
 conveyed by text rather than colour alone.
 
+**Language.** No i18n library. English is a typed record and every other language is typed
+against it, so a missing translation is a compile error rather than a screen that silently
+falls back. English ships in the entry bundle because it is what everything falls back to
+and a fallback that has to arrive over the network is not one; every other language is
+fetched on demand, so adding a third costs the initial download nothing.
+
+**Words the domain does not choose.** Ten registries — form validation, auth failures,
+booking and payment refusals, ticket states, fleet states, announcement severities, audit
+actions — used to return English sentences from modules that cannot know what language
+anybody is reading in. They return a `TranslationKey` now, so a message naming a key nobody
+wrote fails to compile, and the interface decides the words.
+
 **State.** Two contexts, no state library. Tickets render from the cached copy first so a
 ticket opens offline, then reconcile with the server.
 
@@ -455,6 +467,12 @@ actually permitted. Only the second one is a security boundary.
 - Any collection without an explicit rule is denied by default.
 - Driver positions publish **coordinates, a route and an opaque bus label only** —
   never a name or email address. `database.rules.json` rejects any other field.
+- A driver may write a position **only while the operator has assigned them that specific
+  vehicle**, and only inside the shift window that assignment covers. The allowlist and the
+  assignments are both unwritable by any client, so granting the driver role in the admin
+  panel is deliberately not enough on its own — the panel says so.
+- A position is timestamped by the **server**, not the device. A phone with a wrong clock
+  cannot backdate or postdate where a bus was.
 
 ### Deploying the rules
 
@@ -464,6 +482,11 @@ them:
 ```bash
 npx firebase-tools deploy --only firestore:rules,database
 ```
+
+`.firebaserc` names the project, so no `--project` flag is needed. Deploying the Realtime
+Database rules also enforces the assignment gate above: until the operator populates
+`driverAllowlist` and `assignments` from the Firebase console, no driver can broadcast.
+That is the intended order, not a fault.
 
 ### Testing the rules locally
 
