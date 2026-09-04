@@ -7,7 +7,9 @@
  * capability we have not built has to keep saying so.
  */
 
+import { readFileSync } from "node:fs";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { LOCALES } from "@/domain/i18n/strings";
 import About from "@/pages/About";
 import {
   OPERATOR,
@@ -207,6 +209,38 @@ describe("what it refuses to promise", () => {
     expect(
       screen.getByText(/These are intentions, not features/i)
     ).toBeInTheDocument();
+  });
+
+  /*
+    THE FAILURE THIS SECTION IS PRONE TO, and it had already happened twice.
+
+    "Hindi alongside English" and "Installing the site as an app on your phone"
+    were both listed as intentions after they had shipped - Hindi three days
+    earlier - on the page an operator reads to decide whether to trust the rest
+    of it. The test above passed throughout, because it only checked that the
+    disclaimer was present and never what was under it.
+
+    Derived from what the app actually has, so it cannot go stale silently
+    again: ship a capability and this fails until the promise is removed.
+  */
+  it("does not promise anything the app already does", () => {
+    renderAbout();
+
+    const plan = screen
+      .getByRole("heading", { name: "What we are planning next" })
+      .closest("section");
+
+    expect(plan).not.toBeNull();
+
+    const promised = plan!.textContent ?? "";
+
+    if (LOCALES.length > 1) {
+      expect(promised, "Hindi has shipped").not.toMatch(/hindi/i);
+    }
+
+    if (readFileSync("index.html", "utf8").includes('rel="manifest"')) {
+      expect(promised, "the app is installable").not.toMatch(/install/i);
+    }
   });
 
   it("states that this is not the operator's own product", () => {

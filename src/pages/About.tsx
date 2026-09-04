@@ -283,10 +283,10 @@ const About = () => {
               <ul className="list-disc pl-5 space-y-2">
                 <li>
                   Publishing the corridor timetable as open transit data, so it can
-                  appear in other journey planners rather than only here.
+                  appear in other journey planners rather than only here. The feed
+                  is built; what it still needs is surveyed stop coordinates, which
+                  we do not have.
                 </li>
-                <li>Hindi alongside English.</li>
-                <li>Installing the site as an app on your phone.</li>
               </ul>
             </Section>
 
