@@ -5,6 +5,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import PlaceGlyph from "@/components/PlaceGlyph";
 import { useAnnounce } from "@/components/a11y/LiveAnnouncer";
+import { useTranslation } from "@/contexts/LocaleContext";
 import { setPageDescription } from "@/lib/page-meta";
 import { findPlace, gettingThereFor } from "@/domain/places";
 import { getNetworkRoute } from "@/domain/transit/routes";
@@ -28,6 +29,7 @@ const PlaceDetail = () => {
   const { placeId } = useParams();
   const place = placeId ? findPlace(placeId) : null;
   const announce = useAnnounce();
+  const { t } = useTranslation();
 
   /*
     This page owns its own title and description.
@@ -47,8 +49,12 @@ const PlaceDetail = () => {
         ? `${place.description} Nearest BRT stop: ${place.nearestStop}.`
         : undefined
     );
-    announce(`${title} page loaded`);
-  }, [place, announce]);
+    announce(
+      t("route.loaded", {
+        page: place ? place.name : t("page.placeNotFound"),
+      })
+    );
+  }, [place, announce, t]);
 
   if (!place) {
     return (

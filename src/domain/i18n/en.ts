@@ -518,6 +518,34 @@ export const en = {
   "notification.dismiss": "Dismiss notification",
   "notification.positionOnly": "Position only — not an arrival time",
 
+
+  /*
+    What a screen reader is told when a route changes.
+
+    These name pages for a PERSON. The same table also fills `document.title`
+    and the meta description, and those stay English on purpose: they are what
+    a search engine indexes, and the descriptions beside them are long-form
+    copy that belongs to the stage this one is not. Localising the tab title
+    is a decision about search results, not about translation.
+  */
+  "route.loaded": "{page} page loaded",
+  "page.placeNotFound": "Place not found",
+  "page.unknown": "Page",
+  "page.home": "Home",
+  "page.plan": "Plan your journey",
+  "page.routes": "Route explorer",
+  "page.nearby": "Nearby places",
+  "page.map": "Live bus tracking",
+  "page.timetable": "Timetable",
+  "page.fares": "Fares",
+  "page.contact": "Contact",
+  "page.help": "Passenger help",
+  "page.about": "About the BRT corridor",
+  "page.search": "Search",
+  "page.login": "Sign in",
+  "page.dashboard": "Dashboard",
+  "page.driver": "Driver live tracking",
+
   "error.generic": "Something went wrong. Please try again.",
   "error.noPermission": "You do not have permission to perform this action.",
   "error.signInRequired": "Please sign in to continue.",

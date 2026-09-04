@@ -13,23 +13,33 @@ import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { setPageDescription } from "@/lib/page-meta";
 import { useAnnounce } from "./LiveAnnouncer";
+import { useTranslation } from "@/contexts/LocaleContext";
+import { en, type TranslationKey } from "@/domain/i18n/en";
 
-/** Human-readable page names, keyed by route. */
-const ROUTE_TITLES: Record<string, string> = {
-  "/": "Home",
-  "/plan": "Plan your journey",
-  "/routes": "Route explorer",
-  "/nearby": "Nearby places",
-  "/map": "Live bus tracking",
-  "/timetable": "Timetable",
-  "/fares": "Fares",
-  "/contact": "Contact",
-  "/help": "Passenger help",
-  "/about": "About the BRT corridor",
-  "/search": "Search",
-  "/login": "Sign in",
-  "/dashboard": "Dashboard",
-  "/driver": "Driver live tracking",
+/**
+ * Page names, keyed by route.
+ *
+ * Named once and read twice, because the two readers want different things.
+ * The tab title and the meta description are what a SEARCH ENGINE indexes and
+ * stay English; the announcement is spoken to the person using the page and
+ * follows the interface. Localising a tab title is a decision about search
+ * results rather than about translation, and it is not this stage's to make.
+ */
+const ROUTE_TITLES: Record<string, TranslationKey> = {
+  "/": "page.home",
+  "/plan": "page.plan",
+  "/routes": "page.routes",
+  "/nearby": "page.nearby",
+  "/map": "page.map",
+  "/timetable": "page.timetable",
+  "/fares": "page.fares",
+  "/contact": "page.contact",
+  "/help": "page.help",
+  "/about": "page.about",
+  "/search": "page.search",
+  "/login": "page.login",
+  "/dashboard": "page.dashboard",
+  "/driver": "page.driver",
 };
 
 /** Search-result summaries, keyed by the same routes. */
@@ -63,7 +73,8 @@ const PAGE_OWNED = [/^\/nearby\/[a-z0-9-]+$/];
 const ownsItsMetadata = (pathname: string): boolean =>
   PAGE_OWNED.some((route) => route.test(pathname));
 
-const titleFor = (pathname: string): string => ROUTE_TITLES[pathname] ?? "Page";
+const titleFor = (pathname: string): TranslationKey =>
+  ROUTE_TITLES[pathname] ?? "page.unknown";
 
 /**
  * Points every search-parameter variant of a page at one address.
@@ -91,6 +102,7 @@ const setCanonical = (pathname: string) => {
 export const RouteChangeHandler = () => {
   const { pathname } = useLocation();
   const announce = useAnnounce();
+  const { t } = useTranslation();
 
   useEffect(() => {
     setCanonical(pathname);
@@ -106,10 +118,10 @@ export const RouteChangeHandler = () => {
 
     const title = titleFor(pathname);
 
-    document.title = `${title} · BRT Bus Service`;
+    document.title = `${en[title]} · BRT Bus Service`;
     setPageDescription(ROUTE_DESCRIPTIONS[pathname]);
-    announce(`${title} page loaded`);
-  }, [pathname, announce]);
+    announce(t("route.loaded", { page: t(title) }));
+  }, [pathname, announce, t]);
 
   return null;
 };

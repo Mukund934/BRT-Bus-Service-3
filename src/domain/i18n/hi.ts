@@ -413,6 +413,25 @@ export const hi: Catalogue = {
   /* Must carry the same force: the app never claims an arrival time. */
   "notification.positionOnly": "केवल स्थिति — आगमन का समय नहीं",
 
+
+  "route.loaded": "{page} पेज खुला",
+  "page.placeNotFound": "जगह नहीं मिली",
+  "page.unknown": "पेज",
+  "page.home": "होम",
+  "page.plan": "अपनी यात्रा की योजना",
+  "page.routes": "मार्ग सूची",
+  "page.nearby": "आसपास की जगहें",
+  "page.map": "लाइव बस ट्रैकिंग",
+  "page.timetable": "समय सारणी",
+  "page.fares": "किराया",
+  "page.contact": "संपर्क",
+  "page.help": "यात्री सहायता",
+  "page.about": "BRT कॉरिडोर के बारे में",
+  "page.search": "खोज",
+  "page.login": "साइन इन",
+  "page.dashboard": "डैशबोर्ड",
+  "page.driver": "चालक लाइव ट्रैकिंग",
+
   "error.generic": "कुछ गड़बड़ हो गई। कृपया फिर कोशिश कीजिए।",
   "error.noPermission": "आपके पास यह काम करने की अनुमति नहीं है।",
   "error.signInRequired": "जारी रखने के लिए साइन इन कीजिए।",
