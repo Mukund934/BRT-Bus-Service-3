@@ -221,7 +221,7 @@ const Header = () => {
 						</div>
 					</Link>
 
-					<nav aria-label="Main" className="hidden xl:flex items-center gap-1">
+					<nav aria-label="Main" className="hidden xl:flex items-center gap-1 flex-shrink-0">
 						{navLinks.map(({ to, labelKey, icon: Icon }) => {
 							const label = t(labelKey);
 
@@ -231,7 +231,7 @@ const Header = () => {
 								<Link
 									key={to}
 									to={to}
-									className="relative px-3 py-2.5 rounded-xl text-sm font-medium text-white/90 hover:text-white transition-colors duration-state group flex items-center gap-2 hover:bg-white/10"
+									className="relative px-2 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap text-white/90 hover:text-white transition-colors duration-state group flex items-center gap-1.5 hover:bg-white/10"
 									aria-current={active ? "page" : undefined}
 								>
 									<Icon className="w-4 h-4 opacity-80 group-hover:opacity-100 transition" aria-hidden="true" />
