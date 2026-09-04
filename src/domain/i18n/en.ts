@@ -328,6 +328,49 @@ export const en = {
   "ticket.announce.qrFailed": "Could not prepare the QR code for download.",
   "ticket.announce.qrDownloaded": "QR code downloaded.",
 
+
+  /*
+    A passenger's own dashboard.
+
+    The empty history states are three separate strings rather than one with
+    the filter name substituted. English wants "No completed tickets" from a
+    label that reads "Completed", and lower-casing a translated word is an
+    assumption that only holds for languages with letter case.
+  */
+  "dashboard.avatarAlt": "User",
+  "dashboard.passenger": "Passenger",
+  "dashboard.tripsCompleted": "Trips Completed",
+  "dashboard.totalSpent": "Total Spent",
+  "dashboard.favouriteRoute": "Favourite Route",
+
+  "dashboard.yourTicket": "Your Ticket",
+  "dashboard.noActiveTickets": "No active tickets",
+  "dashboard.bookPrompt":
+    "Book a seat from the timetable and your ticket will appear here.",
+  "dashboard.bookCta": "Book a Ticket",
+
+  "dashboard.alerts.title": "Arrival Alerts",
+  "dashboard.alerts.body":
+    "Tells you when your bus is close to your boarding stop.",
+  "dashboard.alerts.on": "On",
+  "dashboard.alerts.off": "Off",
+  "dashboard.alerts.suffix": " — arrival alerts",
+  "dashboard.alerts.switchedOn": "Arrival alerts switched on.",
+  "dashboard.alerts.switchedOff": "Arrival alerts switched off.",
+  "dashboard.alerts.failed": "Could not change your alert setting.",
+
+  "dashboard.history.title": "Ticket History",
+  "dashboard.history.filterLabel": "Filter ticket history",
+  "dashboard.filter.all": "All",
+  "dashboard.history.emptyAll": "No past journeys yet",
+  "dashboard.history.emptyCompleted": "No completed tickets",
+  "dashboard.history.emptyCancelled": "No cancelled tickets",
+
+  "dashboard.cancel.failed":
+    "That ticket could not be cancelled. It may have already departed.",
+  "dashboard.cancel.done": "Ticket cancelled.",
+  "dashboard.cancel.announced": "Your ticket has been cancelled.",
+
   "ticket.status.pending": "Pending",
   "ticket.status.active": "Active",
   "ticket.status.boardingSoon": "Boarding Soon",

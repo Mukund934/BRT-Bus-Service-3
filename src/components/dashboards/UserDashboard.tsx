@@ -7,6 +7,8 @@ import { useAnnounce } from "@/components/a11y/LiveAnnouncer";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTickets } from "@/contexts/TicketContext";
 import { STATUS_LABELS } from "@/domain/ticket/status";
+import { DATE_LOCALES } from "@/domain/i18n/strings";
+import type { TranslationKey } from "@/domain/i18n/en";
 import { useTranslation } from "@/contexts/LocaleContext";
 import type { TicketStatus } from "@/domain/ticket/types";
 import { formatDate } from "@/domain/time";
@@ -16,6 +18,25 @@ import { updateNotificationPreference } from "@/services/userService";
 type HistoryFilter = "ALL" | "COMPLETED" | "CANCELLED";
 
 const FILTERS: HistoryFilter[] = ["ALL", "COMPLETED", "CANCELLED"];
+
+/*
+  A filter's name and the sentence shown when it matches nothing.
+
+  The buttons used to be labelled by title-casing the enum, and the empty
+  state by lower-casing it. Both are English spelling rules applied to a value
+  that is neither English nor a word.
+*/
+const FILTER_LABELS: Record<HistoryFilter, TranslationKey> = {
+  ALL: "dashboard.filter.all",
+  COMPLETED: "ticket.status.completed",
+  CANCELLED: "ticket.status.cancelled",
+};
+
+const EMPTY_LABELS: Record<HistoryFilter, TranslationKey> = {
+  ALL: "dashboard.history.emptyAll",
+  COMPLETED: "dashboard.history.emptyCompleted",
+  CANCELLED: "dashboard.history.emptyCancelled",
+};
 
 const HISTORY_STYLES: Partial<Record<TicketStatus, string>> = {
   COMPLETED: "bg-green-100 text-green-700",
@@ -36,7 +57,7 @@ const UserDashboard = () => {
   const { user, profile, refreshUserRecord } = useAuth();
   const { activeTicket, ticketHistory, stats, cancelTicket } = useTickets();
   const navigate = useNavigate();
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const announce = useAnnounce();
 
   const [filter, setFilter] = useState<HistoryFilter>("ALL");
@@ -62,14 +83,14 @@ const UserDashboard = () => {
       await refreshUserRecord();
 
       announce(
-        next ? "Arrival alerts switched on." : "Arrival alerts switched off."
+        t(next ? "dashboard.alerts.switchedOn" : "dashboard.alerts.switchedOff")
       );
     } catch {
-      toast.error("Could not change your alert setting.");
+      toast.error(t("dashboard.alerts.failed"));
     } finally {
       setSavingAlerts(false);
     }
-  }, [user, alertsEnabled, refreshUserRecord, announce]);
+  }, [user, alertsEnabled, refreshUserRecord, announce, t]);
 
   /**
    * Cancelling removes the ticket from view, so without an explicit
@@ -80,8 +101,7 @@ const UserDashboard = () => {
       const cancelled = await cancelTicket(ticketId);
 
       if (!cancelled) {
-        const message =
-          "That ticket could not be cancelled. It may have already departed.";
+        const message = t("dashboard.cancel.failed");
 
         toast.error(message);
         announce(message, "assertive");
@@ -89,10 +109,10 @@ const UserDashboard = () => {
         return;
       }
 
-      toast.success("Ticket cancelled.");
-      announce("Your ticket has been cancelled.");
+      toast.success(t("dashboard.cancel.done"));
+      announce(t("dashboard.cancel.announced"));
     },
-    [cancelTicket, announce]
+    [cancelTicket, announce, t]
   );
 
   const visibleHistory = useMemo(
@@ -111,7 +131,7 @@ const UserDashboard = () => {
             {user?.photoURL ? (
               <img
                 src={user.photoURL}
-                alt={user.displayName || "User"}
+                alt={user.displayName || t("dashboard.avatarAlt")}
                 className="w-full h-full rounded-full object-cover"
               />
             ) : (
@@ -120,10 +140,12 @@ const UserDashboard = () => {
           </div>
           <div>
             <h1 className="text-3xl font-bold text-gray-900">
-              {user?.displayName || "Passenger"}
+              {user?.displayName || t("dashboard.passenger")}
             </h1>
             <p className="text-gray-600">{user?.email}</p>
-            <p className="text-sm text-primary font-semibold mt-1">👤 Passenger</p>
+            <p className="text-sm text-primary font-semibold mt-1">
+              👤 {t("dashboard.passenger")}
+            </p>
           </div>
         </div>
 
@@ -131,7 +153,7 @@ const UserDashboard = () => {
           <div className="bg-secondary rounded-xl p-4 border border-border">
             <div className="flex items-center gap-2 mb-1">
               <History className="w-4 h-4 text-primary" />
-              <p className="text-xs text-gray-600">Trips Completed</p>
+              <p className="text-xs text-gray-600">{t("dashboard.tripsCompleted")}</p>
             </div>
             <p className="text-2xl font-bold text-gray-900">{stats.tripsCompleted}</p>
           </div>
@@ -139,7 +161,7 @@ const UserDashboard = () => {
           <div className="bg-secondary rounded-xl p-4 border border-border">
             <div className="flex items-center gap-2 mb-1">
               <IndianRupee className="w-4 h-4 text-primary" />
-              <p className="text-xs text-gray-600">Total Spent</p>
+              <p className="text-xs text-gray-600">{t("dashboard.totalSpent")}</p>
             </div>
             <p className="text-2xl font-bold text-gray-900">₹{stats.totalSpent}/-</p>
           </div>
@@ -147,7 +169,7 @@ const UserDashboard = () => {
           <div className="bg-secondary rounded-xl p-4 border border-border">
             <div className="flex items-center gap-2 mb-1">
               <Route className="w-4 h-4 text-primary" />
-              <p className="text-xs text-gray-600">Favourite Route</p>
+              <p className="text-xs text-gray-600">{t("dashboard.favouriteRoute")}</p>
             </div>
             <p className="text-2xl font-bold text-gray-900">
               {stats.favouriteRoute ?? "—"}
@@ -158,7 +180,7 @@ const UserDashboard = () => {
         <div className="border-t pt-8">
           <div className="flex items-center gap-2 mb-6">
             <Ticket className="w-6 h-6 text-primary" />
-            <h2 className="text-2xl font-bold text-gray-900">Your Ticket</h2>
+            <h2 className="text-2xl font-bold text-gray-900">{t("dashboard.yourTicket")}</h2>
           </div>
 
           {activeTicket ? (
@@ -166,15 +188,15 @@ const UserDashboard = () => {
           ) : (
             <div className="text-center p-8 bg-gray-50 rounded-xl border-2 border-dashed border-gray-300">
               <BookOpen className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-              <p className="text-gray-600 font-medium mb-1">No active tickets</p>
+              <p className="text-gray-600 font-medium mb-1">{t("dashboard.noActiveTickets")}</p>
               <p className="text-sm text-gray-500 mb-4">
-                Book a seat from the timetable and your ticket will appear here.
+                {t("dashboard.bookPrompt")}
               </p>
               <button
                 onClick={() => navigate("/timetable")}
                 className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary-strong transition-colors font-semibold"
               >
-                Book a Ticket
+                {t("dashboard.bookCta")}
               </button>
             </div>
           )}
@@ -185,10 +207,10 @@ const UserDashboard = () => {
             <div>
               <div className="flex items-center gap-2 mb-1">
                 <Bell className="w-6 h-6 text-primary" />
-                <h2 className="text-2xl font-bold text-gray-900">Arrival Alerts</h2>
+                <h2 className="text-2xl font-bold text-gray-900">{t("dashboard.alerts.title")}</h2>
               </div>
               <p className="text-sm text-gray-600">
-                Tells you when your bus is close to your boarding stop.
+                {t("dashboard.alerts.body")}
               </p>
             </div>
 
@@ -203,8 +225,8 @@ const UserDashboard = () => {
                   : "bg-gray-100 text-gray-600 hover:bg-gray-200"
               }`}
             >
-              {alertsEnabled ? "On" : "Off"}
-              <span className="sr-only"> — arrival alerts</span>
+              {t(alertsEnabled ? "dashboard.alerts.on" : "dashboard.alerts.off")}
+              <span className="sr-only">{t("dashboard.alerts.suffix")}</span>
             </button>
           </div>
         </div>
@@ -213,14 +235,14 @@ const UserDashboard = () => {
           <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
             <div className="flex items-center gap-2">
               <History className="w-6 h-6 text-primary" />
-              <h2 className="text-2xl font-bold text-gray-900">Ticket History</h2>
+              <h2 className="text-2xl font-bold text-gray-900">{t("dashboard.history.title")}</h2>
             </div>
 
             {/*
               A single-select group: aria-pressed tells a screen reader which
               filter is currently applied, which colour alone cannot.
             */}
-            <div className="flex gap-2" role="group" aria-label="Filter ticket history">
+            <div className="flex gap-2" role="group" aria-label={t("dashboard.history.filterLabel")}>
               {FILTERS.map((option) => (
                 <button
                   key={option}
@@ -233,7 +255,7 @@ const UserDashboard = () => {
                       : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                   }`}
                 >
-                  {option.charAt(0) + option.slice(1).toLowerCase()}
+                  {t(FILTER_LABELS[option])}
                 </button>
               ))}
             </div>
@@ -260,7 +282,7 @@ const UserDashboard = () => {
                       {ticket.departureTime} - {ticket.arrivalTime}
                     </p>
                     <p className="text-xs text-gray-500">
-                      {formatDate(ticket.travelDate)}
+                      {formatDate(ticket.travelDate, DATE_LOCALES[locale])}
                     </p>
                   </div>
 
@@ -281,9 +303,7 @@ const UserDashboard = () => {
             <div className="text-center p-8 bg-gray-50 rounded-xl border-2 border-dashed border-gray-300">
               <History className="w-10 h-10 text-gray-400 mx-auto mb-3" />
               <p className="text-gray-600 font-medium">
-                {filter === "ALL"
-                  ? "No past journeys yet"
-                  : `No ${filter.toLowerCase()} tickets`}
+                {t(EMPTY_LABELS[filter])}
               </p>
             </div>
           )}

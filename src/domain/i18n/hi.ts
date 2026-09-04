@@ -259,6 +259,41 @@ export const hi: Catalogue = {
   "ticket.announce.qrFailed": "QR कोड डाउनलोड के लिए तैयार नहीं हो सका।",
   "ticket.announce.qrDownloaded": "QR कोड डाउनलोड हो गया।",
 
+
+  "dashboard.avatarAlt": "उपयोगकर्ता",
+  "dashboard.passenger": "यात्री",
+  "dashboard.tripsCompleted": "पूरी हुई यात्राएँ",
+  "dashboard.totalSpent": "कुल ख़र्च",
+  "dashboard.favouriteRoute": "पसंदीदा मार्ग",
+
+  "dashboard.yourTicket": "आपका टिकट",
+  "dashboard.noActiveTickets": "कोई चालू टिकट नहीं",
+  "dashboard.bookPrompt":
+    "समय सारणी से सीट बुक कीजिए, आपका टिकट यहाँ दिखने लगेगा।",
+  "dashboard.bookCta": "टिकट बुक करें",
+
+  "dashboard.alerts.title": "आगमन सूचनाएँ",
+  "dashboard.alerts.body":
+    "आपकी बस जब आपके चढ़ने वाले स्टॉप के पास पहुँचती है, तब बताती हैं।",
+  "dashboard.alerts.on": "चालू",
+  "dashboard.alerts.off": "बंद",
+  "dashboard.alerts.suffix": " — आगमन सूचनाएँ",
+  "dashboard.alerts.switchedOn": "आगमन सूचनाएँ चालू कर दी गईं।",
+  "dashboard.alerts.switchedOff": "आगमन सूचनाएँ बंद कर दी गईं।",
+  "dashboard.alerts.failed": "आपकी सूचना सेटिंग नहीं बदली जा सकी।",
+
+  "dashboard.history.title": "टिकट इतिहास",
+  "dashboard.history.filterLabel": "टिकट इतिहास छाँटें",
+  "dashboard.filter.all": "सभी",
+  "dashboard.history.emptyAll": "अभी तक कोई पिछली यात्रा नहीं",
+  "dashboard.history.emptyCompleted": "कोई पूरी हुई यात्रा का टिकट नहीं",
+  "dashboard.history.emptyCancelled": "कोई रद्द किया गया टिकट नहीं",
+
+  "dashboard.cancel.failed":
+    "यह टिकट रद्द नहीं हो सका। हो सकता है बस जा चुकी हो।",
+  "dashboard.cancel.done": "टिकट रद्द हो गया।",
+  "dashboard.cancel.announced": "आपका टिकट रद्द कर दिया गया है।",
+
   "ticket.status.pending": "बाकी",
   "ticket.status.active": "चालू",
   "ticket.status.boardingSoon": "चढ़ने का समय",
