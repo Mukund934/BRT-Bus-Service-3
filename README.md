@@ -50,7 +50,7 @@ during a shift, and an operator publishing service notices.
 |---|---|
 | **Journey planner** (`/plan`) | Pick an origin and destination; departures come from the published timetable and prices from the official fare chart. Weekday and weekend services differ and are handled separately. |
 | **Fare centre** (`/fares`) | The fare between any two stops, plus the full published chart. Unpriced pairs are reported as unavailable rather than estimated. |
-| **Timetable** (`/timetable`) | Weekday and weekend departures for routes 101 and 102, bookable only on a day the service actually runs. |
+| **Timetable** (`/timetable`) | Weekday and weekend departures for all eight numbered workings, in both directions, bookable only on a day the service actually runs. Every grid says which published timetable it came from and when that was read. |
 | **Route explorer** (`/routes`) | Every route in the official network, the stops it serves, interchanges, and which stops have published departures. |
 | **Nearby places** (`/nearby`) | Destinations across Nava Raipur with the nearest stop for each, linked through to planning, routes and fares. |
 
@@ -67,9 +67,14 @@ during a shift, and an operator publishing service notices.
 
 ### Live tracking
 
-- Drivers declare the route they are running and share their position for the shift.
-- The public map shows each vehicle's route, the stop it reaches next and where it
-  terminates — derived from position and route order, never inferred from movement.
+- Drivers declare the route they are running and share their position for the shift, and can
+  only do so while the operator has assigned them a vehicle for that shift.
+- The public map shows each vehicle's route and where it terminates, both read from what the
+  bus reports. **It does not say which stop a bus reaches next**, because that needs surveyed
+  stop positions the corridor does not have — and a guess would be a claim a passenger acts
+  on while standing in the road.
+- A reported position carries one of five states rather than being simply on or off, so
+  "stopped reporting" is distinguishable from "never started".
 - A bus that stops reporting is retired from the map on a timer rather than lingering, and
   the server clears a driver's position if their connection drops.
 - Positions publish coordinates and an opaque label such as `BUS-4K2P`. No driver name,
@@ -77,8 +82,11 @@ during a shift, and an operator publishing service notices.
 
 ### Passenger experience
 
-- Arrival alerts when a reporting bus is within five minutes of your boarding stop, in-app
-  and as a browser notification, with permission requested only when you switch them on.
+- Arrival alerts when a reporting bus comes within 2.5 km of your boarding stop in a
+  straight line, in-app and as a browser notification, with permission requested only when
+  you switch them on. It is a **proximity** alert and says so: it does not know the route
+  that bus is running or how long the road between you takes, so it never claims a number of
+  minutes.
 - Alerts can be turned off from the dashboard.
 - Help centre (`/help`) explaining how booking, fares, ticket states, tracking and data
   handling actually work — every figure read from the domain rather than written out, so the
@@ -140,7 +148,7 @@ flowchart TD
     SVC --> FB["Firebase"]
     FB --> AUTH["Authentication"]
     FB --> FS["Firestore<br/>users · tickets · announcements"]
-    FB --> RTDB["Realtime Database<br/>busLocations"]
+    FB --> RTDB["Realtime Database<br/>busLocationsByRoute"]
     FS --> RULES["Security rules<br/>the real boundary"]
     RTDB --> RULES
 ```
@@ -180,10 +188,10 @@ sequenceDiagram
     D->>RT: publish position and declared route
     D->>RT: arm removal on disconnect
     RT-->>M: position update
-    M->>M: drop anything stale, derive next stop
+    M->>M: drop anything stale, classify what is left
     RT-->>A: position update
-    A->>A: estimate arrival at the boarding stop
-    A-->>P: alert within five minutes
+    A->>A: measure straight-line distance to the boarding stop
+    A-->>P: alert inside the radius, with no arrival time
 ```
 
 ---
@@ -446,8 +454,6 @@ is rejected outright.
 
 ## Future improvements
 
-- Progressive web app installability — needs 192×192 and 512×512 icons, which the
-  repository does not yet contain.
 - A published privacy policy and terms, which are deployment-specific.
 - Weekend Route 101 timetable: five rows in the published source are internally
   inconsistent and are deliberately left as they are rather than reconstructed.
