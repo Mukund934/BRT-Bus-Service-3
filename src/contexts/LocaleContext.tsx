@@ -6,9 +6,11 @@
  * without ever signing in - tying the choice to an account would lose it for
  * exactly the passengers most likely to want it.
  *
- * The chosen locale is written to `<html lang>`, which is not decoration: it
- * is what tells a screen reader which voice to use. Hindi read aloud by an
- * English synthesiser is not accented, it is unintelligible.
+ * English is bundled; every other language is fetched when somebody asks for
+ * it, so what is rendered and what was chosen can differ - offline, or across
+ * a deploy. `<html lang>` follows what is RENDERED, because it is what tells a
+ * screen reader which voice to use, and Hindi read aloud by an English
+ * synthesiser is not accented, it is unintelligible.
  */
 
 import {
