@@ -691,6 +691,11 @@ export const en = {
   "help.plan.noDepartures.q": "Why does my stop show no departures?",
   "help.plan.noDepartures.a":
     "The published timetable covers {scheduled} of the {total} stops in the network. The rest appear on route maps and in fare lookups, but no departure times have been published for them yet, so nothing can be booked from them.",
+  "help.plan.change.q": "Can I get everywhere with one bus?",
+  "help.plan.change.a1":
+    "Not everywhere. Some pairs of stops are not joined by any single published trip, and for those the planner shows a journey with one change: which bus to take, where to get off, how long the wait is, and which bus to take on.",
+  "help.plan.change.a2":
+    "The wait is the timetable's arithmetic and nothing more. No allowance is made for walking between platforms or for a bus running late, because the timetable does not say how long either takes. A journey with a change is also two tickets, so it cannot be booked here in one go.",
   "help.plan.times.q": "Where do the times come from?",
   "help.plan.times.a":
     "Departures come from the published weekday and weekend timetables. Weekday and weekend services differ, so a journey that exists on a Monday may not exist on a Sunday.",

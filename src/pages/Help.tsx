@@ -91,6 +91,11 @@ const Help = () => {
               <Answer question={t("help.plan.times.q")}>
                 <p>{t("help.plan.times.a")}</p>
               </Answer>
+
+              <Answer question={t("help.plan.change.q")}>
+                <p>{t("help.plan.change.a1")}</p>
+                <p>{t("help.plan.change.a2")}</p>
+              </Answer>
             </Section>
 
             <Section title={t("help.fares.heading")}>
