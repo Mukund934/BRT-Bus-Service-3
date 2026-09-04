@@ -417,6 +417,95 @@ export const en = {
     concatenated around it, separators included: Hindi ends a sentence with a
     danda rather than a full stop, and "or" sits differently in a list.
   */
+  "help.title": "Passenger Help",
+  "help.intro":
+    "How this service works, what your ticket means, and what to do when something looks wrong.",
+  "help.plan.heading": "Planning a journey",
+  "help.plan.routes.q": "Which routes are running?",
+  "help.plan.routes.a":
+    "{count} routes carry passengers on this corridor: {names}. {express} is the express variant and skips two stops that {local} calls at.",
+  "help.plan.routes.link": "Browse every route and the stops it serves",
+  "help.plan.noDepartures.q": "Why does my stop show no departures?",
+  "help.plan.noDepartures.a":
+    "The published timetable covers {scheduled} of the {total} stops in the network. The rest appear on route maps and in fare lookups, but no departure times have been published for them yet, so nothing can be booked from them.",
+  "help.plan.times.q": "Where do the times come from?",
+  "help.plan.times.a":
+    "Departures come from the published weekday and weekend timetables. Weekday and weekend services differ, so a journey that exists on a Monday may not exist on a Sunday.",
+  "help.fares.heading": "Fares",
+  "help.fares.calc.q": "How is my fare calculated?",
+  "help.fares.calc.a":
+    "Fares come from the official BRTS fare chart, not from distance measured on the map. The same fare applies in both directions between any two stops.",
+  "help.fares.unpriced.q": "Some pairs show no price. Why?",
+  "help.fares.unpriced.a":
+    "A fare is only shown when the official chart lists one for that pair. Nothing is estimated or filled in, so an unpriced pair is reported as unavailable rather than guessed.",
+  "help.booking.heading": "Booking a ticket",
+  "help.booking.refused.q": "What stops a booking from going through?",
+  "help.booking.two.q": "Can I hold two tickets at once?",
+  "help.booking.two.a":
+    "Only if the journeys do not overlap in time. A second ticket covering the same window as one you already hold is refused.",
+  "help.ticket.heading": "Your ticket",
+  "help.ticket.states.q": "What do the ticket states mean?",
+  "help.ticket.valid.q": "How long does my ticket stay valid?",
+  "help.ticket.valid.a":
+    "It remains valid for {minutes} minutes after the scheduled arrival, so a late-running bus does not leave you holding an expired ticket.",
+  "help.ticket.offline.q": "Will my ticket work without a signal?",
+  "help.ticket.offline.a1":
+    "Yes, once you have opened it. After your first visit the app is kept on this device, so any page you have already opened — your ticket included — opens again with no connection at all.",
+  "help.ticket.offline.a2":
+    "A page you have never opened will not, because there is nothing stored to show. Booking a new ticket needs a connection either way.",
+  "help.ticket.devices.q": "Can I see my tickets on another device?",
+  "help.ticket.devices.a":
+    "Yes. Sign in with the same account and your tickets and journey history follow you.",
+  "help.live.heading": "Live tracking",
+  "help.live.which.q": "Which buses appear on the live map?",
+  "help.live.which.a":
+    "Only buses whose driver is sharing their position. A bus that has not reported for {minutes} minutes is removed, because a position that old no longer tells you where it is.",
+  "help.live.link": "Open the live map",
+  "help.live.empty.q": "The map is empty. Is the service running?",
+  "help.live.empty.a":
+    "An empty map means no driver is currently sharing a position. It does not mean the service is suspended — check the timetable for scheduled departures.",
+  "help.live.driver.q": "Is the driver identified?",
+  "help.live.driver.a":
+    "No. Each vehicle is shown under a short label such as BUS-4K2P. No driver name, email address or account is published.",
+  "help.alerts.heading": "Arrival alerts",
+  "help.alerts.when.q": "When am I told my bus is close?",
+  "help.alerts.when.a":
+    "When a bus that is reporting its position comes within {radius} km of your boarding stop in a straight line, and you are holding a live ticket for that journey.",
+  "help.alerts.proximity":
+    "This is a proximity alert, not an arrival time. It does not know which route that bus is running, which direction it is travelling, or how long the road between you takes, so it never tells you how many minutes away it is. For a time, use the scheduled departure on the timetable.",
+  "help.alerts.off.q": "How do I turn alerts off?",
+  "help.alerts.off.a":
+    "Open your dashboard and switch Arrival Alerts off. Your browser may also ask for permission the first time you switch them on; refusing that only stops the desktop notification, not the in-app one.",
+  "help.data.heading": "Your data",
+  "help.data.stored.q": "What is stored about me?",
+  "help.data.stored.a1":
+    "Your name and email address, so your tickets can be shown to you and nobody else. Your tickets are stored with the journey, the fare and the time you booked.",
+  "help.data.stored.a2":
+    "Tickets are kept both on this device and on our servers, so losing one copy does not lose your ticket.",
+  "help.data.location.q": "Is my location tracked?",
+  "help.data.location.a":
+    "No. Passengers are never located. A bus position comes from the driver's own device, and only while they have chosen to share it for their shift.",
+  "help.data.others.q": "What can other people see?",
+  "help.data.others.a1":
+    "Live bus positions are public, because the map is a public page. Each vehicle appears under a short label such as BUS-4K2P — no driver name, email address or account is published with it.",
+  "help.data.others.a2":
+    "Your own tickets and journey history are visible only to you when signed in.",
+  "help.data.delete.q": "Can I delete my account?",
+  "help.data.delete.lead":
+    "Not from inside the app. Accounts are removed on request — please",
+  "help.data.delete.link": "contact the team",
+  "help.account.heading": "Your account and support",
+  "help.account.password.q": "I have forgotten my password.",
+  "help.account.password.lead": "Use",
+  "help.account.password.link": "Forgot password",
+  "help.account.password.rest":
+    "on the sign-in page. A reset link is sent to your email address. For your protection the same confirmation is shown whether or not an account exists for that address.",
+  "help.account.wrong.q": "Something here looks wrong.",
+  "help.account.wrong.lead":
+    "Timetable, route and fare data follow the official published sources. If something does not match what you saw at the stop, please",
+  "help.account.wrong.link": "tell the team",
+  "help.account.wrong.rest": "so it can be checked.",
+
   "about.title": "About the BRT corridor",
   "about.intro":
     "What Bus Rapid Transit is, what runs in Nava Raipur, and what this site can and cannot tell you about it.",
