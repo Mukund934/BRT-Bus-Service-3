@@ -176,6 +176,19 @@ export const hi: Catalogue = {
   "fares.chartTitle": "आधिकारिक Tatpar BRTS किराया सूची",
   "action.dismiss": "हटाएँ",
 
+  "plan.change.title": "सीधी बस नहीं है, पर एक बार बदलकर पहुँचा जा सकता है",
+  "plan.change.intro":
+    "समय प्रकाशित समय सारणी के हैं। प्लेटफ़ॉर्म तक चलने या बस के देर होने के लिए कोई छूट नहीं जोड़ी गई है, क्योंकि समय सारणी यह नहीं बताती कि उनमें कितना समय लगता है।",
+  "plan.change.route": "मार्ग {route}",
+  "plan.change.changeAt": "{stop} पर बदलिए",
+  "plan.change.wait": "{minutes} मिनट प्रतीक्षा",
+  "plan.change.noWait": "प्रतीक्षा नहीं",
+  "plan.change.cannotBook":
+    "बदलाव वाली यात्रा यहाँ बुक नहीं की जा सकती। हर हिस्से का टिकट अलग होता है, इसलिए उन्हें समय सारणी से बुक कीजिए।",
+  "plan.change.arrives": "{time} पर पहुँचती है",
+  "plan.departureOne": "{count} प्रस्थान",
+  "plan.departureMany": "{count} प्रस्थान",
+
   "plan.title": "अपनी यात्रा की योजना बनाइए",
   "plan.intro":
     "चुनिए कि आप कहाँ से चढ़ेंगे और कहाँ जाना है। किराया आधिकारिक BRTS किराया सूची से आता है।",

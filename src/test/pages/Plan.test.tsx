@@ -2,6 +2,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Route, Routes, useLocation } from "react-router-dom";
 import Plan from "@/pages/Plan";
 import { renderWithProviders, screen } from "../helpers/render";
+import { getAllTrips } from "@/domain/transit/schedule";
+import { tripServesJourney } from "@/domain/transit/departures";
+import { transferOptionsFor } from "@/domain/transit/transfers";
+import type { StopName } from "@/domain/transit/stops";
+import { en } from "@/domain/i18n/en";
 
 vi.mock("@/services/userService", async () => {
   const helper = await import("../helpers/userService");
@@ -25,6 +30,66 @@ const SignInTarget = () => {
 
   return <p>came from {from ? `${from.pathname}${from.search}` : "nowhere"}</p>;
 };
+
+/*
+  Journeys with no direct bus.
+
+  18% of the ordered stop pairs on this corridor are served by no single trip,
+  and every one of them is reachable with one change. The page said "No
+  scheduled service for this journey" for all of them, which was not true.
+
+  The pair is derived from the timetable rather than typed, so it cannot become
+  a through journey without this test noticing.
+*/
+describe("a journey with no direct bus", () => {
+  const noThroughPair = (): [StopName, StopName] => {
+    const trips = getAllTrips("weekday");
+    const stops = [...new Set(trips.flatMap((trip) => trip.calls.map((c) => c.stop)))];
+
+    for (const from of stops) {
+      for (const to of stops) {
+        if (from === to) continue;
+        if (trips.some((trip) => tripServesJourney(trip, from, to))) continue;
+        if (transferOptionsFor(from, to, new Date(2026, 6, 20)).length > 0) {
+          return [from, to];
+        }
+      }
+    }
+
+    throw new Error("no pair needing a change - the corridor changed");
+  };
+
+  it("offers the change instead of denying the journey", async () => {
+    const [from, to] = noThroughPair();
+    const route = `/plan?from=${encodeURIComponent(from)}&to=${encodeURIComponent(
+      to
+    )}&date=2026-07-20&time=06:00`;
+
+    renderWithProviders(<Plan />, { route });
+
+    expect(
+      await screen.findByText(en["plan.change.title"])
+    ).toBeInTheDocument();
+    expect(screen.queryByText(en["plan.noService"])).not.toBeInTheDocument();
+  });
+
+  /*
+    Booking issues one ticket for one trip, so a change is two of them. Said on
+    the page rather than discovered at the second stop.
+  */
+  it("says a change cannot be booked as one ticket", async () => {
+    const [from, to] = noThroughPair();
+    const route = `/plan?from=${encodeURIComponent(from)}&to=${encodeURIComponent(
+      to
+    )}&date=2026-07-20&time=06:00`;
+
+    renderWithProviders(<Plan />, { route });
+
+    expect(
+      await screen.findByText(en["plan.change.cannotBook"])
+    ).toBeInTheDocument();
+  });
+});
 
 describe("pricing a journey", () => {
   it("lists a departure with its arrival, duration and route", async () => {

@@ -204,6 +204,19 @@ export const en = {
   "fares.chartTitle": "Official Tatpar BRTS fare chart",
   "action.dismiss": "Dismiss",
 
+  "plan.change.title": "No direct bus, but one change gets you there",
+  "plan.change.intro":
+    "Times are the published timetable's. Nothing is allowed for walking between platforms or for a bus running late, because the timetable does not say how long either takes.",
+  "plan.change.route": "Route {route}",
+  "plan.change.changeAt": "Change at {stop}",
+  "plan.change.wait": "{minutes} min wait",
+  "plan.change.noWait": "No wait",
+  "plan.change.cannotBook":
+    "A journey with a change cannot be booked here. Each leg is a separate ticket, so book them from the timetable.",
+  "plan.change.arrives": "Arrives {time}",
+  "plan.departureOne": "{count} departure",
+  "plan.departureMany": "{count} departures",
+
   "plan.title": "Plan your journey",
   "plan.intro":
     "Choose where you are boarding and where you are going. Fares come from the official BRTS fare chart.",

@@ -15,6 +15,7 @@ import type { JourneySelection } from "@/domain/ticket/types";
 import { parseTimeToDate } from "@/domain/time";
 import { BOOKING_FAILURE_MESSAGES } from "@/services/ticketService";
 import { calculateFare } from "@/domain/transit/fares";
+import { transferOptionsFor } from "@/domain/transit/transfers";
 import { isInterchange } from "@/domain/transit/routes";
 import {
   getAllTrips,
@@ -132,6 +133,19 @@ const Plan = () => {
   const sameStop = Boolean(origin && destination && origin === destination);
   const unresolved =
     (params.get("from") ?? "") !== "" && (!origin || !destination);
+  /*
+    Only asked for when nothing direct exists, which is also the only case
+    `transferOptionsFor` answers - it returns nothing when a through trip
+    runs, so a passenger is never offered a change beside a direct bus.
+  */
+  const changes = useMemo(
+    () =>
+      origin && destination
+        ? transferOptionsFor(origin, destination, new Date(searchedDate))
+        : [],
+    [origin, destination, searchedDate]
+  );
+
   const unserved =
     origin && !hasScheduledService(origin)
       ? origin
@@ -314,7 +328,74 @@ const Plan = () => {
                   </div>
                 )}
 
-                {options.length === 0 ? (
+                {options.length === 0 && changes.length > 0 ? (
+                  <div className="brt-card text-left">
+                    <p className="font-semibold text-foreground mb-1">
+                      {t("plan.change.title")}
+                    </p>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      {t("plan.change.intro")}
+                    </p>
+
+                    <ol className="space-y-4">
+                      {changes.map((option) => (
+                        <li
+                          key={`${option.first.id}-${option.changeAt}-${option.second.id}`}
+                          className="rounded-xl border border-border p-4"
+                        >
+                          <p className="text-sm">
+                            <span className="font-semibold">{origin}</span>{" "}
+                            <span className="tabular-nums">{option.departs}</span>
+                            {" → "}
+                            <span className="font-semibold">{option.changeAt}</span>{" "}
+                            <span className="tabular-nums">
+                              {option.arrivesAtChange}
+                            </span>
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {t("plan.change.route", {
+                              route: option.first.routeId,
+                            })}
+                          </p>
+
+                          <p className="text-xs font-medium text-primary mt-2">
+                            {t("plan.change.changeAt", { stop: option.changeAt })}
+                            {" · "}
+                            {option.waitMinutes === 0
+                              ? t("plan.change.noWait")
+                              : t("plan.change.wait", {
+                                  minutes: option.waitMinutes,
+                                })}
+                          </p>
+
+                          <p className="text-sm mt-2">
+                            <span className="font-semibold">{option.changeAt}</span>{" "}
+                            <span className="tabular-nums">
+                              {option.departsChange}
+                            </span>
+                            {" → "}
+                            <span className="font-semibold">{destination}</span>{" "}
+                            <span className="tabular-nums">{option.arrives}</span>
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {t("plan.change.route", {
+                              route: option.second.routeId,
+                            })}
+                          </p>
+                        </li>
+                      ))}
+                    </ol>
+
+                    {/*
+                      Said plainly rather than left for a passenger to discover
+                      at the second stop: booking issues one ticket for one
+                      trip, so a change is two of them.
+                    */}
+                    <p className="text-sm text-muted-foreground mt-4">
+                      {t("plan.change.cannotBook")}
+                    </p>
+                  </div>
+                ) : options.length === 0 ? (
                   <div className="brt-card text-center">
                     <p className="font-semibold text-foreground mb-1">
                       {t("plan.noService")}
@@ -336,8 +417,12 @@ const Plan = () => {
                 ) : (
                   <>
                     <h2 className="brt-section-title text-left text-primary">
-                      {options.length}{" "}
-                      {options.length === 1 ? "departure" : "departures"}
+                      {t(
+                        options.length === 1
+                          ? "plan.departureOne"
+                          : "plan.departureMany",
+                        { count: options.length }
+                      )}
                     </h2>
 
                     <div className="space-y-4">
