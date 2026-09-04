@@ -513,6 +513,8 @@ export const en = {
   "routes.stopsMany": "{stops} stops · {count} interchanges",
   "nav.openNavigation": "Open navigation menu",
   "nav.closeNavigation": "Close navigation menu",
+  "routes.weeklyOne": "{stops} stops · {trips} departure a week",
+  "routes.weeklyMany": "{stops} stops · {trips} departures a week",
   "routes.title": "Explore the network",
   "routes.places": "Places you can reach on these routes",
   "routes.today": "Services running today",

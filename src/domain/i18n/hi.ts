@@ -397,6 +397,8 @@ export const hi: Catalogue = {
   "routes.stopsMany": "{stops} स्टॉप · {count} इंटरचेंज",
   "nav.openNavigation": "नेविगेशन मेन्यू खोलें",
   "nav.closeNavigation": "नेविगेशन मेन्यू बंद करें",
+  "routes.weeklyOne": "{stops} स्टॉप · सप्ताह में {trips} प्रस्थान",
+  "routes.weeklyMany": "{stops} स्टॉप · सप्ताह में {trips} प्रस्थान",
   "routes.title": "नेटवर्क देखिए",
   "routes.places": "इन मार्गों से जिन जगहों तक पहुँचा जा सकता है",
   "routes.today": "आज चल रही सेवाएँ",

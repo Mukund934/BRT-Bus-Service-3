@@ -136,8 +136,10 @@ const RouteExplorer = () => {
 
                     <p className="mt-3 text-sm text-muted-foreground flex items-center gap-2">
                       <Clock className="w-3.5 h-3.5" aria-hidden="true" />
-                      {route.servedStops.length} stops · {trips} departures a
-                      week
+                      {t(trips === 1 ? "routes.weeklyOne" : "routes.weeklyMany", {
+                        stops: route.servedStops.length,
+                        trips,
+                      })}
                     </p>
 
                     <Link
