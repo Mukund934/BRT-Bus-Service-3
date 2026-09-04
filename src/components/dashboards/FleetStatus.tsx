@@ -3,6 +3,7 @@ import { Bus, RadioTower } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { PERMISSIONS, can } from "@/domain/auth/permissions";
 import { useTranslation } from "@/contexts/LocaleContext";
+import type { TranslationKey } from "@/domain/i18n/en";
 import { POLLING } from "@/constants/config";
 import { destinationOf, getRoute } from "@/domain/transit/routes";
 import type { VehicleTelemetry } from "@/domain/fleet/telemetry";
@@ -27,10 +28,10 @@ type Filter = "ALL" | "REPORTING" | "ATTENTION";
 
 const FILTERS: Filter[] = ["ALL", "REPORTING", "ATTENTION"];
 
-const FILTER_LABELS: Record<Filter, string> = {
-  ALL: "All drivers",
-  REPORTING: "Reporting",
-  ATTENTION: "Needs attention",
+const FILTER_LABELS: Record<Filter, TranslationKey> = {
+  ALL: "fleet.filter.all",
+  REPORTING: "fleet.filter.reporting",
+  ATTENTION: "fleet.filter.attention",
 };
 
 /** States where the operator is seeing a position they can trust. */
@@ -212,7 +213,7 @@ const FleetStatus = ({ users, loading }: FleetStatusProps) => {
           <h2 className="text-2xl font-bold text-gray-900">Fleet Status</h2>
         </div>
 
-        <div className="flex gap-2" role="group" aria-label="Filter drivers">
+        <div className="flex gap-2" role="group" aria-label={t("fleet.filterLabel")}>
           {FILTERS.map((option) => (
             <button
               key={option}
@@ -225,7 +226,7 @@ const FleetStatus = ({ users, loading }: FleetStatusProps) => {
                   : "bg-gray-100 text-gray-600 hover:bg-gray-200"
               }`}
             >
-              {FILTER_LABELS[option]}
+              {t(FILTER_LABELS[option])}
             </button>
           ))}
         </div>
@@ -255,7 +256,7 @@ const FleetStatus = ({ users, loading }: FleetStatusProps) => {
       */}
       <dl
         className="flex flex-wrap gap-2 mb-6"
-        aria-label="Vehicles by reporting state"
+        aria-label={t("fleet.byState")}
       >
         {STATE_ORDER.map((state) => (
           <div
@@ -271,8 +272,7 @@ const FleetStatus = ({ users, loading }: FleetStatusProps) => {
       {trackingFailed && (
         <div className="mb-4 bg-amber-50 border border-amber-200 rounded-lg p-3">
           <p className="text-sm text-amber-800">
-            Live tracking is unreachable, so nobody shows as on shift. The driver list
-            below is still accurate.
+            {t("fleet.unreachable")}
           </p>
         </div>
       )}
@@ -281,8 +281,7 @@ const FleetStatus = ({ users, loading }: FleetStatusProps) => {
 
       {!loading && drivers.length === 0 && (
         <p className="text-gray-600 text-sm">
-          No accounts hold the driver role yet. Assign one below to let someone
-          broadcast a bus position.
+          {t("fleet.noDrivers")}
         </p>
       )}
 
@@ -294,7 +293,7 @@ const FleetStatus = ({ users, loading }: FleetStatusProps) => {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <caption className="sr-only">
-              Drivers and the vehicles they are running
+              {t("fleet.roster")}
             </caption>
             <thead>
               <tr className="border-b">

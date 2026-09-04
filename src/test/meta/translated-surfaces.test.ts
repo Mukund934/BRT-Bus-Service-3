@@ -20,9 +20,12 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 /*
-  The surfaces translated through stage 3. A file joins this list when it is
-  translated, and the list is the record of what has been done - so adding a
-  screen here before wiring it fails immediately, which is the point.
+  Every translated surface. A file joins this list when it is translated, and
+  the list is the record of what has been done - so adding a screen here
+  before wiring it fails immediately, which is the point.
+
+  As of stage 4 that is the whole interface: every page and every component a
+  passenger, a driver or an operator can reach.
 */
 const SURFACES = [
   "src/pages/About.tsx",
@@ -50,6 +53,9 @@ const SURFACES = [
   "src/components/a11y/RouteChangeHandler.tsx",
   "src/components/ErrorBoundary.tsx",
   "src/components/NotificationPopup.tsx",
+  "src/components/dashboards/AdminDashboard.tsx",
+  "src/components/dashboards/AnnouncementManager.tsx",
+  "src/components/dashboards/FleetStatus.tsx",
   "src/components/dashboards/UserDashboard.tsx",
   "src/components/dashboards/DriverDashboard.tsx",
 ];

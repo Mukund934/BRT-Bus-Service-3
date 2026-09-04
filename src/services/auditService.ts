@@ -25,6 +25,7 @@
  */
 
 import { getDb } from "@/firebase";
+import type { TranslationKey } from "@/domain/i18n/en";
 import { PERMISSIONS, can } from "@/domain/auth/permissions";
 import { REMOTE_PATHS } from "@/constants/config";
 import type { Actor } from "@/types/user";
@@ -49,9 +50,9 @@ const firestore = async () => {
 export type AuditAction = "ROLE_CHANGED" | "ANNOUNCEMENT_PUBLISHED";
 
 /** What each recorded act is called on screen. */
-export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
-  ROLE_CHANGED: "Role changed",
-  ANNOUNCEMENT_PUBLISHED: "Notice published",
+export const AUDIT_ACTION_LABELS: Record<AuditAction, TranslationKey> = {
+  ROLE_CHANGED: "admin.audit.roleChanged",
+  ANNOUNCEMENT_PUBLISHED: "admin.audit.noticePublished",
 };
 
 export interface AuditEntry {

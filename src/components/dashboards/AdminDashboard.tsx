@@ -9,6 +9,7 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { toSafeMessage } from "@/domain/auth/errors";
 import { useTranslation } from "@/contexts/LocaleContext";
+import type { TranslationKey } from "@/domain/i18n/en";
 import { PERMISSIONS, can } from "@/domain/auth/permissions";
 import {
   MAX_USERS_PER_READ,
@@ -29,10 +30,10 @@ interface AdminDashboardProps {
   onError?: (error: string) => void;
 }
 
-const ROLE_LABELS: Record<UserRole, string> = {
-  user: "👤 User (Passenger)",
-  driver: "🚌 Driver",
-  admin: "👨‍💼 Admin",
+const ROLE_LABELS: Record<UserRole, TranslationKey> = {
+  user: "admin.role.user",
+  driver: "admin.role.driver",
+  admin: "admin.role.admin",
 };
 
 const AdminDashboard = ({ onError }: AdminDashboardProps) => {
@@ -134,12 +135,12 @@ const AdminDashboard = ({ onError }: AdminDashboardProps) => {
   // Save role change
   const saveRoleChange = async (userId: string) => {
     if (!editingRole) {
-      setError("Please select a role");
+      setError(t("admin.role.selectFirst"));
       return;
     }
 
     if (!mayAssignRoles) {
-      setError("You do not have permission to change roles.");
+      setError(t("admin.role.noPermission"));
       return;
     }
 
@@ -160,7 +161,7 @@ const AdminDashboard = ({ onError }: AdminDashboardProps) => {
 
       setAllUsers(updatedUsers);
       setFilteredUsers(updatedUsers);
-      setSuccess("Role updated successfully!");
+      setSuccess(t("admin.role.updated"));
       setEditingUserId(null);
       setEditingRole("user");
 
@@ -230,7 +231,9 @@ const AdminDashboard = ({ onError }: AdminDashboardProps) => {
           <h1 className="text-3xl font-bold text-gray-900">Administrator Panel</h1>
         </div>
         <p className="text-gray-600">
-          Welcome, {user?.displayName || "Admin"}. Manage all users and their roles.
+          {t("admin.welcome", {
+            name: user?.displayName || t("admin.defaultName"),
+          })}
         </p>
       </div>
 
@@ -337,7 +340,7 @@ const AdminDashboard = ({ onError }: AdminDashboardProps) => {
               onClick={() => void loadUsers()}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
             >
-              Refresh
+              {t("admin.refresh")}
             </button>
           </div>
 
@@ -355,17 +358,15 @@ const AdminDashboard = ({ onError }: AdminDashboardProps) => {
             className="mb-4 rounded-lg border border-primary/30 bg-accent px-4 py-3"
           >
             <p className="text-sm text-primary-deep">
-              <strong>Granting the driver role is not enough on its own.</strong>{" "}
-              A driver can only broadcast a position once their user ID is added
-              to the <code>driverAllowlist</code> in the Realtime Database. That
-              node is closed to every client by design, so it has to be set from
-              the Firebase console.
+              <strong>{t("admin.allowlist.lead")}</strong>{" "}
+              {t("admin.allowlist.body")} <code>driverAllowlist</code>{" "}
+              {t("admin.allowlist.rest")}
             </p>
           </div>
 
           <div className="relative">
             <label htmlFor={searchId} className="sr-only">
-              Search users by name or email
+              {t("admin.searchLabel")}
             </label>
             <Search
               className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5"
@@ -374,7 +375,7 @@ const AdminDashboard = ({ onError }: AdminDashboardProps) => {
             <input
               id={searchId}
               type="search"
-              placeholder="Search by name or email…"
+              placeholder={t("admin.searchPlaceholder")}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-2.5 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
@@ -383,7 +384,10 @@ const AdminDashboard = ({ onError }: AdminDashboardProps) => {
 
           {/* Result count, announced as the search narrows. */}
           <p className="sr-only" role="status" aria-live="polite">
-            {filteredUsers.length} of {allUsers.length} users shown
+            {t("admin.shown", {
+              shown: filteredUsers.length,
+              total: allUsers.length,
+            })}
           </p>
         </div>
 
@@ -397,7 +401,9 @@ const AdminDashboard = ({ onError }: AdminDashboardProps) => {
           <div className="p-12 text-center">
             <Users className="w-12 h-12 text-gray-400 mx-auto mb-2" aria-hidden="true" />
             <p className="text-gray-600 font-medium">
-              {searchTerm ? `No users match "${searchTerm}"` : "No users yet"}
+              {searchTerm
+                ? t("admin.noMatch", { query: searchTerm })
+                : t("admin.noUsers")}
             </p>
             {searchTerm && (
               <button
@@ -405,7 +411,7 @@ const AdminDashboard = ({ onError }: AdminDashboardProps) => {
                 onClick={() => setSearchTerm("")}
                 className="mt-3 text-blue-600 hover:text-blue-700 font-medium underline underline-offset-2"
               >
-                Clear search
+                {t("admin.clearSearch")}
               </button>
             )}
           </div>
@@ -413,7 +419,7 @@ const AdminDashboard = ({ onError }: AdminDashboardProps) => {
           <div className="overflow-x-auto">
             <table className="w-full">
               <caption className="sr-only">
-                Registered users and their roles
+                {t("admin.roster")}
               </caption>
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
@@ -433,7 +439,7 @@ const AdminDashboard = ({ onError }: AdminDashboardProps) => {
                           {getRoleIcon(u.role)}
                         </div>
                         <span className="text-gray-900 font-medium">
-                          {u.name || u.email?.split("@")[0] || "Unknown"}
+                          {u.name || u.email?.split("@")[0] || t("admin.unknownUser")}
                         </span>
                       </div>
                     </td>
@@ -461,7 +467,7 @@ const AdminDashboard = ({ onError }: AdminDashboardProps) => {
                         >
                           {USER_ROLES.map((option) => (
                             <option key={option} value={option}>
-                              {ROLE_LABELS[option]}
+                              {t(ROLE_LABELS[option])}
                             </option>
                           ))}
                         </select>
@@ -487,7 +493,7 @@ const AdminDashboard = ({ onError }: AdminDashboardProps) => {
                               disabled={saving}
                               className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-semibold disabled:opacity-50"
                             >
-                              {saving ? "Saving…" : "Save"}
+                              {t(saving ? "admin.saving" : "admin.save")}
                             </button>
                             <button
                               type="button"
@@ -495,7 +501,7 @@ const AdminDashboard = ({ onError }: AdminDashboardProps) => {
                               disabled={saving}
                               className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors text-sm font-semibold disabled:opacity-50"
                             >
-                              Cancel
+                              {t("action.cancel")}
                             </button>
                           </>
                         ) : (
@@ -506,7 +512,7 @@ const AdminDashboard = ({ onError }: AdminDashboardProps) => {
                             className="flex items-center gap-2 px-4 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
                           >
                             <Edit2 className="w-4 h-4" aria-hidden="true" />
-                            Edit
+                            {t("admin.edit")}
                             {/* Every row's button would otherwise read as "Edit". */}
                             <span className="sr-only">
                               {" "}
@@ -538,8 +544,7 @@ const AdminDashboard = ({ onError }: AdminDashboardProps) => {
           */}
           {truncated && (
             <p className="text-center text-amber-700 text-sm mt-2">
-              Only the first {MAX_USERS_PER_READ} accounts were loaded. Counts and
-              search cover this subset only.
+              {t("admin.truncated", { limit: MAX_USERS_PER_READ })}
             </p>
           )}
         </div>
@@ -557,12 +562,10 @@ const AdminDashboard = ({ onError }: AdminDashboardProps) => {
         <div className="bg-white rounded-xl shadow-lg overflow-hidden mt-8">
           <div className="p-6 border-b border-gray-200">
             <h2 className="text-2xl font-bold text-gray-900">
-              Administrative activity
+              {t("admin.audit.heading")}
             </h2>
             <p className="text-sm text-gray-500 mt-1">
-              The {MAX_AUDIT_RECORDS} most recent role changes and published
-              notices. Entries cannot be edited or removed, including by an
-              administrator.
+              {t("admin.audit.body", { limit: MAX_AUDIT_RECORDS })}
             </p>
           </div>
 
@@ -573,14 +576,16 @@ const AdminDashboard = ({ onError }: AdminDashboardProps) => {
               error there would send somebody looking for a fault.
             */
             <p className="px-6 py-8 text-center text-gray-500">
-              No administrative changes have been recorded yet.
+              {t("admin.audit.none")}
             </p>
           ) : (
             <ul className="divide-y divide-gray-100">
               {auditLog.map((record) => (
                 <li key={record.id} className="px-6 py-3 text-sm">
                   <span className="font-medium text-gray-900">
-                    {AUDIT_ACTION_LABELS[record.action] ?? record.action}
+                    {AUDIT_ACTION_LABELS[record.action]
+                      ? t(AUDIT_ACTION_LABELS[record.action])
+                      : record.action}
                   </span>{" "}
                   <span className="text-gray-600">{record.subject}</span>
                   {record.detail && (

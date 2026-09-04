@@ -141,7 +141,7 @@ const AnnouncementManager = () => {
     setEntities([]);
     setStartsAt("");
     setEndsAt("");
-    setSuccess("Announcement published.");
+    setSuccess(t("notice.published"));
   };
 
   const toggle = async (announcement: Announcement) => {
@@ -188,8 +188,7 @@ const AnnouncementManager = () => {
       </div>
 
       <p className="text-sm text-gray-600 mb-6">
-        Anything published here is shown to every visitor, on every page. Write only
-        what the operator has confirmed.
+        {t("notice.warning")}
       </p>
 
       {error && (
@@ -207,7 +206,7 @@ const AnnouncementManager = () => {
       <form onSubmit={publish} noValidate className="space-y-4 mb-8">
         <div>
           <label htmlFor={titleId} className="block text-sm font-medium text-gray-700 mb-1">
-            Title
+            {t("notice.title")}
           </label>
           <input
             id={titleId}
@@ -220,7 +219,7 @@ const AnnouncementManager = () => {
 
         <div>
           <label htmlFor={bodyId} className="block text-sm font-medium text-gray-700 mb-1">
-            Message
+            {t("notice.message")}
           </label>
           <textarea
             id={bodyId}
@@ -236,7 +235,7 @@ const AnnouncementManager = () => {
             htmlFor={severityId}
             className="block text-sm font-medium text-gray-700 mb-1"
           >
-            Severity
+            {t("notice.severity")}
           </label>
           <select
             id={severityId}
@@ -246,7 +245,7 @@ const AnnouncementManager = () => {
           >
             {ANNOUNCEMENT_SEVERITIES.map((option) => (
               <option key={option} value={option}>
-                {SEVERITY_LABELS[option]}
+                {t(SEVERITY_LABELS[option])}
               </option>
             ))}
           </select>
@@ -254,13 +253,11 @@ const AnnouncementManager = () => {
 
         <fieldset className="border border-border rounded-lg p-4">
           <legend className="text-sm font-medium text-gray-700 px-1">
-            What this affects
+            {t("notice.affects")}
           </legend>
 
           <p className="text-xs text-gray-600 mb-3">
-            Add one affected thing at a time. Choosing a route and a stop together
-            means that route at that stop; add a second row to cover another route
-            or stop as well. Add nothing to tell every passenger.
+            {t("notice.affectsHint")}
           </p>
 
           {entities.length > 0 && (
@@ -290,7 +287,7 @@ const AnnouncementManager = () => {
                 htmlFor={routeId}
                 className="block text-xs font-medium text-gray-700 mb-1"
               >
-                Route
+                {t("notice.route")}
               </label>
               <select
                 id={routeId}
@@ -312,7 +309,7 @@ const AnnouncementManager = () => {
                 htmlFor={stopId}
                 className="block text-xs font-medium text-gray-700 mb-1"
               >
-                Stop
+                {t("notice.stop")}
               </label>
               <select
                 id={stopId}
@@ -336,14 +333,14 @@ const AnnouncementManager = () => {
               className="flex items-center justify-center gap-1 px-4 py-2 rounded-lg border-2 border-input text-sm font-medium text-gray-700 hover:border-primary transition-colors disabled:opacity-50"
             >
               <Plus className="w-4 h-4" aria-hidden="true" />
-              Add
+              {t("notice.add")}
             </button>
           </div>
         </fieldset>
 
         <fieldset className="border border-border rounded-lg p-4">
           <legend className="text-sm font-medium text-gray-700 px-1">
-            When it applies
+            {t("notice.when")}
           </legend>
 
           <p className="text-xs text-gray-600 mb-3">
@@ -357,7 +354,7 @@ const AnnouncementManager = () => {
                 htmlFor={startsId}
                 className="block text-xs font-medium text-gray-700 mb-1"
               >
-                Starts
+                {t("notice.starts")}
               </label>
               <input
                 id={startsId}
@@ -373,7 +370,7 @@ const AnnouncementManager = () => {
                 htmlFor={endsId}
                 className="block text-xs font-medium text-gray-700 mb-1"
               >
-                Ends
+                {t("notice.ends")}
               </label>
               <input
                 id={endsId}
@@ -391,7 +388,7 @@ const AnnouncementManager = () => {
           disabled={saving}
           className="px-6 py-2.5 bg-primary text-white rounded-lg hover:bg-primary-strong transition-colors font-semibold disabled:opacity-50"
         >
-          {saving ? "Publishing…" : "Publish announcement"}
+          {t(saving ? "notice.publishing" : "notice.publish")}
         </button>
       </form>
 
@@ -402,7 +399,7 @@ const AnnouncementManager = () => {
 
         {!loading && announcements.length === 0 && (
           <p className="text-gray-600 text-sm">
-            Nothing has been published yet. Passengers see no notices.
+            {t("notice.none")}
           </p>
         )}
 
@@ -420,7 +417,7 @@ const AnnouncementManager = () => {
                         SEVERITY_STYLES[announcement.severity]
                       }`}
                     >
-                      {SEVERITY_LABELS[announcement.severity]}
+                      {t(SEVERITY_LABELS[announcement.severity])}
                     </span>
 
                     {!announcement.active && (
@@ -439,7 +436,7 @@ const AnnouncementManager = () => {
                     aria-pressed={announcement.active}
                     className="px-3 py-2 rounded-lg text-xs font-semibold bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors"
                   >
-                    {announcement.active ? "Retire" : "Restore"}
+                    {t(announcement.active ? "notice.retire" : "notice.restore")}
                     <span className="sr-only"> {announcement.title}</span>
                   </button>
 
