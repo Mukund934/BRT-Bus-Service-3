@@ -19,6 +19,8 @@ import { findConflictingTicket } from "@/domain/ticket/conflicts";
 import { createTicket } from "@/domain/ticket/factory";
 import { isLiveStatus } from "@/domain/ticket/status";
 import { getArrivalAt, getDepartureAt } from "@/domain/ticket/timing";
+import type { TranslationKey } from "@/domain/i18n/en";
+
 import type { Ticket, TicketDraft } from "@/domain/ticket/types";
 import { ticketSchema, unknownArraySchema } from "@/domain/validation/schemas";
 import {
@@ -270,13 +272,12 @@ export type BookingResult =
   | { ok: false; reason: BookingFailure };
 
 /** Why a booking was refused, in words a passenger can act on. */
-export const BOOKING_FAILURE_MESSAGES: Record<BookingFailure, string> = {
-  NOT_AUTHENTICATED: "Please sign in to book a ticket.",
-  ALREADY_DEPARTED: "This service has already departed. Please choose a later bus.",
-  OVERLAPPING_TICKET:
-    "You already hold a ticket for a journey that overlaps this one.",
-  INVALID_JOURNEY: "That journey is not valid. Please reselect your stops.",
-  STORAGE_FAILED: "Your ticket could not be saved. Your device storage may be full.",
+export const BOOKING_FAILURE_MESSAGES: Record<BookingFailure, TranslationKey> = {
+  NOT_AUTHENTICATED: "booking.failure.notAuthenticated",
+  ALREADY_DEPARTED: "booking.failure.alreadyDeparted",
+  OVERLAPPING_TICKET: "booking.failure.overlapping",
+  INVALID_JOURNEY: "booking.failure.invalidJourney",
+  STORAGE_FAILED: "booking.failure.storageFailed",
 };
 
 /** A journey that passed every booking rule and may now be paid for. */

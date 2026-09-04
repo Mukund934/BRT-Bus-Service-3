@@ -8,6 +8,8 @@
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { en } from "@/domain/i18n/en";
+import { hi } from "@/domain/i18n/hi";
 import {
   BOOKING_FAILURE_MESSAGES,
   bookTicket,
@@ -99,11 +101,24 @@ describe("booking rules", () => {
     expect(result).toEqual({ ok: false, reason: "NOT_AUTHENTICATED" });
   });
 
+  /*
+    The registry holds KEYS now, so what a passenger reads is one lookup
+    further on - and there are two languages to read it in. Checking the key
+    strings would pass while a refusal rendered as
+    `booking.failure.storageFailed` on a Hindi screen.
+  */
   it("explains every refusal in words a passenger can act on", () => {
-    for (const message of Object.values(BOOKING_FAILURE_MESSAGES)) {
-      expect(message.length).toBeGreaterThan(10);
-      // No error codes or internals leaking into the UI.
-      expect(message).not.toMatch(/[A-Z]{2,}_[A-Z]{2,}/);
+    for (const key of Object.values(BOOKING_FAILURE_MESSAGES)) {
+      for (const catalogue of [en, hi]) {
+        const message = catalogue[key];
+
+        expect(message.length, key).toBeGreaterThan(10);
+        // No error codes, internals or untranslated keys leaking into the UI.
+        expect(message, key).not.toMatch(/[A-Z]{2,}_[A-Z]{2,}/);
+        /* A key has no spaces and equals itself; a sentence has both. */
+        expect(message, key).not.toBe(key);
+        expect(message, key).toContain(" ");
+      }
     }
   });
 });

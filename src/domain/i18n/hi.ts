@@ -180,6 +180,62 @@ export const hi: Catalogue = {
     "आपके पास पहले से {from} से {to} तक का टिकट है, जो इस यात्रा से टकराता है।",
   "booking.proceed": "भुगतान के लिए आगे बढ़ें",
 
+
+  "booking.failure.notAuthenticated": "टिकट बुक करने के लिए साइन इन कीजिए।",
+  "booking.failure.alreadyDeparted":
+    "यह सेवा जा चुकी है। कृपया बाद की कोई बस चुनिए।",
+  "booking.failure.overlapping":
+    "आपके पास पहले से एक ऐसी यात्रा का टिकट है जो इससे टकराती है।",
+  "booking.failure.invalidJourney":
+    "यह यात्रा मान्य नहीं है। कृपया अपने स्टॉप दोबारा चुनिए।",
+  "booking.failure.storageFailed":
+    "आपका टिकट सहेजा नहीं जा सका। आपके डिवाइस की मेमोरी भरी हो सकती है।",
+
+  "payment.failure.declined":
+    "भुगतान अस्वीकार कर दिया गया। आपके खाते से कोई राशि नहीं गई है।",
+  "payment.failure.unavailable":
+    "अभी भुगतान उपलब्ध नहीं है। कृपया थोड़ी देर बाद कोशिश कीजिए।",
+
+  "payment.title": "भुगतान",
+  "payment.description":
+    "अपनी यात्रा देख लीजिए, फिर पुष्टि कीजिए और वर्चुअल टिकट पाइए।",
+  "payment.srTo": "से",
+  "payment.srUntil": "तक",
+
+  /* Must stay as plain as the English. Softening it would mislead. */
+  "payment.noMoney.title": "कोई भुगतान नहीं लिया जाएगा",
+  "payment.noMoney.body":
+    "यह सेवा किसी भुगतान प्रदाता से जुड़ी नहीं है। पुष्टि करने पर केवल एक प्रदर्शन टिकट बनता है और कोई राशि नहीं जाती। किराया हमेशा की तरह बस में कंडक्टर को दीजिए।",
+
+  "payment.pay": "₹{fare} का भुगतान करें",
+  "payment.payDemo": "₹{fare} का प्रदर्शन टिकट बनाएँ",
+
+  "payment.processing.title": "भुगतान हो रहा है",
+  "payment.processing.description":
+    "इसमें बस एक पल लगेगा। कृपया यह विंडो बंद न कीजिए।",
+  "payment.processing.status": "भुगतान हो रहा है…",
+
+  "payment.success.title": "भुगतान सफल",
+  "payment.success.description": "{from} से {to} तक का आपका टिकट पक्का हो गया है।",
+  "payment.success.demo": "प्रदर्शन टिकट। कोई भुगतान नहीं लिया गया।",
+  "payment.success.notSaved":
+    "आपका टिकट इस डिवाइस पर सहेजा नहीं जा सका, इसलिए बाद में यह यहाँ न मिले।",
+  "payment.viewTicket": "मेरा टिकट देखें",
+
+  "payment.failed.title": "भुगतान असफल",
+  "payment.failed.generic": "भुगतान करते समय कुछ गड़बड़ हो गई।",
+  "payment.error.signedOut": "यह भुगतान पूरा करने के लिए साइन इन करना ज़रूरी है।",
+  "payment.error.unknown":
+    "आपका भुगतान पूरा नहीं हो सका। कृपया फिर कोशिश कीजिए।",
+
+  "payment.announce.signedOut": "भुगतान असफल। साइन इन करना ज़रूरी है।",
+  "payment.announce.bookingFailed": "बुकिंग असफल। {reason}",
+  "payment.announce.processing": "आपका भुगतान हो रहा है, कृपया प्रतीक्षा कीजिए।",
+  "payment.announce.paymentFailed": "भुगतान असफल। {reason}",
+  "payment.announce.success":
+    "भुगतान सफल। {from} से {to} तक का आपका टिकट पक्का हो गया है।",
+  "payment.announce.retry": "भुगतान असफल। कृपया फिर कोशिश कीजिए।",
+
   "login.signIn.title": "साइन इन करें",
   "login.signUp.title": "खाता बनाएँ",
   "login.reset.title": "पासवर्ड रीसेट करें",

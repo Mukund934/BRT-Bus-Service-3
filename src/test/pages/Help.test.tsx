@@ -16,6 +16,7 @@ import { STOPS } from "@/domain/transit/stops";
 import { SCHEDULED_STOPS } from "@/domain/transit/schedule";
 import { STATUS_LABELS } from "@/domain/ticket/status";
 import { BOOKING_FAILURE_MESSAGES } from "@/services/ticketService";
+import { en } from "@/domain/i18n/en";
 import { renderWithProviders, screen } from "../helpers/render";
 
 const renderHelp = () => renderWithProviders(<Help />, { route: "/help" });
@@ -76,7 +77,9 @@ describe("what it says about booking", () => {
       "OVERLAPPING_TICKET",
       "STORAGE_FAILED",
     ] as const) {
-      expect(screen.getByText(BOOKING_FAILURE_MESSAGES[reason])).toBeInTheDocument();
+      expect(
+        screen.getByText(en[BOOKING_FAILURE_MESSAGES[reason]])
+      ).toBeInTheDocument();
     }
   });
 });

@@ -11,6 +11,8 @@
  * for a payment.
  */
 
+import type { TranslationKey } from "@/domain/i18n/en";
+
 /** A payment the provider has accepted. */
 export interface PaymentIntent {
   /** Provider-side identifier for this attempt. */
@@ -27,10 +29,9 @@ export type PaymentOutcome =
   | { ok: false; reason: PaymentFailure };
 
 /** Why a payment was refused, in words a passenger can act on. */
-export const PAYMENT_FAILURE_MESSAGES: Record<PaymentFailure, string> = {
-  DECLINED: "The payment was declined. No money has left your account.",
-  PROVIDER_UNAVAILABLE:
-    "Payments are unavailable right now. Please try again in a moment.",
+export const PAYMENT_FAILURE_MESSAGES: Record<PaymentFailure, TranslationKey> = {
+  DECLINED: "payment.failure.declined",
+  PROVIDER_UNAVAILABLE: "payment.failure.unavailable",
 };
 
 export interface PaymentProvider {

@@ -7,6 +7,7 @@ import { STOPS } from "@/domain/transit/stops";
 import { SCHEDULED_STOPS } from "@/domain/transit/schedule";
 import { STATUS_LABELS } from "@/domain/ticket/status";
 import { BOOKING_FAILURE_MESSAGES } from "@/services/ticketService";
+import { useTranslation } from "@/contexts/LocaleContext";
 import { DEFAULT_FRESHNESS } from "@/domain/fleet/state";
 
 /*
@@ -44,6 +45,8 @@ const Section = ({
 );
 
 const Help = () => {
+  const { t } = useTranslation();
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-white">
       <Header />
@@ -123,10 +126,10 @@ const Help = () => {
               <Answer question="What stops a booking from going through?">
                 <p>These are the reasons a booking is refused:</p>
                 <ul className="list-disc pl-5 space-y-1">
-                  <li>{BOOKING_FAILURE_MESSAGES.NOT_AUTHENTICATED}</li>
-                  <li>{BOOKING_FAILURE_MESSAGES.ALREADY_DEPARTED}</li>
-                  <li>{BOOKING_FAILURE_MESSAGES.OVERLAPPING_TICKET}</li>
-                  <li>{BOOKING_FAILURE_MESSAGES.STORAGE_FAILED}</li>
+                  <li>{t(BOOKING_FAILURE_MESSAGES.NOT_AUTHENTICATED)}</li>
+                  <li>{t(BOOKING_FAILURE_MESSAGES.ALREADY_DEPARTED)}</li>
+                  <li>{t(BOOKING_FAILURE_MESSAGES.OVERLAPPING_TICKET)}</li>
+                  <li>{t(BOOKING_FAILURE_MESSAGES.STORAGE_FAILED)}</li>
                 </ul>
               </Answer>
 

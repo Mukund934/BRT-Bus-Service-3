@@ -9,9 +9,11 @@ import {
 } from "@/components/ui/dialog";
 import { useAnnounce } from "@/components/a11y/LiveAnnouncer";
 import { useAuth } from "@/contexts/AuthContext";
+import { useTranslation } from "@/contexts/LocaleContext";
 import { useTickets } from "@/contexts/TicketContext";
 import { PAYMENT_FAILURE_MESSAGES } from "@/domain/payment/types";
 import type { JourneySelection, PaymentStatus } from "@/domain/ticket/types";
+import type { TranslationKey } from "@/domain/i18n/en";
 import { confirmPayment } from "@/domain/ticket/factory";
 import { activePaymentProvider } from "@/services/payment/demoProvider";
 import { BOOKING_FAILURE_MESSAGES } from "@/services/ticketService";
@@ -41,12 +43,13 @@ const PaymentModal = ({ open, onClose, selection, onSuccess }: PaymentModalProps
   const { user } = useAuth();
   const { validateBooking, issueTicket } = useTickets();
   const announce = useAnnounce();
+  const { t } = useTranslation();
 
   const provider = activePaymentProvider();
 
   const [status, setStatus] = useState<PaymentStatus>("PENDING");
-  const [error, setError] = useState("");
-  const [warning, setWarning] = useState("");
+  const [error, setError] = useState<TranslationKey | "">("");
+  const [warning, setWarning] = useState<TranslationKey | "">("");
 
   const successRef = useRef<HTMLButtonElement>(null);
 
@@ -75,9 +78,9 @@ const PaymentModal = ({ open, onClose, selection, onSuccess }: PaymentModalProps
 
   const handlePay = async () => {
     if (!user) {
-      setError("You must be signed in to complete this payment.");
+      setError("payment.error.signedOut");
       setStatus("FAILED");
-      announce("Payment failed. You must be signed in.", "assertive");
+      announce(t("payment.announce.signedOut"), "assertive");
       return;
     }
 
@@ -93,15 +96,18 @@ const PaymentModal = ({ open, onClose, selection, onSuccess }: PaymentModalProps
     });
 
     if (!validation.ok) {
-      const message = BOOKING_FAILURE_MESSAGES[validation.reason];
-      setError(message);
+      const key = BOOKING_FAILURE_MESSAGES[validation.reason];
+      setError(key);
       setStatus("FAILED");
-      announce(`Booking failed. ${message}`, "assertive");
+      announce(
+        t("payment.announce.bookingFailed", { reason: t(key) }),
+        "assertive"
+      );
       return;
     }
 
     setStatus("PROCESSING");
-    announce("Processing your payment, please wait.");
+    announce(t("payment.announce.processing"));
 
     try {
       const outcome = await provider.pay(
@@ -110,10 +116,13 @@ const PaymentModal = ({ open, onClose, selection, onSuccess }: PaymentModalProps
       );
 
       if (!outcome.ok) {
-        const message = PAYMENT_FAILURE_MESSAGES[outcome.reason];
-        setError(message);
+        const key = PAYMENT_FAILURE_MESSAGES[outcome.reason];
+        setError(key);
         setStatus("FAILED");
-        announce(`Payment failed. ${message}`, "assertive");
+        announce(
+          t("payment.announce.paymentFailed", { reason: t(key) }),
+          "assertive"
+        );
         return;
       }
 
@@ -128,19 +137,15 @@ const PaymentModal = ({ open, onClose, selection, onSuccess }: PaymentModalProps
       );
 
       setStatus("SUCCESS");
-      setWarning(
-        issued.persisted
-          ? ""
-          : "Your ticket could not be saved to this device, so it may not be here later."
-      );
+      setWarning(issued.persisted ? "" : "payment.success.notSaved");
       announce(
-        `Payment successful. Your ticket from ${fromStop} to ${toStop} is confirmed.`
+        t("payment.announce.success", { from: fromStop, to: toStop })
       );
     } catch (err) {
       console.error("Payment failed:", err);
-      setError("Could not complete your payment. Please try again.");
+      setError("payment.error.unknown");
       setStatus("FAILED");
-      announce("Payment failed. Please try again.", "assertive");
+      announce(t("payment.announce.retry"), "assertive");
     }
   };
 
@@ -164,20 +169,20 @@ const PaymentModal = ({ open, onClose, selection, onSuccess }: PaymentModalProps
         {status === "PENDING" && (
           <>
             <DialogHeader>
-              <DialogTitle className="text-xl">Payment</DialogTitle>
+              <DialogTitle className="text-xl">{t("payment.title")}</DialogTitle>
               <DialogDescription>
-                Review your journey, then confirm to receive your virtual ticket.
+                {t("payment.description")}
               </DialogDescription>
             </DialogHeader>
 
             <div className="bg-secondary rounded-xl p-4">
               <p className="font-semibold">
                 {fromStop} <span aria-hidden="true">→</span>
-                <span className="sr-only">to</span> {toStop}
+                <span className="sr-only">{t("payment.srTo")}</span> {toStop}
               </p>
               <p className="text-sm">
                 {departureTime} <span aria-hidden="true">-</span>
-                <span className="sr-only">until</span> {arrivalTime}
+                <span className="sr-only">{t("payment.srUntil")}</span> {arrivalTime}
               </p>
               <p className="text-2xl font-bold text-primary mt-2">₹{fare}/-</p>
             </div>
@@ -189,11 +194,9 @@ const PaymentModal = ({ open, onClose, selection, onSuccess }: PaymentModalProps
                   aria-hidden="true"
                 />
                 <div className="min-w-0">
-                  <p className="font-semibold">No payment will be taken</p>
+                  <p className="font-semibold">{t("payment.noMoney.title")}</p>
                   <p className="text-sm mt-0.5">
-                    This service is not connected to a payment provider. Confirming
-                    issues a demonstration ticket and moves no money. Pay the
-                    conductor on board as usual.
+                    {t("payment.noMoney.body")}
                   </p>
                 </div>
               </div>
@@ -201,8 +204,8 @@ const PaymentModal = ({ open, onClose, selection, onSuccess }: PaymentModalProps
 
             <button type="button" onClick={handlePay} className="w-full brt-button touch-target">
               {provider.settlesRealMoney
-                ? `Pay ₹${fare}`
-                : `Issue a demonstration ticket for ₹${fare}`}
+                ? t("payment.pay", { fare })
+                : t("payment.payDemo", { fare })}
             </button>
 
             <button
@@ -210,7 +213,7 @@ const PaymentModal = ({ open, onClose, selection, onSuccess }: PaymentModalProps
               onClick={onClose}
               className="w-full py-2 text-sm text-muted-foreground touch-target"
             >
-              Cancel
+              {t("action.cancel")}
             </button>
           </>
         )}
@@ -218,9 +221,9 @@ const PaymentModal = ({ open, onClose, selection, onSuccess }: PaymentModalProps
         {isProcessing && (
           <>
             <DialogHeader>
-              <DialogTitle className="text-xl">Processing payment</DialogTitle>
+              <DialogTitle className="text-xl">{t("payment.processing.title")}</DialogTitle>
               <DialogDescription>
-                This will only take a moment. Please do not close this window.
+                {t("payment.processing.description")}
               </DialogDescription>
             </DialogHeader>
 
@@ -229,7 +232,7 @@ const PaymentModal = ({ open, onClose, selection, onSuccess }: PaymentModalProps
                 className="w-12 h-12 text-primary animate-spin mb-4"
                 aria-hidden="true"
               />
-              <p>Processing payment…</p>
+              <p>{t("payment.processing.status")}</p>
             </div>
           </>
         )}
@@ -237,21 +240,21 @@ const PaymentModal = ({ open, onClose, selection, onSuccess }: PaymentModalProps
         {status === "SUCCESS" && (
           <>
             <DialogHeader>
-              <DialogTitle className="text-xl">Payment successful</DialogTitle>
+              <DialogTitle className="text-xl">{t("payment.success.title")}</DialogTitle>
               <DialogDescription>
-                Your ticket from {fromStop} to {toStop} is confirmed.
+                {t("payment.success.description", { from: fromStop, to: toStop })}
               </DialogDescription>
             </DialogHeader>
 
             {!provider.settlesRealMoney && (
               <p className="text-sm text-muted-foreground text-center">
-                Demonstration ticket. No payment was taken.
+                {t("payment.success.demo")}
               </p>
             )}
 
             {warning && (
               <p role="status" className="text-sm text-amber-900 text-center">
-                {warning}
+                {t(warning)}
               </p>
             )}
 
@@ -269,7 +272,7 @@ const PaymentModal = ({ open, onClose, selection, onSuccess }: PaymentModalProps
                 }}
                 className="brt-button touch-target"
               >
-                View my ticket
+                {t("payment.viewTicket")}
               </button>
             </div>
           </>
@@ -279,10 +282,10 @@ const PaymentModal = ({ open, onClose, selection, onSuccess }: PaymentModalProps
           <>
             <DialogHeader>
               <DialogTitle className="text-xl text-destructive">
-                Payment failed
+                {t("payment.failed.title")}
               </DialogTitle>
               <DialogDescription>
-                {error || "Something went wrong while processing your payment."}
+                {error ? t(error) : t("payment.failed.generic")}
               </DialogDescription>
             </DialogHeader>
 
@@ -292,7 +295,7 @@ const PaymentModal = ({ open, onClose, selection, onSuccess }: PaymentModalProps
                 onClick={onClose}
                 className="px-5 py-2.5 rounded-xl border border-border text-foreground font-medium transition-colors duration-state hover:bg-secondary touch-target"
               >
-                Close
+                {t("action.close")}
               </button>
 
               <button
@@ -300,7 +303,7 @@ const PaymentModal = ({ open, onClose, selection, onSuccess }: PaymentModalProps
                 onClick={() => setStatus("PENDING")}
                 className="brt-button touch-target"
               >
-                Try again
+                {t("state.retry")}
               </button>
             </div>
           </>

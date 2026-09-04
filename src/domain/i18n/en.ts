@@ -219,6 +219,75 @@ export const en = {
     "You already have a ticket from {from} to {to} that overlaps this journey.",
   "booking.proceed": "Proceed to pay",
 
+
+  /*
+    Why a booking was refused, and why a payment failed.
+
+    Keyed off the failure code rather than written at the call site, because
+    the same refusal is shown in the payment dialog and listed on /help - and
+    those two drifting apart is how a help page starts describing behaviour
+    the app no longer has.
+  */
+  "booking.failure.notAuthenticated": "Please sign in to book a ticket.",
+  "booking.failure.alreadyDeparted":
+    "This service has already departed. Please choose a later bus.",
+  "booking.failure.overlapping":
+    "You already hold a ticket for a journey that overlaps this one.",
+  "booking.failure.invalidJourney":
+    "That journey is not valid. Please reselect your stops.",
+  "booking.failure.storageFailed":
+    "Your ticket could not be saved. Your device storage may be full.",
+
+  "payment.failure.declined":
+    "The payment was declined. No money has left your account.",
+  "payment.failure.unavailable":
+    "Payments are unavailable right now. Please try again in a moment.",
+
+  "payment.title": "Payment",
+  "payment.description":
+    "Review your journey, then confirm to receive your virtual ticket.",
+  "payment.srTo": "to",
+  "payment.srUntil": "until",
+
+  /*
+    The honesty notice, which is the most important string in this file. It
+    must say plainly in every language that confirming moves no money - a
+    Hindi reader shown a softened version has been misled about whether they
+    have paid for their journey.
+  */
+  "payment.noMoney.title": "No payment will be taken",
+  "payment.noMoney.body":
+    "This service is not connected to a payment provider. Confirming issues a demonstration ticket and moves no money. Pay the conductor on board as usual.",
+
+  "payment.pay": "Pay ₹{fare}",
+  "payment.payDemo": "Issue a demonstration ticket for ₹{fare}",
+
+  "payment.processing.title": "Processing payment",
+  "payment.processing.description":
+    "This will only take a moment. Please do not close this window.",
+  "payment.processing.status": "Processing payment…",
+
+  "payment.success.title": "Payment successful",
+  "payment.success.description": "Your ticket from {from} to {to} is confirmed.",
+  "payment.success.demo": "Demonstration ticket. No payment was taken.",
+  "payment.success.notSaved":
+    "Your ticket could not be saved to this device, so it may not be here later.",
+  "payment.viewTicket": "View my ticket",
+
+  "payment.failed.title": "Payment failed",
+  "payment.failed.generic":
+    "Something went wrong while processing your payment.",
+  "payment.error.signedOut": "You must be signed in to complete this payment.",
+  "payment.error.unknown": "Could not complete your payment. Please try again.",
+
+  "payment.announce.signedOut": "Payment failed. You must be signed in.",
+  "payment.announce.bookingFailed": "Booking failed. {reason}",
+  "payment.announce.processing": "Processing your payment, please wait.",
+  "payment.announce.paymentFailed": "Payment failed. {reason}",
+  "payment.announce.success":
+    "Payment successful. Your ticket from {from} to {to} is confirmed.",
+  "payment.announce.retry": "Payment failed. Please try again.",
+
   "login.signIn.title": "Sign in",
   "login.signUp.title": "Create account",
   "login.reset.title": "Reset password",
