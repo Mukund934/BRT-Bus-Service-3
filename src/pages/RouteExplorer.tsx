@@ -2,6 +2,7 @@ import { useId, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { ArrowRight, Clock, Repeat, Search } from "lucide-react";
 import Header from "@/components/Header";
+import { useTranslation } from "@/contexts/LocaleContext";
 import Footer from "@/components/Footer";
 import RouteStopList from "@/components/RouteStopList";
 import NetworkDiagram from "@/components/NetworkDiagram";
@@ -64,6 +65,7 @@ const routeMatches = (route: NetworkRoute, query: string): boolean => {
 };
 
 const RouteExplorer = () => {
+  const { t } = useTranslation();
   const panelId = useId();
   const searchId = useId();
   const [params, setParams] = useSearchParams();
@@ -97,24 +99,23 @@ const RouteExplorer = () => {
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-10 animate-fade-in-up">
             <h1 className="text-3xl md:text-4xl font-bold text-primary tracking-tight">
-              Explore the network
+              {t("routes.title")}
             </h1>
             <p className="mt-3 text-muted-foreground max-w-2xl mx-auto">
-              Every route published in the official Tatpar BRTS network, the
-              stops it serves, and where you can change buses.
+              {t("routes.intro")}
             </p>
 
             <Link
               to="/nearby"
               className="inline-block mt-3 text-primary font-medium underline underline-offset-2 touch-target"
             >
-              Places you can reach on these routes
+              {t("routes.places")}
             </Link>
           </div>
 
           <section className="mb-12" aria-labelledby="scheduled-heading">
             <h2 id="scheduled-heading" className="brt-section-title text-primary">
-              Services running today
+              {t("routes.today")}
             </h2>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -143,7 +144,7 @@ const RouteExplorer = () => {
                       to="/timetable"
                       className="brt-button inline-block mt-4 touch-target"
                     >
-                      View timetable
+                      {t("routes.viewTimetable")}
                     </Link>
                   </div>
                 );
@@ -153,7 +154,7 @@ const RouteExplorer = () => {
 
           <section className="mb-12" aria-labelledby="diagram-heading">
             <h2 id="diagram-heading" className="brt-section-title text-primary">
-              How the network connects
+              {t("routes.connections")}
             </h2>
 
             {grid === null ? (
@@ -164,16 +165,12 @@ const RouteExplorer = () => {
                 them.
               */
               <p className="brt-card text-sm text-muted-foreground">
-                The published routes disagree about the order of a shared stop,
-                so a single diagram cannot represent them. The stop list for
-                each route below is unaffected.
+                {t("routes.cycle")}
               </p>
             ) : (
               <>
                 <p className="text-sm text-muted-foreground mb-4 max-w-2xl mx-auto text-center">
-                  A connection diagram, not a map. It shows which routes call at
-                  which stops and in what order &mdash; distances and directions
-                  on it mean nothing.
+                  {t("routes.diagramMeaning")}
                 </p>
 
                 {isSimulatorPermitted(import.meta.env) && (
@@ -188,7 +185,7 @@ const RouteExplorer = () => {
                           : "border-border text-foreground hover:bg-secondary"
                       }`}
                     >
-                      {showSimulated ? "Hide" : "Show"} simulated fleet
+                      {t(showSimulated ? "routes.hideSimulated" : "routes.showSimulated")}
                     </button>
                   </div>
                 )}
@@ -211,7 +208,7 @@ const RouteExplorer = () => {
 
                 <div
                   role="group"
-                  aria-label="Network view"
+                  aria-label={t("routes.viewLabel")}
                   className="flex justify-center gap-2 mb-4"
                 >
                   {(["diagram", "table"] as const).map((option) => (
@@ -226,7 +223,7 @@ const RouteExplorer = () => {
                           : "border border-border text-foreground hover:bg-secondary"
                       }`}
                     >
-                      {option === "diagram" ? "Diagram" : "Table"}
+                      {t(option === "diagram" ? "routes.diagram" : "routes.table")}
                     </button>
                   ))}
                 </div>
@@ -240,7 +237,7 @@ const RouteExplorer = () => {
                     />
 
                     <ul
-                      aria-label="Diagram legend"
+                      aria-label={t("routes.legend")}
                       className="flex flex-wrap justify-center gap-x-5 gap-y-2 mt-4 text-xs text-muted-foreground list-none p-0"
                     >
                       {networkRoutes.map((route) => (
@@ -263,7 +260,7 @@ const RouteExplorer = () => {
                           aria-hidden="true"
                           className="h-3 w-3 rounded-full border-2 border-primary bg-card"
                         />
-                        Interchange
+                        {t("routes.interchange")}
                       </li>
 
                       {simulated.length > 0 && (
@@ -286,7 +283,7 @@ const RouteExplorer = () => {
 
           <section aria-labelledby="network-heading">
             <h2 id="network-heading" className="brt-section-title text-primary">
-              Official network routes
+              {t("routes.official")}
             </h2>
 
             <div className="mb-6">
@@ -294,7 +291,7 @@ const RouteExplorer = () => {
                 htmlFor={searchId}
                 className="block text-sm font-medium text-foreground mb-1"
               >
-                Find a route
+                {t("routes.find")}
               </label>
 
               <div className="relative">
@@ -307,7 +304,7 @@ const RouteExplorer = () => {
                   type="search"
                   value={query}
                   autoComplete="off"
-                  placeholder="Search by route or stop name"
+                  placeholder={t("routes.searchPlaceholder")}
                   onChange={(event) => setQuery(event.target.value)}
                   className="brt-input touch-target pl-11"
                 />
@@ -324,14 +321,14 @@ const RouteExplorer = () => {
                   No routes match "{query.trim()}"
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  Try a route name, a route id, or the name of a stop.
+                  {t("routes.tryAnother")}
                 </p>
                 <button
                   type="button"
                   onClick={() => setQuery("")}
                   className="mt-3 text-primary font-medium underline underline-offset-2 touch-target"
                 >
-                  Clear search
+                  {t("routes.clearSearch")}
                 </button>
               </div>
             )}
@@ -381,10 +378,18 @@ const RouteExplorer = () => {
 
                     <p className="mt-1 text-xs text-muted-foreground">
                       {withDepartures === route.servedStops.length
-                        ? "All stops have scheduled departures"
+                        ? t("routes.allScheduled")
                         : withDepartures === 0
-                          ? "No scheduled departures yet"
-                          : `${withDepartures} of ${route.servedStops.length} stops ${withDepartures === 1 ? "has" : "have"} scheduled departures`}
+                          ? t("routes.noDepartures")
+                          : t(
+                              withDepartures === 1
+                                ? "routes.oneDeparture"
+                                : "routes.someDepartures",
+                              {
+                                withDepartures,
+                                total: route.servedStops.length,
+                              }
+                            )}
                     </p>
                   </button>
                 );
@@ -410,37 +415,37 @@ const RouteExplorer = () => {
                         className="brt-button inline-flex items-center gap-2 touch-target"
                       >
                         <Repeat className="w-4 h-4" aria-hidden="true" />
-                        Plan a journey
+                        {t("routes.planJourney")}
                       </Link>
 
                       <Link
                         to="/fares"
                         className="px-6 py-3 rounded-xl border border-border text-foreground font-medium transition-colors duration-state hover:bg-secondary inline-flex items-center gap-2 touch-target"
                       >
-                        Check fares
+                        {t("routes.checkFares")}
                       </Link>
 
                       <Link
                         to="/timetable"
                         className="px-6 py-3 rounded-xl border border-border text-foreground font-medium transition-colors duration-state hover:bg-secondary inline-flex items-center gap-2 touch-target"
                       >
-                        Timetable
+                        {t("routes.timetable")}
                       </Link>
                     </div>
                   </div>
 
                   <dl className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
                     {[
-                      ["Stops", `${selected.servedStops.length}`],
+                      [t("routes.stat.stops"), `${selected.servedStops.length}`],
                       [
-                        "Interchanges",
+                        t("routes.stat.interchanges"),
                         `${selected.servedStops.filter(isInterchange).length}`,
                       ],
                       [
-                        "With departures",
+                        t("routes.stat.withDepartures"),
                         `${selected.servedStops.filter((stop) => SCHEDULED_STOPS.has(stop)).length} of ${selected.servedStops.length}`,
                       ],
-                      ["Terminates", selected.servedStops[selected.servedStops.length - 1]!],
+                      [t("routes.stat.terminates"), selected.servedStops[selected.servedStops.length - 1]!],
                     ].map(([label, value]) => (
                       <div key={label} className="rounded-xl bg-secondary p-4">
                         <dt className="text-xs text-muted-foreground">{label}</dt>

@@ -305,6 +305,118 @@ export const hi: Catalogue = {
   "dashboard.cancel.announced": "आपका टिकट रद्द कर दिया गया है।",
 
 
+  "place.notFound.title": "उस जगह के लिए हमारे पास कोई पेज नहीं है",
+  "place.notFound.body": "हो सकता है उसका नाम बदल गया हो, या लिंक ग़लत हो।",
+  "place.back": "आसपास की जगहों पर वापस",
+  "place.allNearby": "आसपास की सभी जगहें",
+  "place.operatorListing": "संचालक की सूची",
+  "place.gettingThere": "वहाँ कैसे पहुँचें",
+  "place.row.nearestStop": "सबसे पास का स्टॉप",
+  "place.registryStop":
+    "इस जगह के लिए संचालक कोई BRT पहुँच प्रकाशित नहीं करता। यह स्टॉप हमारी अपनी नेटवर्क सूची से आया है।",
+  "place.row.routes": "वहाँ रुकने वाले मार्ग",
+  "place.noRoutes": "प्रकाशित नेटवर्क का कोई मार्ग इस स्टॉप पर नहीं रुकता।",
+  "place.row.service": "निर्धारित सेवा",
+  "place.scheduled":
+    "इस स्टॉप के प्रस्थान प्रकाशित हैं, इसलिए वहाँ तक की यात्रा की योजना बनाई जा सकती है।",
+  "place.unserved":
+    "यह स्टॉप प्रकाशित नेटवर्क में है, पर वहाँ से अभी कोई प्रस्थान नहीं है, इसलिए वहाँ तक की यात्रा की योजना नहीं बनाई जा सकती।",
+  "place.row.hours": "खुलने का समय",
+  "place.row.phone": "फ़ोन",
+  "place.row.website": "वेबसाइट",
+  "place.about": "इस जानकारी के बारे में",
+  "place.row.location": "स्थान",
+  "place.noMap": "हम इस जगह को मानचित्र पर नहीं दिखाते।",
+  "place.uncheckedLead": "एक प्रकाशित निर्देशांक मौजूद है, पर",
+  "place.uncheckedEmphasis": "उसे मौक़े पर किसी ने जाँचा नहीं है",
+  "place.uncheckedRest": ", इसलिए यहाँ दूरियों के लिए उसका इस्तेमाल नहीं होता।",
+  "place.noCoordinate":
+    "इस जगह के लिए कोई स्रोत निर्देशांक प्रकाशित नहीं करता।",
+  "place.row.source": "स्रोत",
+  "place.row.lastChecked": "आख़िरी बार जाँचा गया",
+  "routes.intro":
+    "आधिकारिक Tatpar BRTS नेटवर्क में प्रकाशित हर मार्ग, वह किन स्टॉप पर रुकता है, और आप कहाँ बस बदल सकते हैं।",
+  "routes.cycle":
+    "प्रकाशित मार्ग किसी साझा स्टॉप के क्रम पर एकमत नहीं हैं, इसलिए एक ही आरेख उन्हें नहीं दिखा सकता। नीचे हर मार्ग की स्टॉप सूची इससे प्रभावित नहीं है।",
+  "routes.noDepartures": "अभी कोई निर्धारित प्रस्थान नहीं",
+  "routes.someDepartures":
+    "{total} में से {withDepartures} स्टॉप के प्रस्थान निर्धारित हैं",
+  "routes.oneDeparture":
+    "{total} में से {withDepartures} स्टॉप का प्रस्थान निर्धारित है",
+  "routes.planJourney": "यात्रा की योजना बनाइए",
+  "routes.checkFares": "किराया देखिए",
+  "routes.timetable": "समय सारणी",
+  "routes.stat.stops": "स्टॉप",
+  "routes.stat.interchanges": "इंटरचेंज",
+  "routes.stat.withDepartures": "प्रस्थान वाले",
+  "routes.stat.terminates": "अंतिम स्टॉप",
+
+  "routes.diagramMeaning":
+    "यह जुड़ाव का आरेख है, मानचित्र नहीं। यह दिखाता है कि कौन से मार्ग किन स्टॉप पर और किस क्रम में रुकते हैं — इस पर दूरियों और दिशाओं का कोई मतलब नहीं है।",
+  "routes.title": "नेटवर्क देखिए",
+  "routes.places": "इन मार्गों से जिन जगहों तक पहुँचा जा सकता है",
+  "routes.today": "आज चल रही सेवाएँ",
+  "routes.viewTimetable": "समय सारणी देखिए",
+  "routes.connections": "नेटवर्क कैसे जुड़ता है",
+  "routes.diagramNote":
+    "यह जुड़ाव का आरेख है, मानचित्र नहीं। यह दिखाता है कि कौन से मार्ग किन स्टॉप पर रुकते हैं, यह नहीं कि वे स्टॉप कहाँ हैं।",
+  "routes.showSimulated": "नक़ली फ़्लीट दिखाएँ",
+  "routes.hideSimulated": "नक़ली फ़्लीट छिपाएँ",
+  "routes.viewLabel": "नेटवर्क दृश्य",
+  "routes.diagram": "आरेख",
+  "routes.table": "तालिका",
+  "routes.legend": "आरेख की कुंजी",
+  "routes.interchange": "इंटरचेंज",
+  "routes.official": "आधिकारिक नेटवर्क मार्ग",
+  "routes.find": "कोई मार्ग ढूँढिए",
+  "routes.searchPlaceholder": "मार्ग या स्टॉप के नाम से खोजिए",
+  "routes.tryAnother":
+    "कोई मार्ग नाम, मार्ग क्रमांक, या किसी स्टॉप का नाम आज़माइए।",
+  "routes.clearSearch": "खोज हटाएँ",
+  "routes.allScheduled": "सभी स्टॉप के प्रस्थान निर्धारित हैं",
+
+  "map.title": "लाइव बस ट्रैकिंग",
+  "map.pause": "लाइव अपडेट रोकें",
+  "map.resume": "लाइव अपडेट फिर शुरू करें",
+  "map.announce.resumed": "लाइव अपडेट फिर शुरू हो गए।",
+  "map.announce.paused":
+    "लाइव अपडेट रोक दिए गए। कॉरिडोर {time} की स्थिति में दिखाया जा रहा है।",
+  "map.pausedLead": "रुका हुआ। कॉरिडोर इस समय की स्थिति में दिखाया जा रहा है —",
+  "map.updating": "बसों की सूचना आते ही अपने आप अपडेट हो रहा है।",
+  "map.show": "दिखाएँ",
+  "map.everyRoute": "सभी मार्ग",
+  "map.frameTitle": "लाइव बस स्थितियाँ",
+  "map.unavailable":
+    "लाइव ट्रैकिंग अभी उपलब्ध नहीं है। कृपया बाद में कोशिश कीजिए।",
+  "map.activeCount": "🚍 चालू बसें: {count}",
+  "map.activeHeading": "चालू बसें",
+  "map.loading": "बसें लोड हो रही हैं...",
+  "map.none": "कोई बस चालू नहीं",
+  "map.col.bus": "बस",
+  "map.col.route": "मार्ग",
+  "map.col.towards": "किस ओर",
+  "map.col.status": "स्थिति",
+  "map.col.lastUpdate": "पिछली सूचना",
+  "map.simulated": "नक़ली",
+  "map.noNextStop":
+    "मार्ग और गंतव्य वही हैं जो बस बताती है। हम यह नहीं दिखाते कि वह अगला किस स्टॉप पर पहुँचेगी: उसके लिए सर्वे किए गए स्टॉप निर्देशांक चाहिए, जो इस कॉरिडोर के पास अभी नहीं हैं।",
+  "nearby.title": "आसपास की जगहें",
+  "nearby.intro":
+    "नवा रायपुर की जगहें और हर एक का सबसे पास का BRT स्टॉप। वहाँ की यात्रा की योजना बनाइए, मार्ग देखिए, या किराया जाँचिए।",
+  "nearby.find": "कोई जगह ढूँढिए",
+  "nearby.searchPlaceholder": "जगह के नाम से खोजिए",
+  "nearby.all": "सभी",
+  "nearby.noMatch": "आपकी खोज से कोई जगह मेल नहीं खाती",
+  "nearby.tryAnother": "कोई दूसरा नाम आज़माइए, या कोई और श्रेणी चुनिए।",
+  "nearby.clearFilters": "फ़िल्टर हटाएँ",
+  "nearby.officialListing": "आधिकारिक सूची",
+  "nearby.unserved":
+    "यह स्टॉप प्रकाशित नेटवर्क में है, पर वहाँ से अभी कोई प्रस्थान नहीं है, इसलिए वहाँ तक की यात्रा की योजना नहीं बनाई जा सकती।",
+  "nearby.planJourney": "यात्रा की योजना",
+  "nearby.route": "मार्ग",
+  "nearby.fare": "किराया",
+  "nearby.nearestStop": "सबसे पास का स्टॉप: {stop}",
+
   "contact.title": "हमारी टीम से मिलिए",
   "contact.intro":
     "हमारी टीम के सदस्य आपकी मदद के लिए हैं। सहायता, सहयोग या किसी सवाल के लिए कभी भी संपर्क कीजिए।",

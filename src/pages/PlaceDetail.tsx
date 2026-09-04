@@ -64,17 +64,17 @@ const PlaceDetail = () => {
         <main id="main-content" tabIndex={-1} className="py-16 px-4">
           <div className="max-w-2xl mx-auto text-center">
             <h1 className="text-2xl font-bold text-foreground">
-              We do not have a page for that place
+              {t("place.notFound.title")}
             </h1>
             <p className="mt-3 text-muted-foreground">
-              It may have been renamed, or the link may be wrong.
+              {t("place.notFound.body")}
             </p>
             <Link
               to="/nearby"
               className="inline-flex items-center gap-2 mt-6 px-5 py-3 rounded-xl bg-primary text-primary-foreground font-medium touch-target"
             >
               <ArrowLeft className="w-4 h-4" aria-hidden="true" />
-              Back to nearby places
+              {t("place.back")}
             </Link>
           </div>
         </main>
@@ -98,7 +98,7 @@ const PlaceDetail = () => {
             className="inline-flex items-center gap-1.5 text-sm text-primary font-medium touch-target"
           >
             <ArrowLeft className="w-4 h-4" aria-hidden="true" />
-            All nearby places
+            {t("place.allNearby")}
           </Link>
 
           <div className="mt-4 rounded-2xl overflow-hidden border border-border bg-card">
@@ -114,7 +114,7 @@ const PlaceDetail = () => {
 
                 {place.official && (
                   <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary whitespace-nowrap">
-                    Operator listing
+                    {t("place.operatorListing")}
                   </span>
                 )}
               </div>
@@ -137,7 +137,7 @@ const PlaceDetail = () => {
               id="getting-there-heading"
               className="text-lg font-bold text-foreground"
             >
-              Getting there
+              {t("place.gettingThere")}
             </h2>
 
             {/*
@@ -146,7 +146,7 @@ const PlaceDetail = () => {
               the operator's own have already done so.
             */}
             <dl className="mt-2">
-              <Row label="Nearest stop">
+              <Row label={t("place.row.nearestStop")}>
                 <span className="inline-flex items-center gap-1.5">
                   <MapPin className="w-4 h-4 text-primary" aria-hidden="true" />
                   {there.stop}
@@ -154,30 +154,29 @@ const PlaceDetail = () => {
 
                 {there.stopSource === "registry" && (
                   <span className="block mt-1 text-xs text-muted-foreground">
-                    The operator publishes no BRT access for this place. This
-                    stop comes from our own network registry.
+                    {t("place.registryStop")}
                   </span>
                 )}
               </Row>
 
-              <Row label="Routes calling there">
+              <Row label={t("place.row.routes")}>
                 {routeNames.length > 0
                   ? routeNames.join(", ")
-                  : "No route in the published network calls at this stop."}
+                  : t("place.noRoutes")}
               </Row>
 
-              <Row label="Scheduled service">
+              <Row label={t("place.row.service")}>
                 {there.scheduled
-                  ? "This stop has published departures, so a journey can be planned to it."
-                  : "This stop is on the published network but has no departures yet, so a journey cannot be planned to it."}
+                  ? t("place.scheduled")
+                  : t("place.unserved")}
               </Row>
 
               {place.openingHours && (
-                <Row label="Opening hours">{place.openingHours}</Row>
+                <Row label={t("place.row.hours")}>{place.openingHours}</Row>
               )}
 
               {place.contact && (
-                <Row label="Phone">
+                <Row label={t("place.row.phone")}>
                   <a
                     href={`tel:${place.contact.replace(/[^\d+]/g, "")}`}
                     className="inline-flex items-center gap-1.5 text-primary underline underline-offset-2"
@@ -189,7 +188,7 @@ const PlaceDetail = () => {
               )}
 
               {place.website && (
-                <Row label="Website">
+                <Row label={t("place.row.website")}>
                   <a
                     href={place.website}
                     target="_blank"
@@ -210,7 +209,7 @@ const PlaceDetail = () => {
                   to={`/plan?to=${encodeURIComponent(place.nearestStop)}`}
                   className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium transition-transform duration-state hover:-translate-y-0.5 touch-target"
                 >
-                  Plan journey
+                  {t("nearby.planJourney")}
                   <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
                 </Link>
               )}
@@ -220,7 +219,7 @@ const PlaceDetail = () => {
                   to={`/routes?route=${there.routeIds[0]}`}
                   className="px-4 py-2 rounded-xl border border-border text-foreground text-sm font-medium transition-colors duration-state hover:bg-secondary touch-target"
                 >
-                  Route
+                  {t("nearby.route")}
                 </Link>
               )}
 
@@ -228,7 +227,7 @@ const PlaceDetail = () => {
                 to="/fares"
                 className="px-4 py-2 rounded-xl border border-border text-foreground text-sm font-medium transition-colors duration-state hover:bg-secondary touch-target"
               >
-                Fare
+                {t("nearby.fare")}
               </Link>
             </div>
           </section>
@@ -243,31 +242,33 @@ const PlaceDetail = () => {
             className="mt-6 rounded-2xl border border-border bg-card p-6"
           >
             <h2 id="data-heading" className="text-lg font-bold text-foreground">
-              About this information
+              {t("place.about")}
             </h2>
 
             <dl className="mt-2">
-              <Row label="Location">
+              <Row label={t("place.row.location")}>
                 {place.coordinateStatus === "disputed" ? (
                   <>
                     <span className="font-medium">
-                      We do not show this place on a map.
+                      {t("place.noMap")}
                     </span>{" "}
                     {place.coordinateNote}
                   </>
                 ) : place.coordinates ? (
                   <>
-                    A published coordinate exists but{" "}
-                    <span className="font-medium">nobody has checked it on the ground</span>
-                    , so it is not used for distances here.
+                    {t("place.uncheckedLead")}{" "}
+                    <span className="font-medium">
+                      {t("place.uncheckedEmphasis")}
+                    </span>
+                    {t("place.uncheckedRest")}
                   </>
                 ) : (
-                  "No source publishes a coordinate for this place."
+                  t("place.noCoordinate")
                 )}
               </Row>
 
-              <Row label="Source">{place.source}</Row>
-              <Row label="Last checked">{place.lastVerified}</Row>
+              <Row label={t("place.row.source")}>{place.source}</Row>
+              <Row label={t("place.row.lastChecked")}>{place.lastVerified}</Row>
             </dl>
           </section>
         </div>

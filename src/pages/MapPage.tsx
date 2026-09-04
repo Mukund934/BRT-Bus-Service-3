@@ -65,15 +65,15 @@ const MapPage = () => {
     if (paused) {
       // Resuming jumps to now rather than to whenever the next tick lands.
       setCheckedAt(serverNow());
-      announce("Live updates resumed.");
+      announce(t("map.announce.resumed"));
     } else {
       announce(
-        `Live updates paused. Showing the corridor at ${serviceClockLabel(
-          new Date(checkedAt)
-        )}.`
+        t("map.announce.paused", {
+          time: serviceClockLabel(new Date(checkedAt)),
+        })
       );
     }
-  }, [announce, buses, checkedAt, paused]);
+  }, [announce, buses, checkedAt, paused, t]);
 
   /*
     Availability is reported through the error callback rather than checked
@@ -170,7 +170,7 @@ const MapPage = () => {
       <main id="main-content" tabIndex={-1} className="py-20 px-4">
         <div className="max-w-6xl mx-auto">
           <h1 className="text-2xl font-bold text-center mb-6 text-primary-deep">
-            Live Bus Tracking
+            {t("map.title")}
           </h1>
 
           {/*
@@ -191,7 +191,7 @@ const MapPage = () => {
               ) : (
                 <Pause className="w-4 h-4" aria-hidden="true" />
               )}
-              {paused ? "Resume live updates" : "Pause live updates"}
+              {t(paused ? "map.resume" : "map.pause")}
             </button>
 
             {/*
@@ -202,7 +202,7 @@ const MapPage = () => {
               for the other seven.
             */}
             <label className="inline-flex items-center gap-2 text-sm text-gray-700">
-              <span>Show</span>
+              <span>{t("map.show")}</span>
               <select
                 value={routeId}
                 onChange={(event) =>
@@ -210,7 +210,7 @@ const MapPage = () => {
                 }
                 className="px-3 py-2 border border-input rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-ring"
               >
-                <option value="">Every route</option>
+                <option value="">{t("map.everyRoute")}</option>
                 {ROUTE_IDS.map((id) => (
                   <option key={id} value={id}>
                     {getRoute(id).name}
@@ -230,18 +230,19 @@ const MapPage = () => {
             <p className="text-sm text-gray-600">
               {paused ? (
                 <>
-                  Paused. Showing the corridor as it stood at{" "}
-                  <strong>{serviceClockLabel(new Date(frozen.at))}</strong>.
+                  {t("map.pausedLead")}{" "}
+                  <strong>{serviceClockLabel(new Date(frozen.at))}</strong>
+                  {t("about.sentenceEnd")}
                 </>
               ) : (
-                "Updating automatically as buses report."
+                t("map.updating")
               )}
             </p>
           </div>
 
           <div className="w-full h-[400px] rounded-xl overflow-hidden shadow mb-4 relative">
             <iframe
-              title="Live bus locations"
+              title={t("map.frameTitle")}
               width="100%"
               height="100%"
               loading="lazy"
@@ -249,32 +250,34 @@ const MapPage = () => {
             />
 
             <div className="absolute top-3 left-3 bg-white px-3 py-1 rounded shadow text-sm">
-              🚍 Active Buses: {active.length}
+              {t("map.activeCount", { count: active.length })}
             </div>
           </div>
 
           <div className="bg-white rounded-xl shadow p-6">
-            <h2 className="text-lg font-semibold mb-4 text-primary-deep">Active Buses</h2>
+            <h2 className="text-lg font-semibold mb-4 text-primary-deep">
+              {t("map.activeHeading")}
+            </h2>
 
-            {loading && <p>Loading buses...</p>}
+            {loading && <p>{t("map.loading")}</p>}
 
             {!loading && failed && (
               <p className="text-gray-600">
-                Live tracking is unavailable right now. Please try again later.
+                {t("map.unavailable")}
               </p>
             )}
 
-            {!loading && !failed && active.length === 0 && <p>No buses active</p>}
+            {!loading && !failed && active.length === 0 && <p>{t("map.none")}</p>}
 
             {!loading && !failed && active.length > 0 && (
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b">
-                    <th className="text-left py-2">Bus</th>
-                    <th className="text-left">Route</th>
-                    <th className="text-left">Towards</th>
-                    <th className="text-left">Status</th>
-                    <th>Last update</th>
+                    <th className="text-left py-2">{t("map.col.bus")}</th>
+                    <th className="text-left">{t("map.col.route")}</th>
+                    <th className="text-left">{t("map.col.towards")}</th>
+                    <th className="text-left">{t("map.col.status")}</th>
+                    <th>{t("map.col.lastUpdate")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -290,7 +293,7 @@ const MapPage = () => {
                           */}
                           {telemetry.simulated && (
                             <span className="ml-2 rounded-full bg-secondary px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-secondary-foreground">
-                              Simulated
+                              {t("map.simulated")}
                             </span>
                           )}
                         </td>
@@ -324,9 +327,7 @@ const MapPage = () => {
             */}
             {!loading && !failed && active.length > 0 && (
               <p className="mt-4 text-xs text-muted-foreground">
-                Route and destination come from what the bus reports. We do not
-                show which stop it reaches next: that needs surveyed stop
-                positions, which the corridor does not have yet.
+                {t("map.noNextStop")}
               </p>
             )}
           </div>
