@@ -336,12 +336,13 @@ Then open http://localhost:8080.
 | `npm run test:rules` | security rules against the Firebase emulator (needs JDK 21+) |
 | `npm run test:rules:db` | just the Realtime Database rules, one emulator at a time |
 | `npm run test:rules:firestore` | just the Firestore rules, one emulator at a time |
-
-`test:rules` starts three emulators at once, each a JVM. On a machine short of
-memory that fails to start rather than failing a test — the exit says
-`3221225786`, which is a process killed on startup, not a rule that broke. The
-two split commands run one emulator at a time and cover the same ground.
+| `npm run gtfs:export` | build a GTFS feed, or report what is missing |
 | `npm run verify` | everything CI runs, in the same order |
+
+`test:rules` starts three emulators at once, each a JVM. On a machine short of memory that
+fails to **start** rather than failing a test — the exit code is `3221225786`, a process
+killed on startup, not a rule that broke. The two split commands run one emulator at a time
+and cover the same ground.
 
 ---
 
@@ -490,12 +491,30 @@ is rejected outright.
 
 ## Future improvements
 
-- A published privacy policy and terms, which are deployment-specific.
-- Weekend Route 101 timetable: five rows in the published source are internally
-  inconsistent and are deliberately left as they are rather than reconstructed.
-- Editing a display name from the account screen.
-- React Router 7 migration, which clears two outstanding advisories currently mitigated in
+Most of what is left is not code. Each of these is waiting on something outside the
+repository, and is listed rather than quietly attempted:
+
+- **Surveyed stop coordinates.** `STOP_COORDS` is a generated lattice, which is why buses
+  are not plotted on a real basemap, no ETA is calculated, and the GTFS feed refuses to
+  build. Twenty stops need a real position.
+- **A native-speaker review of the Hindi.** 600-odd strings, none of them checked by
+  somebody who lives on the corridor.
+- **A LICENSE**, which needs an authorship agreement first.
+- **A published privacy policy and terms**, which are deployment-specific legal decisions.
+- **An error-reporting destination.** Scrubbing and rate limiting are built and tested;
+  nothing is sent anywhere, because sending it is a privacy decision rather than a
+  configuration step.
+- **Weekend Route 101 times.** Five rows in the published source are internally inconsistent
+  and are left exactly as published rather than reconstructed.
+- **A device or emulator** for the native mobile build. The domain compiles with no DOM and
+  453 of its tests already run outside one, so the remaining work is a toolchain decision.
+- React Router 7 migration, which clears two accepted advisories currently mitigated in
   `RouteGuards.tsx`.
+
+Deliberately **not** built, each for a stated reason: occupancy and crowding (no honest data
+source), route recommendation (two routes — it returns the same answer for every input),
+nearest-stop search and historical punctuality (both would need data invented first), and a
+statistical ETA confidence band (it would launder a guess as a measurement).
 
 ---
 
