@@ -387,6 +387,20 @@ export const hi: Catalogue = {
   "login.announce.resetSent":
     "अगर उस ईमेल पर खाता है, तो रीसेट लिंक भेजा जा रहा है।",
 
+
+  "boundary.title": "कुछ गड़बड़ हो गई",
+  "boundary.body":
+    "यह पेज दिखाया नहीं जा सका। दोबारा लोड करने से आमतौर पर ठीक हो जाता है, ख़ासकर तब जब यह टैब खुला रहते हुए ऐप अपडेट हुआ हो।",
+  "boundary.offlineTitle": "इस पेज के लिए कनेक्शन चाहिए",
+  "boundary.offlineBody":
+    "आप ऑफ़लाइन लग रहे हैं, और यह पेज इस डिवाइस पर पहले कभी नहीं खोला गया। जो पेज आप पहले देख चुके हैं, वे अब भी चलते हैं।",
+  "boundary.reload": "पेज दोबारा लोड करें",
+  "boundary.home": "होम पर वापस",
+
+  "notification.dismiss": "सूचना हटाएँ",
+  /* Must carry the same force: the app never claims an arrival time. */
+  "notification.positionOnly": "केवल स्थिति — आगमन का समय नहीं",
+
   "error.generic": "कुछ गड़बड़ हो गई। कृपया फिर कोशिश कीजिए।",
   "error.noPermission": "आपके पास यह काम करने की अनुमति नहीं है।",
   "error.signInRequired": "जारी रखने के लिए साइन इन कीजिए।",

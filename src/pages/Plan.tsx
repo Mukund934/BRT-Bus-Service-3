@@ -13,6 +13,7 @@ import type { JourneyPair } from "@/domain/journeys";
 import { useAuth } from "@/contexts/AuthContext";
 import type { JourneySelection } from "@/domain/ticket/types";
 import { parseTimeToDate } from "@/domain/time";
+import { BOOKING_FAILURE_MESSAGES } from "@/services/ticketService";
 import { calculateFare } from "@/domain/transit/fares";
 import { isInterchange } from "@/domain/transit/routes";
 import {
@@ -156,7 +157,7 @@ const Plan = () => {
 
   const handleBook = (trip: Trip) => {
     if (!user) {
-      toast.info("Please sign in to book a ticket.");
+      toast.info(t(BOOKING_FAILURE_MESSAGES.NOT_AUTHENTICATED));
       navigate("/login", { state: { from: location } });
       return;
     }

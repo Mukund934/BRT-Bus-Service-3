@@ -22,6 +22,7 @@ import {
   serviceOn,
   serviceWeekdayName,
 } from "@/domain/transit/calendar";
+import { BOOKING_FAILURE_MESSAGES } from "@/services/ticketService";
 import { outlookFor, tripTimings } from "@/domain/transit/departures";
 import {
   getCallTime,
@@ -407,7 +408,7 @@ const Timetable = () => {
     if (!user) {
       // Replaces a blocking window.alert(). A toast conveys the same thing
       // without stealing focus or freezing the page.
-      toast.info("Please sign in to book a ticket.");
+      toast.info(t(BOOKING_FAILURE_MESSAGES.NOT_AUTHENTICATED));
       navigate("/login", { state: { from: location } });
       return;
     }

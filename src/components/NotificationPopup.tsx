@@ -11,6 +11,7 @@ import {
 import { X } from "lucide-react";
 import { NOTIFICATION_RULES } from "@/constants/config";
 import { useAnnounce } from "@/components/a11y/LiveAnnouncer";
+import { useTranslation } from "@/contexts/LocaleContext";
 import { createAlertThrottle } from "@/domain/alerts/arrival";
 
 interface ArrivalNotification {
@@ -80,6 +81,8 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     []
   );
 
+  const { t } = useTranslation();
+
   const value = useMemo<NotificationContextValue>(() => ({ notify }), [notify]);
 
   return (
@@ -113,7 +116,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
                   </span>
                 </p>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Position only &mdash; not an arrival time
+                  {t("notification.positionOnly")}
                 </p>
               </div>
 
@@ -130,7 +133,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
                 tabIndex={-1}
               >
                 <X className="w-4 h-4" />
-                <span className="sr-only">Dismiss notification</span>
+                <span className="sr-only">{t("notification.dismiss")}</span>
               </button>
             </div>
           </div>

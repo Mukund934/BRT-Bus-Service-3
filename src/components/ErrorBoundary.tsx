@@ -1,6 +1,39 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
 import { AlertTriangle } from "lucide-react";
 import { reportCaught } from "@/services/observability";
+import { STORAGE_KEYS } from "@/constants/config";
+import {
+  ENGLISH,
+  isLocale,
+  loadedCatalogue,
+  translate,
+  type LoadedCatalogue,
+} from "@/domain/i18n/strings";
+
+/**
+ * The language to fail in.
+ *
+ * This boundary sits OUTSIDE `LocaleProvider` on purpose - it has to survive
+ * a crash in the provider itself - so it cannot use the hook, and reads the
+ * stored choice directly.
+ *
+ * A language is only used if it is already in memory. Fetching one while the
+ * app is on fire is the wrong moment to depend on the network, and English is
+ * always present. That is also why the fallback renders `lang` from the
+ * catalogue it actually got rather than from the choice: English announced in
+ * a Hindi voice is not a degraded error screen, it is an unreadable one.
+ */
+const failureCatalogue = (): LoadedCatalogue => {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEYS.LOCALE);
+
+    if (isLocale(stored)) return loadedCatalogue(stored) ?? ENGLISH;
+  } catch {
+    /* A device that refuses storage still gets an error screen. */
+  }
+
+  return ENGLISH;
+};
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -28,6 +61,8 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   override componentDidCatch(error: Error, info: ErrorInfo) {
     console.error("Unhandled render error", error, info.componentStack);
     reportCaught("boundary", error);
+
+    document.documentElement.lang = failureCatalogue().locale;
   }
 
   override render() {
@@ -40,6 +75,10 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
     */
     const offline =
       typeof navigator !== "undefined" && navigator.onLine === false;
+
+    const catalogue = failureCatalogue();
+    const t = (key: Parameters<typeof translate>[1]) =>
+      translate(catalogue, key);
 
     return (
       <main
@@ -57,7 +96,7 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
           />
 
           <h1 className="text-xl font-semibold text-gray-900 mb-2">
-            {offline ? "This page needs a connection" : "Something went wrong"}
+            {t(offline ? "boundary.offlineTitle" : "boundary.title")}
           </h1>
 
           {/*
@@ -67,9 +106,7 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
             to reload is advice that cannot work.
           */}
           <p className="text-gray-600 mb-6">
-            {offline
-              ? "You appear to be offline, and this page has not been opened on this device before. Pages you have already visited still work."
-              : "This page could not be displayed. Reloading usually fixes it, especially if the app was updated while this tab was open."}
+            {t(offline ? "boundary.offlineBody" : "boundary.body")}
           </p>
 
           <div className="flex flex-wrap gap-3 justify-center">
@@ -78,14 +115,14 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
               onClick={() => window.location.reload()}
               className="brt-button touch-target inline-flex items-center"
             >
-              Reload the page
+              {t("boundary.reload")}
             </button>
 
             <a
               href="/"
               className="px-6 py-3 rounded-xl border border-border font-semibold text-foreground hover:bg-secondary transition-colors touch-target inline-flex items-center"
             >
-              Back to home
+              {t("boundary.home")}
             </a>
           </div>
         </div>

@@ -482,6 +482,26 @@ export const en = {
     console for whoever debugs them. A rules refusal is not a bug and reads as
     a plain refusal.
   */
+
+  /*
+    The screen shown when the app itself has failed, and the arrival popup.
+
+    "Position only" is a truthfulness notice, not a caption: the app knows
+    where a bus IS and never when it will arrive, and both languages have to
+    say so with the same force.
+  */
+  "boundary.title": "Something went wrong",
+  "boundary.body":
+    "This page could not be displayed. Reloading usually fixes it, especially if the app was updated while this tab was open.",
+  "boundary.offlineTitle": "This page needs a connection",
+  "boundary.offlineBody":
+    "You appear to be offline, and this page has not been opened on this device before. Pages you have already visited still work.",
+  "boundary.reload": "Reload the page",
+  "boundary.home": "Back to home",
+
+  "notification.dismiss": "Dismiss notification",
+  "notification.positionOnly": "Position only — not an arrival time",
+
   "error.generic": "Something went wrong. Please try again.",
   "error.noPermission": "You do not have permission to perform this action.",
   "error.signInRequired": "Please sign in to continue.",
