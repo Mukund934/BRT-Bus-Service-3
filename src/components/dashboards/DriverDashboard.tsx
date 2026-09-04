@@ -90,8 +90,7 @@ const DriverDashboard = () => {
           */}
           {vehicleId === null && (
             <p className="text-blue-100 text-sm mt-6">
-              No bus is assigned to you right now, so nothing is being shared.
-              The operator assigns one for each shift.
+              {t("driver.dashboard.noAssignment")}
             </p>
           )}
         </div>

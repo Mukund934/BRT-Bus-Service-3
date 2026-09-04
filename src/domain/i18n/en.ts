@@ -413,6 +413,8 @@ export const en = {
   "driver.announce.interrupted":
     "Your position is not reaching passengers. {reason}",
 
+  "driver.dashboard.noAssignment":
+    "No bus is assigned to you right now, so nothing is being shared. The operator assigns one for each shift.",
   "driver.dashboard.role": "Driver",
   "driver.dashboard.title": "Share Live Location",
   "driver.dashboard.body":

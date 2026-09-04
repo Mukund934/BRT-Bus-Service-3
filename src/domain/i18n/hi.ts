@@ -328,6 +328,8 @@ export const hi: Catalogue = {
   "driver.announce.interrupted":
     "आपकी स्थिति यात्रियों तक नहीं पहुँच रही। {reason}",
 
+  "driver.dashboard.noAssignment":
+    "अभी आपको कोई बस नहीं सौंपी गई है, इसलिए कुछ भी साझा नहीं हो रहा। संचालक हर शिफ़्ट के लिए बस सौंपते हैं।",
   "driver.dashboard.role": "चालक",
   "driver.dashboard.title": "लाइव स्थिति साझा करें",
   "driver.dashboard.body":
