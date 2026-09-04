@@ -79,6 +79,10 @@ const describeGaps = (gaps) => {
           url: "<operator public url>",
           timezone: "Asia/Kolkata",
         },
+        feedPublisher: {
+          name: "<who is publishing this feed - not the operator>",
+          url: "<publisher public url>",
+        },
         startDate: "YYYYMMDD",
         endDate: "YYYYMMDD",
         stopCoordinates: { "<stop name>": { lat: 0, lng: 0 } },
@@ -97,6 +101,7 @@ const main = async () => {
 
     const feed = module.buildGtfsFeed({
       agency: config?.agency ?? { id: "", name: "", url: "", timezone: "" },
+      feedPublisher: config?.feedPublisher ?? { name: "", url: "" },
       stopCoordinates: config?.stopCoordinates ?? {},
       startDate: config?.startDate ?? "",
       endDate: config?.endDate ?? "",

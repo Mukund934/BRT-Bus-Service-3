@@ -33,6 +33,7 @@ import { TICKET_RULES } from "@/constants/config";
 import { ROUTE_IDS, getRoute, type RouteId } from "@/domain/transit/routes";
 import { STOPS, type StopName } from "@/domain/transit/stops";
 import { getAllTrips, type ServiceDay, type Trip } from "@/domain/transit/schedule";
+import { TIMETABLE_SOURCE } from "@/domain/transit/timetable";
 
 /** Where the service is run from, as the operator states it. */
 export interface GtfsAgency {
@@ -43,6 +44,20 @@ export interface GtfsAgency {
   timezone: string;
 }
 
+/**
+ * Who publishes the FEED, which is not who runs the service.
+ *
+ * GTFS asks for both and they are different claims. The agency is the
+ * operator; the feed publisher is whoever assembled this file. Naming the
+ * operator in both would attribute our export to them, in every system that
+ * ingests it - and this site says plainly elsewhere that it is not their
+ * product and not affiliated with them.
+ */
+export interface GtfsFeedPublisher {
+  name: string;
+  url: string;
+}
+
 export interface GtfsCoordinate {
   lat: number;
   lng: number;
@@ -50,6 +65,8 @@ export interface GtfsCoordinate {
 
 export interface GtfsInputs {
   agency: GtfsAgency;
+  /** Whoever is publishing this feed. Not the operator - see the type. */
+  feedPublisher: GtfsFeedPublisher;
   /**
    * Surveyed stop positions.
    *
@@ -65,6 +82,7 @@ export interface GtfsInputs {
 export type GtfsGap =
   | { kind: "AGENCY"; detail: string }
   | { kind: "FEED_WINDOW"; detail: string }
+  | { kind: "FEED_PUBLISHER"; detail: string }
   | { kind: "STOP_COORDINATES"; detail: string; stops: StopName[] };
 
 export type GtfsFeed =
@@ -239,7 +257,7 @@ const missingCoordinates = (
  */
 export const buildGtfsFeed = (inputs: GtfsInputs): GtfsFeed => {
   const gaps: GtfsGap[] = [];
-  const { agency, stopCoordinates, startDate, endDate } = inputs;
+  const { agency, feedPublisher, stopCoordinates, startDate, endDate } = inputs;
 
   if (!agency?.name?.trim() || !agency?.url?.trim() || !agency?.timezone?.trim()) {
     gaps.push({
@@ -248,6 +266,16 @@ export const buildGtfsFeed = (inputs: GtfsInputs): GtfsFeed => {
         "The operator's name, public URL and IANA timezone are facts about " +
         "somebody else. Guessing them misattributes the service in every " +
         "system that ingests the feed.",
+    });
+  }
+
+  if (!feedPublisher?.name?.trim() || !feedPublisher?.url?.trim()) {
+    gaps.push({
+      kind: "FEED_PUBLISHER",
+      detail:
+        "A feed names who published it, separately from who runs the buses. " +
+        "Defaulting it to the operator would credit them with a file they " +
+        "did not produce.",
     });
   }
 
@@ -328,6 +356,37 @@ export const buildGtfsFeed = (inputs: GtfsInputs): GtfsFeed => {
   return {
     ok: true,
     files: {
+      /*
+        The dataset's own provenance. `feed_version` is the date the
+        timetable was read, because that is what changes when the data
+        changes - a version that never moves tells a consumer nothing about
+        whether they are holding the current file.
+
+        `feed_lang` is the language of the NAMES in this feed, not of the app.
+        Stops and routes are carried in the form the operator publishes them,
+        which is English, and that stays true however many languages the site
+        is read in.
+      */
+      "feed_info.txt": csv(
+        [
+          "feed_publisher_name",
+          "feed_publisher_url",
+          "feed_lang",
+          "feed_start_date",
+          "feed_end_date",
+          "feed_version",
+        ],
+        [
+          [
+            feedPublisher.name,
+            feedPublisher.url,
+            "en",
+            startDate,
+            endDate,
+            TIMETABLE_SOURCE.extractedOn,
+          ],
+        ]
+      ),
       "agency.txt": csv(
         ["agency_id", "agency_name", "agency_url", "agency_timezone"],
         [[agency.id, agency.name, agency.url, agency.timezone]]

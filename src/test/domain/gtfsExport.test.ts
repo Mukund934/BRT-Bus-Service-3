@@ -19,6 +19,7 @@ import {
   type GtfsInputs,
 } from "@/domain/gtfs/export";
 import { ROUTE_IDS } from "@/domain/transit/routes";
+import { TIMETABLE_SOURCE } from "@/domain/transit/timetable";
 import { getAllTrips } from "@/domain/transit/schedule";
 import { serviceOn } from "@/domain/transit/calendar";
 
@@ -38,8 +39,15 @@ const fixtureCoordinates = () =>
     ])
   );
 
+/* Deliberately not the agency: the feed's publisher is a separate claim. */
+const feedPublisher = {
+  name: "Fixture Feed Publisher",
+  url: "https://feeds.example.invalid",
+};
+
 const inputs = (over: Partial<GtfsInputs> = {}): GtfsInputs => ({
   agency,
+  feedPublisher,
   stopCoordinates: fixtureCoordinates(),
   startDate: "20260101",
   endDate: "20261231",
@@ -56,6 +64,60 @@ const built = () => {
 
 const rows = (file: string) =>
   file.trim().split("\n").slice(1).map((line) => line.split(","));
+
+/*
+  The dataset's own provenance.
+
+  A feed that does not say who published it or which version it is leaves a
+  consumer unable to tell a current file from a stale one - and GTFS has a
+  place for exactly that, which this export did not fill.
+*/
+describe("what the feed says about itself", () => {
+  it("publishes feed_info.txt", () => {
+    expect(Object.keys(built())).toContain("feed_info.txt");
+  });
+
+  /*
+    THE LINE. The agency runs the buses; we assembled the file. Naming the
+    operator as publisher would credit them with something they did not
+    produce, in every system that ingests it.
+  */
+  it("names the feed's publisher, not the operator", () => {
+    const rows = built()["feed_info.txt"]!;
+
+    expect(rows).toContain(feedPublisher.name);
+    expect(rows).not.toContain(agency.name);
+  });
+
+  /*
+    Read from the timetable's own provenance rather than typed, so the version
+    moves when the data does. A constant here would report the same version
+    forever.
+  */
+  it("versions the feed by the date the timetable was read", () => {
+    expect(built()["feed_info.txt"]).toContain(TIMETABLE_SOURCE.extractedOn);
+  });
+
+  /*
+    The language of the NAMES in the feed, not of the site. Stops and routes
+    are carried as the operator publishes them, which stays English however
+    many languages the app is read in.
+  */
+  it("declares the language its names are written in", () => {
+    expect(built()["feed_info.txt"]).toMatch(/(^|,)en(,|$)/m);
+  });
+
+  it("refuses to build without a feed publisher", () => {
+    const feed = buildGtfsFeed(
+      inputs({ feedPublisher: { name: "", url: "" } })
+    );
+
+    expect(feed.ok).toBe(false);
+    if (!feed.ok) {
+      expect(feed.gaps.map((gap) => gap.kind)).toContain("FEED_PUBLISHER");
+    }
+  });
+});
 
 describe("what the export refuses to invent", () => {
   /*
@@ -141,6 +203,7 @@ describe("the feed it does produce", () => {
     expect(Object.keys(built()).sort()).toEqual([
       "agency.txt",
       "calendar.txt",
+      "feed_info.txt",
       "routes.txt",
       "stop_times.txt",
       "trips.txt",
