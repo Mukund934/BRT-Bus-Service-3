@@ -21,6 +21,8 @@ import { gzipSync } from "node:zlib";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { en } from "@/domain/i18n/en";
+import { LOCALES, loadCatalogue } from "@/domain/i18n/strings";
 
 const DIST = "dist";
 const KB = 1024;
@@ -60,6 +62,11 @@ const gzippedKb = (assets: string[]) =>
 
 /** Every emitted chunk, whether or not the entry pulls it. */
 const chunkNames = initialScripts.map((asset) => path.basename(asset));
+
+/** The bytes of the initial graph, for asking what is inside them. */
+const entryCode = initialScripts
+  .map((asset) => readFileSync(path.join(DIST, asset), "utf8"))
+  .join("\n");
 
 describe("the first load", () => {
   it("is described by the built document", () => {
@@ -111,5 +118,41 @@ describe("what must not be in the first load", () => {
   */
   it("does not ship a route's code before that route is visited", () => {
     expect(chunkNames.join(" ")).not.toMatch(/Dashboard|MapView|Timetable/);
+  });
+
+  /*
+    Every language except English.
+
+    The header and footer are in the shell, so a dictionary they can reach is
+    in the entry graph for every visitor - including the ones who will never
+    read it. One extra language was affordable; the fourth is not, and the
+    cost lands on exactly the phones least able to pay it.
+
+    Asked of the CATALOGUES rather than of the chunk filenames, so that a
+    renamed chunk, an inlined one, or a language added later cannot slip past
+    a pattern that was written before it existed.
+  */
+  it("does not ship a language nobody has chosen", async () => {
+    for (const locale of LOCALES.filter((candidate) => candidate !== "en")) {
+      const { strings } = await loadCatalogue(locale);
+
+      for (const key of ["nav.timetable", "nav.fares"] as const) {
+        expect(
+          entryCode,
+          `${locale} copy for ${key} is in the entry graph`
+        ).not.toContain(strings[key]);
+      }
+    }
+  });
+
+  /*
+    And the check that stops the one above from passing for the wrong reason.
+    If `entryCode` were ever empty - a renamed asset directory, a changed
+    markup convention - every absence above would hold vacuously while the
+    guard measured nothing.
+  */
+  it("is reading the entry graph it claims to be reading", () => {
+    expect(entryCode).toContain(en["nav.timetable"]);
+    expect(entryCode.length).toBeGreaterThan(100_000);
   });
 });
