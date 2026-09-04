@@ -401,6 +401,94 @@ export const en = {
     operator's fleet table. Three surfaces, one table — /about exists to
     explain the words the map uses, so they cannot be allowed to drift.
   */
+  /*
+    /about - the page an operator reads first.
+
+    Every figure on it is substituted rather than written into a sentence: the
+    stop counts, the fare range, the staleness threshold and the operator's own
+    published numbers all come from the data, so a translated sentence cannot
+    end up quoting a figure the app no longer holds.
+
+    The operator's published FACTS are not here at all. They are a quotation
+    carrying a citation, and a quotation is not translated - the same rule that
+    keeps stop names in their published form. See `domain/transit/operator`.
+
+    A sentence containing a link is split into segments rather than
+    concatenated around it, separators included: Hindi ends a sentence with a
+    danda rather than a full stop, and "or" sits differently in a list.
+  */
+  "about.title": "About the BRT corridor",
+  "about.intro":
+    "What Bus Rapid Transit is, what runs in Nava Raipur, and what this site can and cannot tell you about it.",
+  "about.brt.heading": "What Bus Rapid Transit is",
+  "about.brt.1":
+    "Bus Rapid Transit gives buses their own lane, so they are not held up by the traffic beside them. Passengers wait at fixed stations rather than at the roadside, board through a platform level with the bus floor, and travel to a published timetable.",
+  "about.brt.2":
+    "The point of it is that the service becomes predictable. A journey that takes twenty minutes today should take twenty minutes tomorrow, which is what makes a bus usable for getting to work.",
+  "about.service.heading": "The Nava Raipur service",
+  "about.service.intro":
+    "The corridor is run by {operator} ({abbreviation}). The figures below are the operator’s own published numbers about their service, not ours.",
+  "about.service.infrastructure": "Corridor infrastructure",
+  "about.service.source":
+    "Source: {publication}, {url}, read on {retrieved}. That page has been unreachable since {unreachable}, so these figures cannot currently be checked against it. They are reproduced as they were published and attributed to {abbreviation}, rather than presented as our own.",
+  "about.stops.heading": "Stops: what is published, and what we list",
+  "about.stops.intro":
+    "The operator publishes its stopping places in three groups:",
+  "about.stops.ours":
+    "Our own stop registry holds {total} stops, of which {scheduled} have published departure times. Those numbers do not reconcile with the operator’s, and we have not deleted stops to force a match. Where the two disagree the operator is the authority on what exists; we are reporting only what we hold.",
+  "about.stops.unserved":
+    "A stop with no departure times still appears in route listings and fare lookups. Nothing can be booked from it, because no times have been published for it.",
+  "about.network.heading": "Routes and the network",
+  "about.network.body":
+    "The network is a trunk corridor with feeder routes joining it. We list {routes} network routes and {interchanges} interchanges where you can change between them. The timetable publishes {workings} numbered workings, because one route is operated with more than one stopping pattern.",
+  "about.network.link": "Browse the network diagram and every route",
+  "about.fares.heading": "Fares",
+  "about.fares.body":
+    "Fares come from the official BRTS fare chart. They are not calculated from distance, and nothing is estimated: a pair the chart does not price is reported as unavailable rather than filled in. Published fares run from ₹{lowest} to ₹{highest}, and the same fare applies in both directions between any two stops.",
+  "about.fares.link": "Check the fare between any two stops",
+  "about.ride.heading": "How to ride",
+  "about.ride.lead":
+    "Find your stop, check when the next bus leaves, look up the fare, then board at the platform. Each step has its own page:",
+  "about.ride.plan": "plan a journey",
+  "about.ride.timetable": "read the timetable",
+  "about.ride.nearby": "find places near the corridor",
+  "about.ride.separator": ", ",
+  "about.ride.or": ", or ",
+  "about.sentenceEnd": ".",
+  "about.live.heading": "Live tracking, and what it cannot tell you",
+  "about.live.1":
+    "Live positions are published by the driver’s own device while they are on duty. Coverage is therefore not guaranteed: a bus whose driver is not sharing a position is invisible to us even though it is running normally. An empty map means we are receiving no positions, not that no bus is coming.",
+  "about.live.2":
+    "A reported position is not simply on or off. Every bus we show carries one of these states:",
+  "about.live.3":
+    "Past about {minutes} minutes we stop showing the bus at all, because a position that old says more about where it was than where it is. We do not turn any of this into an arrival time: we know where a bus reported itself, not what the road ahead of it is doing.",
+  "about.tickets.heading": "Digital tickets",
+  "about.tickets.stored":
+    "A ticket booked here is kept on your device and on our servers, and shown as a code when you open it.",
+  "about.tickets.paid": "Payment is taken through {provider}.",
+  "about.tickets.demo":
+    "Booking is a demonstration: no money changes hands, and a ticket bought here is not accepted as a fare.",
+  "about.tickets.offline":
+    "After your first visit the app is kept on this device, so a ticket you have already opened will open again with no connection. A page you have never opened will not, and booking a new ticket still needs one.",
+  "about.updates.heading": "Service updates",
+  "about.updates.body":
+    "When a disruption is published it appears at the top of every page here, not only on the home page, so a bookmark or a deep link cannot hide it. Updates come from whoever is authorised to post them. We do not write them ourselves, and we do not infer a disruption from buses being quiet.",
+  "about.a11y.heading": "Accessibility",
+  "about.a11y.1":
+    "Every page can be reached and operated from the keyboard, with a visible focus outline and a skip link to the main content. Page changes are announced to screen readers, and the network is offered as a table as well as a diagram, so nothing here depends on reading a map.",
+  "about.a11y.2":
+    "Colour is never the only way a state is communicated, and animation is reduced automatically when your system asks for that. If something here is unusable for you, that is a defect worth reporting on the",
+  "about.a11y.contactLink": "contact page",
+  "about.next.heading": "What we are planning next",
+  "about.next.intro":
+    "These are intentions, not features. None of them exists yet:",
+  "about.next.gtfs":
+    "Publishing the corridor timetable as open transit data, so it can appear in other journey planners rather than only here. The feed is built; what it still needs is surveyed stop coordinates, which we do not have.",
+  "about.who.heading": "Who we are",
+  "about.who.body":
+    "This is an independent, student-built project. It is not an official {abbreviation} product, it is not affiliated with the operator, and nothing here is endorsed by them. The service information is reproduced from published sources with attribution; the software is ours.",
+  "about.who.link": "Who built this, and how to reach us",
+
   "fleet.noShift": "No shift started",
   "fleet.state.live": "Live",
   "fleet.state.recent": "Recent",

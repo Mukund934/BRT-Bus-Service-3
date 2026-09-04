@@ -81,140 +81,112 @@ const About = () => {
         <div className="max-w-3xl mx-auto">
           <div className="text-center mb-12">
             <h1 className="text-4xl font-bold text-primary-deep mb-3">
-              About the BRT corridor
+              {t("about.title")}
             </h1>
-            <p className="text-gray-600">
-              What Bus Rapid Transit is, what runs in Nava Raipur, and what this
-              site can and cannot tell you about it.
-            </p>
+            <p className="text-gray-600">{t("about.intro")}</p>
           </div>
 
           <div className="space-y-8">
-            <Section title="What Bus Rapid Transit is">
-              <p>
-                Bus Rapid Transit gives buses their own lane, so they are not held
-                up by the traffic beside them. Passengers wait at fixed stations
-                rather than at the roadside, board through a platform level with
-                the bus floor, and travel to a published timetable.
-              </p>
-              <p>
-                The point of it is that the service becomes predictable. A journey
-                that takes twenty minutes today should take twenty minutes
-                tomorrow, which is what makes a bus usable for getting to work.
-              </p>
+            <Section title={t("about.brt.heading")}>
+              <p>{t("about.brt.1")}</p>
+              <p>{t("about.brt.2")}</p>
             </Section>
 
-            <Section title="The Nava Raipur service">
+            <Section title={t("about.service.heading")}>
               <p>
-                The corridor is run by {OPERATOR.name} ({OPERATOR.abbreviation}).
-                The figures below are the operator&rsquo;s own published numbers
-                about their service, not ours.
+                {t("about.service.intro", {
+                  operator: OPERATOR.name,
+                  abbreviation: OPERATOR.abbreviation,
+                })}
               </p>
 
               <FactList facts={SERVICE_FACTS} />
 
               <h3 className="font-semibold text-gray-900 pt-2">
-                Corridor infrastructure
+                {t("about.service.infrastructure")}
               </h3>
               <FactList facts={INFRASTRUCTURE_FACTS} />
 
               <p className="text-xs text-gray-500 border-t border-border pt-4">
-                Source: {OPERATOR_SOURCE.publication}, {OPERATOR_SOURCE.url}, read
-                on {OPERATOR_SOURCE.retrievedOn}. That page has been unreachable
-                since {OPERATOR_SOURCE.unreachableSince}, so these figures cannot
-                currently be checked against it. They are reproduced as they were
-                published and attributed to {OPERATOR.abbreviation}, rather than
-                presented as our own.
+                {t("about.service.source", {
+                  publication: OPERATOR_SOURCE.publication,
+                  url: OPERATOR_SOURCE.url,
+                  retrieved: OPERATOR_SOURCE.retrievedOn,
+                  unreachable: OPERATOR_SOURCE.unreachableSince,
+                  abbreviation: OPERATOR.abbreviation,
+                })}
               </p>
             </Section>
 
-            <Section title="Stops: what is published, and what we list">
-              <p>The operator publishes its stopping places in three groups:</p>
+            <Section title={t("about.stops.heading")}>
+              <p>{t("about.stops.intro")}</p>
 
               <FactList facts={PUBLISHED_STOPS} />
 
               <p>
-                Our own stop registry holds {STOPS.length} stops, of which{" "}
-                {SCHEDULED_STOPS.size} have published departure times. Those
-                numbers do not reconcile with the operator&rsquo;s, and we have not
-                deleted stops to force a match. Where the two disagree the operator
-                is the authority on what exists; we are reporting only what we
-                hold.
+                {t("about.stops.ours", {
+                  total: STOPS.length,
+                  scheduled: SCHEDULED_STOPS.size,
+                })}
               </p>
-              <p>
-                A stop with no departure times still appears in route listings and
-                fare lookups. Nothing can be booked from it, because no times have
-                been published for it.
-              </p>
+              <p>{t("about.stops.unserved")}</p>
             </Section>
 
-            <Section title="Routes and the network">
+            <Section title={t("about.network.heading")}>
               <p>
-                The network is a trunk corridor with feeder routes joining it. We
-                list {NETWORK_ROUTE_IDS.length} network routes and{" "}
-                {INTERCHANGES.length} interchanges where you can change between
-                them. The timetable publishes {ROUTE_IDS.length} numbered workings,
-                because one route is operated with more than one stopping pattern.
+                {t("about.network.body", {
+                  routes: NETWORK_ROUTE_IDS.length,
+                  interchanges: INTERCHANGES.length,
+                  workings: ROUTE_IDS.length,
+                })}
               </p>
               <p>
                 <Link to="/routes" className="text-primary font-medium underline">
-                  Browse the network diagram and every route
+                  {t("about.network.link")}
                 </Link>
-                .
+                {t("about.sentenceEnd")}
               </p>
             </Section>
 
-            <Section title="Fares">
+            <Section title={t("about.fares.heading")}>
               <p>
-                Fares come from the official BRTS fare chart. They are not
-                calculated from distance, and nothing is estimated: a pair the
-                chart does not price is reported as unavailable rather than filled
-                in. Published fares run from &#8377;{lowestFare} to &#8377;
-                {highestFare}, and the same fare applies in both directions between
-                any two stops.
+                {t("about.fares.body", {
+                  lowest: lowestFare,
+                  highest: highestFare,
+                })}
               </p>
               <p>
                 <Link to="/fares" className="text-primary font-medium underline">
-                  Check the fare between any two stops
+                  {t("about.fares.link")}
                 </Link>
-                .
+                {t("about.sentenceEnd")}
               </p>
             </Section>
 
-            <Section title="How to ride">
+            <Section title={t("about.ride.heading")}>
               <p>
-                Find your stop, check when the next bus leaves, look up the fare,
-                then board at the platform. Each step has its own page:{" "}
+                {t("about.ride.lead")}{" "}
                 <Link to="/plan" className="text-primary font-medium underline">
-                  plan a journey
+                  {t("about.ride.plan")}
                 </Link>
-                ,{" "}
+                {t("about.ride.separator")}
                 <Link
                   to="/timetable"
                   className="text-primary font-medium underline"
                 >
-                  read the timetable
+                  {t("about.ride.timetable")}
                 </Link>
-                , or{" "}
+                {t("about.ride.or")}
                 <Link to="/nearby" className="text-primary font-medium underline">
-                  find places near the corridor
+                  {t("about.ride.nearby")}
                 </Link>
-                .
+                {t("about.sentenceEnd")}
               </p>
             </Section>
 
-            <Section title="Live tracking, and what it cannot tell you">
-              <p>
-                Live positions are published by the driver&rsquo;s own device while
-                they are on duty. Coverage is therefore not guaranteed: a bus whose
-                driver is not sharing a position is invisible to us even though it
-                is running normally. An empty map means we are receiving no
-                positions, not that no bus is coming.
-              </p>
-              <p>
-                A reported position is not simply on or off. Every bus we show
-                carries one of these states:
-              </p>
+            <Section title={t("about.live.heading")}>
+              <p>{t("about.live.1")}</p>
+              <p>{t("about.live.2")}</p>
               <dl className="divide-y divide-border">
                 {PASSENGER_VISIBLE.map((state) => (
                   <div key={state} className="py-3">
@@ -225,86 +197,50 @@ const About = () => {
                   </div>
                 ))}
               </dl>
-              <p>
-                Past about {staleMinutes} minutes we stop showing the bus at all,
-                because a position that old says more about where it was than where
-                it is. We do not turn any of this into an arrival time: we know
-                where a bus reported itself, not what the road ahead of it is
-                doing.
-              </p>
+              <p>{t("about.live.3", { minutes: staleMinutes })}</p>
             </Section>
 
-            <Section title="Digital tickets">
+            <Section title={t("about.tickets.heading")}>
               <p>
-                A ticket booked here is kept on your device and on our servers,
-                and shown as a code when you open it.{" "}
+                {t("about.tickets.stored")}{" "}
                 {payments.settlesRealMoney
-                  ? `Payment is taken through ${payments.label}.`
-                  : "Booking is a demonstration: no money changes hands, and a ticket bought here is not accepted as a fare."}
+                  ? t("about.tickets.paid", { provider: payments.label })
+                  : t("about.tickets.demo")}
               </p>
-              <p>
-                After your first visit the app is kept on this device, so a ticket
-                you have already opened will open again with no connection. A page
-                you have never opened will not, and booking a new ticket still
-                needs one.
-              </p>
+              <p>{t("about.tickets.offline")}</p>
             </Section>
 
-            <Section title="Service updates">
-              <p>
-                When a disruption is published it appears at the top of every page
-                here, not only on the home page, so a bookmark or a deep link
-                cannot hide it. Updates come from whoever is authorised to post
-                them. We do not write them ourselves, and we do not infer a
-                disruption from buses being quiet.
-              </p>
+            <Section title={t("about.updates.heading")}>
+              <p>{t("about.updates.body")}</p>
             </Section>
 
-            <Section title="Accessibility">
+            <Section title={t("about.a11y.heading")}>
+              <p>{t("about.a11y.1")}</p>
               <p>
-                Every page can be reached and operated from the keyboard, with a
-                visible focus outline and a skip link to the main content. Page
-                changes are announced to screen readers, and the network is offered
-                as a table as well as a diagram, so nothing here depends on reading
-                a map.
-              </p>
-              <p>
-                Colour is never the only way a state is communicated, and animation
-                is reduced automatically when your system asks for that. If
-                something here is unusable for you, that is a defect worth
-                reporting on the{" "}
+                {t("about.a11y.2")}{" "}
                 <Link to="/contact" className="text-primary font-medium underline">
-                  contact page
+                  {t("about.a11y.contactLink")}
                 </Link>
-                .
+                {t("about.sentenceEnd")}
               </p>
             </Section>
 
-            <Section title="What we are planning next">
-              <p>These are intentions, not features. None of them exists yet:</p>
+            <Section title={t("about.next.heading")}>
+              <p>{t("about.next.intro")}</p>
               <ul className="list-disc pl-5 space-y-2">
-                <li>
-                  Publishing the corridor timetable as open transit data, so it can
-                  appear in other journey planners rather than only here. The feed
-                  is built; what it still needs is surveyed stop coordinates, which
-                  we do not have.
-                </li>
+                <li>{t("about.next.gtfs")}</li>
               </ul>
             </Section>
 
-            <Section title="Who we are">
+            <Section title={t("about.who.heading")}>
               <p>
-                This is an independent, student-built project. It is not an
-                official {OPERATOR.abbreviation} product, it is not affiliated with
-                the operator, and nothing here is endorsed by them. The service
-                information is reproduced from published sources with attribution;
-                the software is ours.
+                {t("about.who.body", { abbreviation: OPERATOR.abbreviation })}
               </p>
               <p>
                 <Link to="/contact" className="text-primary font-medium underline">
-                  Who built this, and how to reach us
+                  {t("about.who.link")}
                 </Link>
-                .
+                {t("about.sentenceEnd")}
               </p>
             </Section>
           </div>

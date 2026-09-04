@@ -25,6 +25,7 @@ import { describe, expect, it } from "vitest";
   screen here before wiring it fails immediately, which is the point.
 */
 const SURFACES = [
+  "src/pages/About.tsx",
   "src/pages/Login.tsx",
   "src/pages/Timetable.tsx",
   "src/pages/Driver.tsx",
