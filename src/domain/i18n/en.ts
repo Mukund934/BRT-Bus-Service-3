@@ -146,6 +146,20 @@ export const en = {
   "timetable.showing":
     "Showing the {shown}. Booking stays on today's {today}.",
 
+  "service.weekdays": "Weekdays",
+  "service.weekends": "Weekends",
+  "timetable.notToday":
+    "This service does not run today, so it cannot be booked. The times are listed for reference.",
+  "timetable.departs": "Departs",
+  "timetable.next": "Next",
+  "timetable.serviceDay": "Service day",
+  /*
+    The caption keeps the operator's service name and the published direction
+    as they are; only the frame around them is ours.
+  */
+  "timetable.caption": "BRT Service - {direction} ({service})",
+  "booking.book": "Book",
+  "booking.bookTrip": "route {route} departing {time}",
   "service.weekday": "Weekday service",
   "service.weekend": "Weekend service",
   "service.weekday.short": "Weekday",

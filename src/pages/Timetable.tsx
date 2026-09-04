@@ -60,10 +60,20 @@ const terminusOf = (service: ServiceDay, direction: Direction): StopName | null 
     )
     .at(-1)?.stop ?? null;
 
-const captionFor = (service: ServiceDay, direction: Direction): string =>
-  `BRT Service - ${DIRECTION_LABELS[direction]} (${
-    service === "weekday" ? "Weekdays" : "Weekends"
-  })`;
+/** The translator, passed to helpers that render outside a component. */
+type Translate = ReturnType<typeof useTranslation>["t"];
+
+const captionFor = (
+  service: ServiceDay,
+  direction: Direction,
+  t: Translate
+): string =>
+  t("timetable.caption", {
+    direction: DIRECTION_LABELS[direction],
+    service: t(
+      service === "weekday" ? "service.weekdays" : "service.weekends"
+    ),
+  });
 
 /**
  * What is leaving the corridor origin next.
@@ -233,6 +243,7 @@ const TimetableTable = ({
   nowLabel,
   onBook,
 }: TimetableTableProps) => {
+  const { t } = useTranslation();
   const stops = columnStops(trips);
   /*
     A day that is not today has no "now", so nothing is marked. Passing a
@@ -265,7 +276,7 @@ const TimetableTable = ({
               scope="col"
               className={`${HEAD_CELL} ${STICKY_COLUMN} z-30 text-left`}
             >
-              Departs
+              {t("timetable.departs")}
             </th>
             {stops.map((stop) => (
               <th key={stop} scope="col" className={`${HEAD_CELL} z-20 text-center`}>
@@ -273,10 +284,10 @@ const TimetableTable = ({
               </th>
             ))}
             <th scope="col" className={`${HEAD_CELL} z-20 text-center`}>
-              Arrival
+              {t("journey.arrival")}
             </th>
             <th scope="col" className={`${HEAD_CELL} z-20 text-center`}>
-              Book
+              {t("booking.book")}
             </th>
           </tr>
         </thead>
@@ -323,7 +334,7 @@ const TimetableTable = ({
 
                     {timing === "next" && (
                       <span className="ml-1.5 rounded-full bg-primary px-1.5 py-0.5 text-[9px] font-semibold text-primary-foreground">
-                        Next
+                        {t("timetable.next")}
                       </span>
                     )}
 
@@ -355,14 +366,17 @@ const TimetableTable = ({
                       onClick={() => onBook(trip)}
                       className="px-2 py-1.5 text-[10px] lg:text-xs bg-primary text-primary-foreground rounded-md hover:-translate-y-0.5 transition-[transform,box-shadow] duration-state hover:shadow-md active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
                     >
-                      Book
+                      {t("booking.book")}
                       {/*
                         Every row's button would otherwise read as just "Book",
                         leaving a screen-reader user unable to tell them apart.
                       */}
                       <span className="sr-only">
                         {" "}
-                        route {trip.routeId} departing {departure}
+                        {t("booking.bookTrip", {
+                          route: trip.routeId,
+                          time: departure,
+                        })}
                       </span>
                     </button>
                   </td>
@@ -458,7 +472,7 @@ const Timetable = () => {
 
           <div
             role="group"
-            aria-label="Service day"
+            aria-label={t("timetable.serviceDay")}
             className="inline-flex mt-3 rounded-full border border-border overflow-hidden"
           >
             {SERVICES.map(({ day, labelKey }) => (
@@ -529,13 +543,12 @@ const Timetable = () => {
           </div>
 
           <h2 className="text-lg font-bold text-foreground mb-3 tracking-tight">
-            {captionFor(shown, direction)}
+            {captionFor(shown, direction, t)}
           </h2>
 
           {!isToday && (
             <p className="text-sm font-medium text-muted-foreground mb-3">
-              This service does not run today, so it cannot be booked. The times
-              are listed for reference.
+              {t("timetable.notToday")}
             </p>
           )}
 
@@ -551,7 +564,7 @@ const Timetable = () => {
           ) : (
             <TimetableTable
               key={`${shown}-${direction}`}
-              caption={captionFor(shown, direction)}
+              caption={captionFor(shown, direction, t)}
               trips={trips}
               available={isToday}
               nowMinutes={isToday ? serviceMinutesOf(now) : null}

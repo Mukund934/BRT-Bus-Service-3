@@ -127,6 +127,16 @@ export const hi: Catalogue = {
   "timetable.showing":
     "{shown} दिखाई जा रही है। बुकिंग आज की {today} पर ही रहेगी।",
 
+  "service.weekdays": "सप्ताह के दिन",
+  "service.weekends": "सप्ताहांत",
+  "timetable.notToday":
+    "यह सेवा आज नहीं चलती, इसलिए इसे बुक नहीं किया जा सकता। समय केवल जानकारी के लिए दिए गए हैं।",
+  "timetable.departs": "प्रस्थान",
+  "timetable.next": "अगली",
+  "timetable.serviceDay": "सेवा का दिन",
+  "timetable.caption": "BRT सेवा - {direction} ({service})",
+  "booking.book": "बुक",
+  "booking.bookTrip": "मार्ग {route}, प्रस्थान {time}",
   "service.weekday": "सप्ताह के दिनों की सेवा",
   "service.weekend": "सप्ताहांत की सेवा",
   "service.weekday.short": "सप्ताह के दिन",

@@ -26,6 +26,7 @@ import { describe, expect, it } from "vitest";
 */
 const SURFACES = [
   "src/pages/Login.tsx",
+  "src/pages/Timetable.tsx",
   "src/pages/Driver.tsx",
   "src/components/BookingModal.tsx",
   "src/components/PaymentModal.tsx",
