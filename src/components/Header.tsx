@@ -387,7 +387,9 @@ const Header = () => {
 							className="xl:hidden text-white p-2 rounded-lg hover:bg-white/10 transition focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-primary touch-target"
 							aria-expanded={isMenuOpen}
 							aria-controls={mobileMenuId}
-							aria-label={isMenuOpen ? "Close navigation menu" : "Open navigation menu"}
+							aria-label={t(
+								isMenuOpen ? "nav.closeNavigation" : "nav.openNavigation"
+							)}
 						>
 							{isMenuOpen ? (
 								<X className="w-6 h-6" aria-hidden="true" />

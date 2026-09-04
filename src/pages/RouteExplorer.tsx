@@ -372,8 +372,15 @@ const RouteExplorer = () => {
                     </p>
 
                     <p className="mt-3 text-xs text-muted-foreground">
-                      {route.servedStops.length} stops · {interchanges}{" "}
-                      {interchanges === 1 ? "interchange" : "interchanges"}
+                      {t(
+                        interchanges === 1
+                          ? "routes.stopsOne"
+                          : "routes.stopsMany",
+                        {
+                          stops: route.servedStops.length,
+                          count: interchanges,
+                        }
+                      )}
                     </p>
 
                     <p className="mt-1 text-xs text-muted-foreground">

@@ -393,6 +393,10 @@ export const hi: Catalogue = {
 
   "routes.diagramMeaning":
     "यह जुड़ाव का आरेख है, मानचित्र नहीं। यह दिखाता है कि कौन से मार्ग किन स्टॉप पर और किस क्रम में रुकते हैं — इस पर दूरियों और दिशाओं का कोई मतलब नहीं है।",
+  "routes.stopsOne": "{stops} स्टॉप · {count} इंटरचेंज",
+  "routes.stopsMany": "{stops} स्टॉप · {count} इंटरचेंज",
+  "nav.openNavigation": "नेविगेशन मेन्यू खोलें",
+  "nav.closeNavigation": "नेविगेशन मेन्यू बंद करें",
   "routes.title": "नेटवर्क देखिए",
   "routes.places": "इन मार्गों से जिन जगहों तक पहुँचा जा सकता है",
   "routes.today": "आज चल रही सेवाएँ",

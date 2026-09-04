@@ -100,6 +100,47 @@ const withoutComments = (source: string): string =>
     .filter((line) => !line.trim().startsWith("//"))
     .join("\n");
 
+/*
+  Copy hiding inside a JSX expression.
+
+  `{n === 1 ? "departure" : "departures"}` is a sentence a passenger reads, and
+  the line check above cannot see it: the line has braces, so it reads as code.
+  Two of these survived four translation stages - a plural on the route
+  explorer and the mobile menu's own aria-label.
+
+  Only the two-sided form is looked for, because that is what a conditional
+  string looks like and because it keeps the rule narrow enough to stay on.
+*/
+const TERNARY = /\?\s*"([A-Za-z][A-Za-z ,'\u2019-]{2,})"\s*:\s*"([A-Za-z][A-Za-z ,'\u2019-]{2,})"/g;
+
+/*
+  Values that are not copy even though they are quoted words: HTML input
+  types, ARIA politeness, and Tailwind class lists. A class list is every
+  token carrying a hyphen or a variant colon, which is what separates
+  "bg-card" from "interchange".
+*/
+const TECHNICAL = new Set([
+  "text",
+  "password",
+  "polite",
+  "assertive",
+  "button",
+  "submit",
+  "search",
+  "on",
+  "off",
+  "auto",
+  "none",
+  "true",
+  "false",
+]);
+
+const isClassList = (value: string) =>
+  value.split(/\s+/).every((token) => token.includes("-") || token.includes(":"));
+
+const isConditionalCopy = (value: string) =>
+  !TECHNICAL.has(value) && !value.includes(".") && !isClassList(value);
+
 const englishIn = (file: string): string[] => {
   const source = withoutComments(readFileSync(file, "utf8"));
   const allowed = PUBLISHED[file] ?? [];
@@ -115,6 +156,12 @@ const englishIn = (file: string): string[] => {
     const line = raw.trim();
 
     if (isProse(line)) found.push(line);
+  }
+
+  for (const match of source.matchAll(TERNARY)) {
+    for (const value of [match[1]!, match[2]!]) {
+      if (isConditionalCopy(value)) found.push(value);
+    }
   }
 
   return found.filter((value) => !allowed.includes(value));
@@ -152,6 +199,38 @@ describe("screens that are supposed to be translated", () => {
     expect(detected).toContain(
       "This bus has already departed. Please choose a later service."
     );
+  });
+
+  it("detects copy hiding in a conditional", () => {
+    const sample = '{n === 1 ? "departure" : "departures"}';
+    const found: string[] = [];
+
+    for (const match of sample.matchAll(TERNARY)) {
+      for (const value of [match[1]!, match[2]!]) {
+        if (isConditionalCopy(value)) found.push(value);
+      }
+    }
+
+    expect(found).toEqual(["departure", "departures"]);
+  });
+
+  /*
+    And leaves the things that only look like copy. A guard that flagged every
+    Tailwind class would be switched off within the hour.
+  */
+  it("leaves class lists, input types and aria values alone", () => {
+    for (const sample of [
+      '{on ? "bg-card" : "bg-secondary"}',
+      '{show ? "text" : "password"}',
+      '{urgent ? "assertive" : "polite"}',
+      '{a ? "fill-card stroke-primary" : "fill-primary stroke-primary"}',
+    ]) {
+      for (const match of sample.matchAll(TERNARY)) {
+        for (const value of [match[1]!, match[2]!]) {
+          expect(isConditionalCopy(value), value).toBe(false);
+        }
+      }
+    }
   });
 
   /*

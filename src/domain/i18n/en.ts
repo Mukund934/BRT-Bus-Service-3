@@ -509,6 +509,10 @@ export const en = {
 
   "routes.diagramMeaning":
     "A connection diagram, not a map. It shows which routes call at which stops and in what order — distances and directions on it mean nothing.",
+  "routes.stopsOne": "{stops} stops · {count} interchange",
+  "routes.stopsMany": "{stops} stops · {count} interchanges",
+  "nav.openNavigation": "Open navigation menu",
+  "nav.closeNavigation": "Close navigation menu",
   "routes.title": "Explore the network",
   "routes.places": "Places you can reach on these routes",
   "routes.today": "Services running today",
