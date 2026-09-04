@@ -4,6 +4,8 @@ import Footer from "@/components/Footer";
 import { POLLING } from "@/constants/config";
 import { useAuth } from "@/contexts/AuthContext";
 import { toSafeMessage } from "@/domain/auth/errors";
+import type { TranslationKey } from "@/domain/i18n/en";
+import { useTranslation } from "@/contexts/LocaleContext";
 import { PERMISSIONS, can } from "@/domain/auth/permissions";
 import { ROUTE_IDS, getRoute, type RouteId } from "@/domain/transit/routes";
 import {
@@ -33,12 +35,13 @@ interface DriverCoords {
  * decides what renders, this decides what is written.
  */
 const Driver = () => {
+  const { t } = useTranslation();
   const { user, actor } = useAuth();
 
   const [isSharing, setIsSharing] = useState(false);
   const [routeId, setRouteId] = useState<RouteId>(ROUTE_IDS[0]);
   const [coords, setCoords] = useState<DriverCoords | null>(null);
-  const [error, setError] = useState("");
+  const [error, setError] = useState<TranslationKey | "">("");
 
   /*
     Which bus this driver may publish as, read live.
@@ -107,8 +110,8 @@ const Driver = () => {
           console.error("Geolocation failed:", geoError);
           setError(
             geoError.code === geoError.PERMISSION_DENIED
-              ? "Location permission is required to broadcast your position."
-              : "Could not read your location. Please try again."
+              ? "driver.error.permission"
+              : "driver.error.readFailed"
           );
           setIsSharing(false);
         },
@@ -184,10 +187,12 @@ const Driver = () => {
     if (health !== "interrupted") return;
 
     announce(
-      `Your position is not reaching passengers. ${interruptionReason(wasHidden)}`,
+      t("driver.announce.interrupted", {
+        reason: t(interruptionReason(wasHidden)),
+      }),
       "assertive"
     );
-  }, [health, wasHidden, announce]);
+  }, [health, wasHidden, announce, t]);
 
   const startSharing = async () => {
     setError("");
@@ -195,7 +200,7 @@ const Driver = () => {
     // Resolves the on-demand Realtime Database load before promising the
     // driver that their position is being broadcast.
     if (!(await isLiveTrackingAvailable())) {
-      setError("Live tracking is unavailable right now.");
+      setError("driver.error.unavailable");
       return;
     }
 
@@ -209,17 +214,17 @@ const Driver = () => {
       <main id="main-content" tabIndex={-1} className="py-20 px-4">
         <div className="max-w-xl mx-auto">
           <div className="bg-white rounded-2xl shadow-lg p-8 text-center space-y-6">
-            <h1 className="text-2xl font-bold text-primary-deep">Driver Live Tracking</h1>
+            <h1 className="text-2xl font-bold text-primary-deep">{t("driver.title")}</h1>
 
             {vehicleId && (
               <p className="text-sm text-gray-500">
-                Broadcasting as{" "}
+                {t("driver.broadcastingAs")}{" "}
                 <span className="font-mono font-medium">{vehicleId}</span>
               </p>
             )}
 
             {vehicleId === undefined && (
-              <p className="text-sm text-gray-500">Checking your assignment…</p>
+              <p className="text-sm text-gray-500">{t("driver.checking")}</p>
             )}
 
             {/*
@@ -238,9 +243,8 @@ const Driver = () => {
                 className="rounded-lg border border-primary/30 bg-accent px-4 py-3 text-left"
               >
                 <p className="text-sm text-primary-deep">
-                  <strong>No bus is assigned to you right now.</strong> Sharing
-                  your position needs an assignment from the operator, and each
-                  one covers a single shift. Ask them to assign you a vehicle.
+                  <strong>{t("driver.noAssignment.lead")}</strong>{" "}
+                  {t("driver.noAssignment.body")}
                 </p>
               </div>
             )}
@@ -250,7 +254,7 @@ const Driver = () => {
                 htmlFor={routeFieldId}
                 className="block text-sm font-medium text-gray-700 mb-1"
               >
-                Route you are running
+                {t("driver.routeLabel")}
               </label>
 
               <select
@@ -269,7 +273,7 @@ const Driver = () => {
 
               {isSharing && (
                 <p className="text-xs text-gray-500 mt-1">
-                  Stop sharing to change route.
+                  {t("driver.stopToChange")}
                 </p>
               )}
             </div>
@@ -285,8 +289,9 @@ const Driver = () => {
                 }`}
               />
               <span className="text-sm font-medium">
-                {SHARING_MESSAGES[health]}
-                {health === "sharing" && ` on ${getRoute(routeId).name}`}
+                {t(SHARING_MESSAGES[health])}
+                {health === "sharing" &&
+                  t("driver.sharingOn", { route: getRoute(routeId).name })}
               </span>
             </div>
 
@@ -299,24 +304,28 @@ const Driver = () => {
             {health === "interrupted" && (
               <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-3 text-left">
                 <p className="text-sm font-semibold text-destructive">
-                  Your position is not reaching passengers.
+                  {t("driver.interrupted.title")}
                 </p>
                 <p className="text-sm text-destructive mt-1">
-                  {interruptionReason(wasHidden)}
+                  {t(interruptionReason(wasHidden))}
                 </p>
               </div>
             )}
 
             {error && (
               <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-3">
-                <p className="text-sm text-destructive">{error}</p>
+                <p className="text-sm text-destructive">{t(error)}</p>
               </div>
             )}
 
             {coords && (
               <div className="bg-gray-50 p-4 rounded-lg text-sm text-gray-700">
-                <p>Latitude: {coords.latitude}</p>
-                <p>Longitude: {coords.longitude}</p>
+                <p>
+                  {t("driver.latitude")}: {coords.latitude}
+                </p>
+                <p>
+                  {t("driver.longitude")}: {coords.longitude}
+                </p>
               </div>
             )}
 
@@ -333,21 +342,20 @@ const Driver = () => {
                   disabled={!mayPublish || !vehicleId}
                   className="px-6 py-3 rounded-xl bg-green-600 text-white font-medium shadow hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Start Sharing
+                  {t("driver.start")}
                 </button>
               ) : (
                 <button
                   onClick={() => void stop()}
                   className="px-6 py-3 rounded-xl bg-destructive text-white font-medium shadow hover:bg-destructive transition"
                 >
-                  Stop Sharing
+                  {t("driver.stop")}
                 </button>
               )}
             </div>
 
             <p className="text-xs text-gray-400">
-              Only your coordinates and this bus label are shared. Your name and
-              email address are never published.
+              {t("driver.privacy")}
             </p>
           </div>
         </div>

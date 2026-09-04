@@ -13,6 +13,8 @@
  * publish is exactly what this notices.
  */
 
+import type { TranslationKey } from "@/domain/i18n/en";
+
 export type SharingHealth =
   /** Not trying to share. */
   | "idle"
@@ -63,10 +65,10 @@ export const sharingHealth = (
 };
 
 /** What the driver is told, in each state. */
-export const SHARING_MESSAGES: Record<SharingHealth, string> = {
-  idle: "Not sharing",
-  sharing: "Sharing your live location",
-  interrupted: "Your position is not reaching passengers",
+export const SHARING_MESSAGES: Record<SharingHealth, TranslationKey> = {
+  idle: "fleet.sharing.idle",
+  sharing: "fleet.sharing.sharing",
+  interrupted: "fleet.sharing.interrupted",
 };
 
 /**
@@ -76,7 +78,9 @@ export const SHARING_MESSAGES: Record<SharingHealth, string> = {
  * actually observe - `document.visibilityState` says so directly. Anything
  * else gets the honest general form rather than a guess at a cause.
  */
-export const interruptionReason = (hiddenSinceLastPublish: boolean): string =>
+export const interruptionReason = (
+  hiddenSinceLastPublish: boolean
+): TranslationKey =>
   hiddenSinceLastPublish
-    ? "This tab was in the background, and browsers stop a background tab from reading its location. Keep this screen open and awake while you are on shift."
-    : "The last update did not reach us. Check your signal.";
+    ? "fleet.interruption.background"
+    : "fleet.interruption.signal";

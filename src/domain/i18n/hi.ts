@@ -294,6 +294,46 @@ export const hi: Catalogue = {
   "dashboard.cancel.done": "टिकट रद्द हो गया।",
   "dashboard.cancel.announced": "आपका टिकट रद्द कर दिया गया है।",
 
+
+  "fleet.sharing.idle": "साझा नहीं हो रहा",
+  "fleet.sharing.sharing": "आपकी लाइव स्थिति साझा हो रही है",
+  "fleet.sharing.interrupted": "आपकी स्थिति यात्रियों तक नहीं पहुँच रही",
+  /* Names only the cause that can be observed; stays general otherwise. */
+  "fleet.interruption.background":
+    "यह टैब पीछे चला गया था, और ब्राउज़र पीछे चल रहे टैब को स्थिति पढ़ने नहीं देते। शिफ़्ट के दौरान यह स्क्रीन खुली और जागती रखिए।",
+  "fleet.interruption.signal":
+    "पिछला अपडेट हम तक नहीं पहुँचा। अपना सिग्नल जाँचिए।",
+
+  "driver.title": "चालक लाइव ट्रैकिंग",
+  "driver.broadcastingAs": "इस रूप में प्रसारित",
+  "driver.checking": "आपकी ड्यूटी देखी जा रही है…",
+  "driver.noAssignment.lead": "अभी आपको कोई बस नहीं सौंपी गई है।",
+  "driver.noAssignment.body":
+    "स्थिति साझा करने के लिए संचालक की ओर से ड्यूटी मिलनी ज़रूरी है, और हर ड्यूटी एक शिफ़्ट के लिए होती है। उनसे बस सौंपने को कहिए।",
+  "driver.routeLabel": "आप कौन सा मार्ग चला रहे हैं",
+  "driver.stopToChange": "मार्ग बदलने के लिए साझा करना रोकिए।",
+  "driver.sharingOn": " — {route}",
+  "driver.interrupted.title": "आपकी स्थिति यात्रियों तक नहीं पहुँच रही।",
+  "driver.latitude": "अक्षांश",
+  "driver.longitude": "देशांतर",
+  "driver.start": "साझा करना शुरू करें",
+  "driver.stop": "साझा करना रोकें",
+  "driver.privacy":
+    "केवल आपके निर्देशांक और यह बस लेबल साझा होते हैं। आपका नाम और ईमेल पता कभी प्रकाशित नहीं होता।",
+  "driver.error.permission":
+    "अपनी स्थिति प्रसारित करने के लिए लोकेशन की अनुमति ज़रूरी है।",
+  "driver.error.readFailed":
+    "आपकी स्थिति पढ़ी नहीं जा सकी। कृपया फिर कोशिश कीजिए।",
+  "driver.error.unavailable": "लाइव ट्रैकिंग अभी उपलब्ध नहीं है।",
+  "driver.announce.interrupted":
+    "आपकी स्थिति यात्रियों तक नहीं पहुँच रही। {reason}",
+
+  "driver.dashboard.role": "चालक",
+  "driver.dashboard.title": "लाइव स्थिति साझा करें",
+  "driver.dashboard.body":
+    "प्रसारण लाइव ट्रैकिंग पेज पर चलता है और आपके वहाँ से हटते ही रुक जाता है, इसलिए शिफ़्ट के दौरान वह पेज खुला रखिए।",
+  "driver.dashboard.cta": "लाइव ट्रैकिंग खोलें",
+
   "ticket.status.pending": "बाकी",
   "ticket.status.active": "चालू",
   "ticket.status.boardingSoon": "चढ़ने का समय",

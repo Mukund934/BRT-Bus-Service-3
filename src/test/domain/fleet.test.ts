@@ -36,6 +36,8 @@ import {
   fromGtfsRealtime,
   type GtfsRealtimeFeed,
 } from "@/domain/fleet/adapters";
+import { en } from "@/domain/i18n/en";
+import { hi } from "@/domain/i18n/hi";
 import {
   INTERRUPTION_TOLERANCE,
   SHARING_MESSAGES,
@@ -664,15 +666,33 @@ describe("whether sharing is actually happening", () => {
     the honest general form instead of a guess.
   */
   it("names the background tab only when that is what happened", () => {
-    expect(interruptionReason(true)).toMatch(/background/i);
-    expect(interruptionReason(true)).toMatch(/keep this screen open/i);
-    expect(interruptionReason(false)).not.toMatch(/background/i);
-    expect(interruptionReason(false)).toMatch(/signal/i);
+    expect(interruptionReason(true)).toBe("fleet.interruption.background");
+    expect(interruptionReason(false)).toBe("fleet.interruption.signal");
+
+    expect(en["fleet.interruption.background"]).toMatch(/background/i);
+    expect(en["fleet.interruption.background"]).toMatch(/keep this screen open/i);
+    expect(en["fleet.interruption.signal"]).not.toMatch(/background/i);
+    expect(en["fleet.interruption.signal"]).toMatch(/signal/i);
+  });
+
+  /*
+    And the Hindi must not turn "we do not know why" into a guess that sounds
+    specific. Only the observed cause names a cause.
+  */
+  it("stays general about the cause it cannot observe, in every language", () => {
+    for (const catalogue of [en, hi]) {
+      const general = catalogue["fleet.interruption.signal"];
+
+      expect(general.length).toBeGreaterThan(10);
+      expect(general).not.toMatch(/background|टैब|पीछे/i);
+    }
   });
 
   it("gives every state something to say", () => {
     for (const health of ["idle", "sharing", "interrupted"] as const) {
-      expect(SHARING_MESSAGES[health].length).toBeGreaterThan(5);
+      for (const catalogue of [en, hi]) {
+        expect(catalogue[SHARING_MESSAGES[health]].length, health).toBeGreaterThan(5);
+      }
     }
   });
 });

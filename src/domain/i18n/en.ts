@@ -371,6 +371,54 @@ export const en = {
   "dashboard.cancel.done": "Ticket cancelled.",
   "dashboard.cancel.announced": "Your ticket has been cancelled.",
 
+
+  /*
+    The driver's screen.
+
+    Route names and headlines in the picker are published data and stay as
+    published, in both languages - only the label above the picker is ours.
+
+    The interruption reasons name the ONE cause that can actually be observed,
+    a backgrounded tab, and stay general about everything else. Translating
+    them must not turn "we do not know why" into a guess that sounds specific.
+  */
+  "fleet.sharing.idle": "Not sharing",
+  "fleet.sharing.sharing": "Sharing your live location",
+  "fleet.sharing.interrupted": "Your position is not reaching passengers",
+  "fleet.interruption.background":
+    "This tab was in the background, and browsers stop a background tab from reading its location. Keep this screen open and awake while you are on shift.",
+  "fleet.interruption.signal":
+    "The last update did not reach us. Check your signal.",
+
+  "driver.title": "Driver Live Tracking",
+  "driver.broadcastingAs": "Broadcasting as",
+  "driver.checking": "Checking your assignment…",
+  "driver.noAssignment.lead": "No bus is assigned to you right now.",
+  "driver.noAssignment.body":
+    "Sharing your position needs an assignment from the operator, and each one covers a single shift. Ask them to assign you a vehicle.",
+  "driver.routeLabel": "Route you are running",
+  "driver.stopToChange": "Stop sharing to change route.",
+  "driver.sharingOn": " on {route}",
+  "driver.interrupted.title": "Your position is not reaching passengers.",
+  "driver.latitude": "Latitude",
+  "driver.longitude": "Longitude",
+  "driver.start": "Start Sharing",
+  "driver.stop": "Stop Sharing",
+  "driver.privacy":
+    "Only your coordinates and this bus label are shared. Your name and email address are never published.",
+  "driver.error.permission":
+    "Location permission is required to broadcast your position.",
+  "driver.error.readFailed": "Could not read your location. Please try again.",
+  "driver.error.unavailable": "Live tracking is unavailable right now.",
+  "driver.announce.interrupted":
+    "Your position is not reaching passengers. {reason}",
+
+  "driver.dashboard.role": "Driver",
+  "driver.dashboard.title": "Share Live Location",
+  "driver.dashboard.body":
+    "Broadcasting runs on the live tracking page and stops when you leave it, so keep that page open while you are on shift.",
+  "driver.dashboard.cta": "Open live tracking",
+
   "ticket.status.pending": "Pending",
   "ticket.status.active": "Active",
   "ticket.status.boardingSoon": "Boarding Soon",
