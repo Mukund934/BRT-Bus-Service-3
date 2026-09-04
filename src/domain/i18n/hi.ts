@@ -160,6 +160,52 @@ export const hi: Catalogue = {
     "{stop} प्रकाशित नेटवर्क में है, पर वहाँ से अभी कोई प्रस्थान नहीं है। समय सारणी किन स्टॉप को कवर करती है, यह देखने के लिए मार्ग देखिए।",
   "stopField.placeholder": "स्टॉप खोजने के लिए लिखिए",
 
+
+  "login.signIn.title": "साइन इन करें",
+  "login.signUp.title": "खाता बनाएँ",
+  "login.reset.title": "पासवर्ड रीसेट करें",
+
+  "login.email": "ईमेल",
+  "login.password": "पासवर्ड",
+  "login.name": "पूरा नाम",
+  "login.required": " (ज़रूरी)",
+
+  "login.signIn.action": "साइन इन",
+  "login.signIn.pending": "साइन इन हो रहा है…",
+  "login.signUp.action": "साइन अप",
+  "login.signUp.pending": "खाता बनाया जा रहा है…",
+  "login.google": "Google से जारी रखें",
+  "login.forgot": "पासवर्ड भूल गए?",
+  "login.backToSignIn": "साइन इन पर वापस",
+  "login.passwordHint": "कम से कम 6 अक्षर।",
+
+  "login.reset.intro":
+    "अपना ईमेल भरिए, हम आपको नया पासवर्ड बनाने का लिंक भेजेंगे।",
+  /* "अगर", not "जब" - the sentence must not confirm that the account exists. */
+  "login.reset.sent":
+    "अगर {email} के लिए कोई खाता है, तो पासवर्ड रीसेट लिंक भेजा जा रहा है। अपना इनबॉक्स और स्पैम फ़ोल्डर देखिए।",
+  "login.reset.action": "रीसेट लिंक भेजें",
+  "login.reset.pending": "भेजा जा रहा है…",
+
+  "login.haveAccount": "पहले से खाता है?",
+  "login.noAccount": "खाता नहीं है?",
+  "login.showPassword": "पासवर्ड दिखाएँ",
+  "login.hidePassword": "पासवर्ड छिपाएँ",
+
+  "login.aside.newTitle": "नमस्ते!",
+  "login.aside.newBody":
+    "खाता नहीं है? अभी साइन अप कीजिए और बस टिकट बुक करके आसान यात्रा कीजिए।",
+  "login.aside.returningTitle": "फिर से स्वागत है!",
+  "login.aside.returningBody":
+    "पहले से खाता है? टिकट बुक करना जारी रखने के लिए साइन इन कीजिए।",
+
+  "login.announce.signInProblem": "साइन इन फ़ॉर्म में कोई समस्या है।",
+  "login.announce.signUpProblem": "साइन अप फ़ॉर्म में कोई समस्या है।",
+  "login.announce.resetProblem": "रीसेट फ़ॉर्म में कोई समस्या है।",
+  "login.announce.signingIn": "आपको साइन इन किया जा रहा है…",
+  "login.announce.creating": "आपका खाता बनाया जा रहा है…",
+  "login.announce.resetSent":
+    "अगर उस ईमेल पर खाता है, तो रीसेट लिंक भेजा जा रहा है।",
   "validation.generic": "कृपया अपनी जानकारी जाँचिए।",
   "validation.email.required": "ईमेल भरना ज़रूरी है",
   "validation.email.tooLong": "ईमेल बहुत लंबा है",

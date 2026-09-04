@@ -186,6 +186,62 @@ export const en = {
     detects the problem should not be choosing the words - it runs in a domain
     that has no idea which language anybody is reading in.
   */
+
+  /*
+    Stage 3: the transactional surface, starting where an account does.
+
+    "Continue with Google" keeps the product name in both languages - it names
+    a button in somebody else's product, and a translated form of it would be
+    a button nobody recognises.
+  */
+  "login.signIn.title": "Sign in",
+  "login.signUp.title": "Create account",
+  "login.reset.title": "Reset password",
+
+  "login.email": "Email",
+  "login.password": "Password",
+  "login.name": "Full name",
+  "login.required": " (required)",
+
+  "login.signIn.action": "Sign in",
+  "login.signIn.pending": "Signing in…",
+  "login.signUp.action": "Sign up",
+  "login.signUp.pending": "Creating account…",
+  "login.google": "Continue with Google",
+  "login.forgot": "Forgot password?",
+  "login.backToSignIn": "Back to sign in",
+  "login.passwordHint": "At least 6 characters.",
+
+  "login.reset.intro":
+    "Enter your email and we will send you a link to set a new password.",
+  /*
+    Deliberately says "if". The reset flow must never confirm whether an
+    address is registered, in any language.
+  */
+  "login.reset.sent":
+    "If an account exists for {email}, a password reset link is on its way. Check your inbox and spam folder.",
+  "login.reset.action": "Send reset link",
+  "login.reset.pending": "Sending…",
+
+  "login.haveAccount": "Already have an account?",
+  "login.noAccount": "Don't have an account?",
+  "login.showPassword": "Show password",
+  "login.hidePassword": "Hide password",
+
+  "login.aside.newTitle": "Hello, friend!",
+  "login.aside.newBody":
+    "Don't have an account? Sign up now to book bus tickets and enjoy seamless travel.",
+  "login.aside.returningTitle": "Welcome back!",
+  "login.aside.returningBody":
+    "Already have an account? Sign in to continue booking your tickets.",
+
+  "login.announce.signInProblem": "There is a problem with the sign-in form.",
+  "login.announce.signUpProblem": "There is a problem with the sign-up form.",
+  "login.announce.resetProblem": "There is a problem with the reset form.",
+  "login.announce.signingIn": "Signing you in…",
+  "login.announce.creating": "Creating your account…",
+  "login.announce.resetSent":
+    "If that email has an account, a reset link is on its way.",
   "validation.generic": "Please check your details.",
   "validation.email.required": "Email is required",
   "validation.email.tooLong": "Email is too long",
