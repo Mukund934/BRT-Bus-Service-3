@@ -10,8 +10,9 @@ ticket, and follow buses that drivers are actively sharing.
 ![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)
 ![Vite](https://img.shields.io/badge/Vite-5-646CFF?logo=vite&logoColor=white)
 ![Firebase](https://img.shields.io/badge/Firebase-Auth%20%7C%20Firestore%20%7C%20RTDB-FFCA28?logo=firebase&logoColor=black)
-![Tests](https://img.shields.io/badge/tests-1215%20passing-brightgreen)
-![Coverage](https://img.shields.io/badge/lines-97.1%25-brightgreen)
+![Tests](https://img.shields.io/badge/tests-1359%20passing-brightgreen)
+![Coverage](https://img.shields.io/badge/lines-97.7%25-brightgreen)
+![Languages](https://img.shields.io/badge/languages-English%20%7C%20%E0%A4%B9%E0%A4%BF%E0%A4%A8%E0%A5%8D%E0%A4%A6%E0%A5%80-brightgreen)
 
 **Live:** https://bus-service-lyart.vercel.app/
 
@@ -48,7 +49,7 @@ during a shift, and an operator publishing service notices.
 
 | | |
 |---|---|
-| **Journey planner** (`/plan`) | Pick an origin and destination; departures come from the published timetable and prices from the official fare chart. Weekday and weekend services differ and are handled separately. |
+| **Journey planner** (`/plan`) | Pick an origin and destination; departures come from the published timetable and prices from the official fare chart. Weekday and weekend services differ and are handled separately. Where no single bus makes the journey — 68 of the 380 stop pairs — it shows a **one-change** itinerary instead of denying the journey. |
 | **Fare centre** (`/fares`) | The fare between any two stops, plus the full published chart. Unpriced pairs are reported as unavailable rather than estimated. |
 | **Timetable** (`/timetable`) | Weekday and weekend departures for all eight numbered workings, in both directions, bookable only on a day the service actually runs. Every grid says which published timetable it came from and when that was read. |
 | **Route explorer** (`/routes`) | Every route in the official network, the stops it serves, interchanges, and which stops have published departures. |
@@ -94,6 +95,34 @@ during a shift, and an operator publishing service notices.
 - Email and Google sign-in, and password recovery that reports the same outcome whether or
   not an account exists, so the form cannot be used to discover registered addresses.
 
+### Language
+
+- The whole interface is available in **English and Hindi** — every page, every dialog, every
+  error, and the live-region announcements a screen reader hears. `<html lang>` follows the
+  words actually on screen rather than the language requested, because English read aloud by
+  a Hindi synthesiser is unusable rather than merely wrong.
+- **Published transit data is never translated.** Stop names, route names and fares stay in
+  the form the operator publishes them, in both languages: their official Devanagari forms
+  are the operator's to supply, and a machine transliteration reads as wrong to somebody who
+  lives on the corridor.
+- English is bundled; every other language is fetched when somebody asks for it, so a third
+  language costs the initial download nothing.
+
+> The Hindi has not yet been reviewed by a native speaker. It uses the plain civic register
+> Indian transit signage uses and should be read by somebody from Raipur before it reaches
+> passengers.
+
+### Open data
+
+- `npm run gtfs:export` builds a **GTFS static feed** from the same timetable the site
+  renders — agency, stops, routes, trips, stop times, calendar and `feed_info`.
+- It **refuses to produce a partial feed**. Missing surveyed stop coordinates, an unnamed
+  operator or an unnamed feed publisher are each reported as a named gap and the export
+  stops, because a feed carrying invented coordinates would send people to places no bus
+  stops at — permanently, in every system that ingests it.
+- The feed's publisher is a required input distinct from the agency: the operator runs the
+  buses, this project assembled the file, and crediting them with it would be false.
+
 ### Admin and operations
 
 - User roster with search, role assignment, and a capped read that reports when it truncated
@@ -125,6 +154,7 @@ Places, Live Map, Passenger Dashboard, Admin Panel and Help.
 | **Database** | Cloud Firestore — users, tickets, announcements |
 | **Realtime** | Firebase Realtime Database — live bus positions |
 | **Other** | qrcode.react, sonner, OpenStreetMap embed, Browser Notification API |
+| **i18n** | No library — a typed catalogue per language, loaded on demand |
 | **Testing** | Vitest, Testing Library, user-event, jsdom, v8 coverage |
 | **Tooling** | ESLint (typescript-eslint), GitHub Actions, Vercel |
 
@@ -201,9 +231,14 @@ sequenceDiagram
 ```
 src/
   domain/        pure rules, no React and no network
-    transit/     routes, stops, timetable, official fare matrix
+    transit/     routes, stops, timetable, fare matrix, one-change journeys
     ticket/      lifecycle, status engine, conflicts, selectors
+    fleet/       vehicle roster, assignments, reporting states
+    i18n/        one typed catalogue per language, English as the source
+    gtfs/        static feed export, and what it refuses to invent
     auth/        permission model and safe error messages
+    payment/     the provider contract, honest about settling no money
+    observability/ what an error report may contain before it is sent
     validation/  zod schemas for every trust boundary
   services/      the only code that talks to Firebase or browser storage
   contexts/      AuthContext (session, role) and TicketContext
@@ -254,8 +289,9 @@ ticket opens offline, then reconcile with the server.
 
 | | |
 |---|---|
-| Tests | **1,215**, across 80 files, plus 116 against the Firebase emulator |
-| Coverage | **97.1% lines**, 90.4% branches, 90.8% functions |
+| Tests | **1,359**, across 86 files, plus 121 against the Firebase emulator |
+| Coverage | **97.7% lines**, 90.4% branches, 92.6% functions |
+| Domain suite | 453 tests that run with no DOM at all, proving the rules are portable |
 | Thresholds | 95 lines / 86 branches / 83 functions — a ratchet set just below actuals, raised deliberately |
 | Typecheck | clean |
 | Lint | 0 errors |
